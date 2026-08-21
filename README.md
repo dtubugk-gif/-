@@ -28,6 +28,19 @@ npm run build
 
 התוצאה בתיקיית `dist/` — אפשר להעלות לכל אחסון סטטי. קובץ `netlify.toml` כבר מוכן לפריסה ב-Netlify (כולל redirect ל-SPA).
 
+## 📱 בניית APK לאנדרואיד
+
+הפרויקט עטוף ב-Capacitor, כך שאפשר לבנות ממנו אפליקציית אנדרואיד:
+
+```bash
+npm run build          # בניית קבצי ה-web
+npx cap sync android   # העתקה לפרויקט האנדרואיד
+cd android && ./gradlew assembleDebug
+```
+
+ה-APK ייווצר ב-`android/app/build/outputs/apk/debug/app-debug.apk`.
+דרישות: Java 21 ו-Android SDK (פלטפורמה 36).
+
 ## 🛠 טכנולוגיות
 
 React 18 + Vite · Tailwind CSS 4 · React Router · Web Speech API (הקראה) · WebAudio (צלילי משוב)

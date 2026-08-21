@@ -1,0 +1,8 @@
+{
+  "appId": "com.linguago.app",
+  "appName": "LinguaGo",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false
+  }
+}
