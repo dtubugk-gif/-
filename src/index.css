@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@theme {
+  --color-duo-green: #58cc02;
+  --color-duo-green-dark: #4aa802;
+  --color-duo-green-darker: #3d8c02;
+  --color-duo-blue: #1cb0f6;
+  --color-duo-blue-dark: #1899d6;
+  --color-duo-red: #ff4b4b;
+  --color-duo-red-dark: #ea2b2b;
+  --color-duo-yellow: #ffc800;
+  --color-duo-yellow-dark: #e6a800;
+  --color-duo-purple: #ce82ff;
+  --color-duo-orange: #ff9600;
+  --color-duo-gray: #e5e5e5;
+  --color-duo-text: #3c3c3c;
+  --color-duo-muted: #afafaf;
+}
+
+html {
+  font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+
+body {
+  background-color: #ffffff;
+  color: var(--color-duo-text);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 3D-style buttons like Duolingo */
+.btn-3d {
+  border-bottom-width: 4px;
+  transition: filter 0.15s, transform 0.05s;
+  user-select: none;
+}
+.btn-3d:active:not(:disabled) {
+  transform: translateY(2px);
+  border-bottom-width: 2px;
+  margin-bottom: 2px;
+}
+.btn-3d:disabled {
+  cursor: not-allowed;
+}
+
+@keyframes pop-in {
+  0% { transform: scale(0.6); opacity: 0; }
+  70% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-pop-in { animation: pop-in 0.35s ease-out both; }
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-slide-up { animation: slide-up 0.25s ease-out both; }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+.animate-shake { animation: shake 0.4s ease-in-out; }
+
+@keyframes bounce-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.animate-bounce-slow { animation: bounce-slow 2s ease-in-out infinite; }
+
+@keyframes fall {
+  0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0.6; }
+}
+.confetti-piece {
+  position: fixed;
+  top: 0;
+  width: 10px;
+  height: 16px;
+  border-radius: 2px;
+  animation: fall 2.8s linear both;
+  pointer-events: none;
+  z-index: 100;
+}
+
+@keyframes flame-flicker {
+  0%, 100% { transform: scale(1) rotate(-2deg); }
+  50% { transform: scale(1.12) rotate(2deg); }
+}
+.animate-flame { animation: flame-flicker 0.8s ease-in-out infinite; display: inline-block; }

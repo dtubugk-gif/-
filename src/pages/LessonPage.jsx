@@ -1,0 +1,111 @@
+// עמוד שיעור: מנוע התרגול + מסכי "נגמרו הלבבות" וסיום חגיגי.
+
+import { useMemo, useState } from 'react'
+import { useNavigate, useParams, Link } from 'react-router-dom'
+import { getLesson } from '../data/course'
+import { generateExercises } from '../lib/exerciseGen'
+import { useProgress } from '../hooks/useProgress'
+import LessonEngine from '../components/LessonEngine'
+import Confetti from '../components/Confetti'
+import Button from '../components/Button'
+import { playFanfare } from '../lib/speech'
+
+export default function LessonPage() {
+  const { unitId, lessonId } = useParams()
+  const navigate = useNavigate()
+  const { state, completeLesson } = useProgress()
+
+  const lesson = useMemo(() => getLesson(unitId, lessonId), [unitId, lessonId])
+  const exercises = useMemo(() => (lesson ? generateExercises(lesson) : []), [lesson])
+
+  const [finished, setFinished] = useState(null) // { perfect, xpGained, newAchievements }
+  const [outOfHearts, setOutOfHearts] = useState(false)
+  // לבבות בכניסה לשיעור — כדי לא לזרוק החוצה באמצע שיעור לפני שראו משוב
+  const [enteredWithoutHearts] = useState(() => state.hearts <= 0)
+
+  if (!lesson) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
+        <div className="text-6xl">🤔</div>
+        <h1 className="text-2xl font-extrabold">השיעור לא נמצא</h1>
+        <Link to="/"><Button>חזרה למפה</Button></Link>
+      </div>
+    )
+  }
+
+  if (enteredWithoutHearts || outOfHearts) {
+    return <OutOfHeartsScreen />
+  }
+
+  if (finished) {
+    return <FinishScreen lesson={lesson} finished={finished} onContinue={() => navigate('/')} />
+  }
+
+  return (
+    <LessonEngine
+      exercises={exercises}
+      useHearts
+      onOutOfHearts={() => setOutOfHearts(true)}
+      onFinish={({ perfect }) => {
+        const result = completeLesson(lesson.unit.id, lesson.index, perfect)
+        playFanfare()
+        setFinished({ perfect, xpGained: result.xpGained, newAchievements: result.newAchievements })
+      }}
+    />
+  )
+}
+
+function OutOfHeartsScreen() {
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
+      <div className="animate-pop-in text-7xl">💔</div>
+      <h1 className="text-2xl font-extrabold">נגמרו הלבבות!</h1>
+      <p className="max-w-sm font-bold text-duo-muted">
+        לב חוזר כל 30 דקות, או שאפשר לתרגל טעויות ולהרוויח לב מיד 💪
+      </p>
+      <Link to="/practice"><Button variant="blue">לתרגול שמחזיר לב</Button></Link>
+      <Link to="/"><Button variant="white">חזרה למפה</Button></Link>
+    </div>
+  )
+}
+
+function FinishScreen({ lesson, finished, onContinue }) {
+  return (
+    <div className="relative flex min-h-screen flex-col items-center justify-center gap-5 overflow-hidden p-6 text-center">
+      <Confetti />
+      <div className="animate-bounce-slow text-8xl">🦉</div>
+      <h1 className="animate-pop-in text-3xl font-extrabold text-duo-green">
+        {finished.perfect ? 'שיעור מושלם!' : 'כל הכבוד!'}
+      </h1>
+      <p className="text-lg font-bold text-duo-muted">
+        סיימת את {lesson.title} ביחידה "{lesson.unit.title}"
+      </p>
+
+      <div className="flex gap-4">
+        <div className="animate-pop-in rounded-2xl border-2 border-duo-yellow bg-yellow-50 px-6 py-3">
+          <div className="text-sm font-extrabold text-duo-yellow-dark">XP שהרווחת</div>
+          <div dir="ltr" className="text-2xl font-extrabold text-duo-yellow-dark">+{finished.xpGained}</div>
+        </div>
+        {finished.perfect && (
+          <div className="animate-pop-in rounded-2xl border-2 border-duo-green bg-green-50 px-6 py-3">
+            <div className="text-sm font-extrabold text-duo-green-darker">בונוס דיוק</div>
+            <div className="text-2xl font-extrabold text-duo-green-darker">💯</div>
+          </div>
+        )}
+      </div>
+
+      {finished.newAchievements?.length > 0 && (
+        <div className="animate-pop-in rounded-2xl border-2 border-duo-purple bg-purple-50 px-6 py-4">
+          <div className="mb-1 font-extrabold text-duo-purple">הישג חדש! 🏆</div>
+          {finished.newAchievements.map((a) => (
+            <div key={a.id} className="font-bold">
+              {a.icon} {a.title} — {a.desc}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Button onClick={onContinue} className="mt-2 px-10">המשך</Button>
+    </div>
+  )
+}
