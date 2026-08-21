@@ -35,12 +35,6 @@ export function useProgressProvider() {
     [apply]
   )
 
-  const completePractice = useCallback(() => {
-    const result = P.completePractice(stateRef.current)
-    apply(result.state)
-    return result
-  }, [apply])
-
   return {
     state,
     loseHeart,
@@ -50,7 +44,6 @@ export function useProgressProvider() {
     setDailyGoal,
     saveProfile,
     completeLesson,
-    completePractice,
   }
 }
 

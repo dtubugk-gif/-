@@ -1,11 +1,11 @@
-// כל תוכן הקורס: יחידות, מילים ומשפטים.
+// תוכן הקורס: 7 רמות בסדר קושי עולה. כל רמה עם אוצר מילים ומשפטים משלה.
 // word: { en, he, emoji? }  sentence: { en, he }
 
-export const UNITS = [
+export const LEVELS = [
   {
-    id: 'u1',
-    title: 'יסודות 1',
-    subtitle: 'ברכות והיכרות',
+    id: 'l1',
+    title: 'יסודות והיכרות',
+    subtitle: 'ברכות, נימוסים ומשפטים ראשונים',
     color: '#58cc02',
     icon: '👋',
     words: [
@@ -36,9 +36,9 @@ export const UNITS = [
     ],
   },
   {
-    id: 'u2',
-    title: 'יסודות 2',
-    subtitle: 'משפחה ואנשים',
+    id: 'l2',
+    title: 'משפחה ואנשים',
+    subtitle: 'מדברים על האנשים שסביבנו',
     color: '#1cb0f6',
     icon: '👨‍👩‍👧',
     words: [
@@ -69,9 +69,9 @@ export const UNITS = [
     ],
   },
   {
-    id: 'u3',
+    id: 'l3',
     title: 'אוכל ושתייה',
-    subtitle: 'מה אוכלים היום?',
+    subtitle: 'מזמינים, טועמים ומבשלים',
     color: '#ff9600',
     icon: '🍎',
     words: [
@@ -103,9 +103,9 @@ export const UNITS = [
     ],
   },
   {
-    id: 'u4',
-    title: 'צבעים ומספרים',
-    subtitle: 'סופרים וצובעים',
+    id: 'l4',
+    title: 'צבעים, מספרים וחיות',
+    subtitle: 'מתארים את העולם שסביבנו',
     color: '#ce82ff',
     icon: '🎨',
     words: [
@@ -118,93 +118,29 @@ export const UNITS = [
       { en: 'one', he: 'אחת', emoji: '1️⃣' },
       { en: 'two', he: 'שתיים', emoji: '2️⃣' },
       { en: 'three', he: 'שלוש', emoji: '3️⃣' },
-      { en: 'four', he: 'ארבע', emoji: '4️⃣' },
       { en: 'five', he: 'חמש', emoji: '5️⃣' },
-      { en: 'ten', he: 'עשר', emoji: '🔟' },
-      { en: 'big', he: 'גדול', emoji: '🐘' },
-      { en: 'small', he: 'קטן', emoji: '🐜' },
+      { en: 'dog', he: 'כלב', emoji: '🐶' },
+      { en: 'cat', he: 'חתול', emoji: '🐱' },
+      { en: 'bird', he: 'ציפור', emoji: '🐦' },
+      { en: 'fish', he: 'דג', emoji: '🐟' },
+      { en: 'lion', he: 'אריה', emoji: '🦁' },
+      { en: 'horse', he: 'סוס', emoji: '🐴' },
     ],
     sentences: [
       { en: 'the sky is blue', he: 'השמיים כחולים' },
       { en: 'I have two apples', he: 'יש לי שני תפוחים' },
       { en: 'the small cat is black', he: 'החתול הקטן שחור' },
       { en: 'three red flowers', he: 'שלושה פרחים אדומים' },
-      { en: 'the big house is white', he: 'הבית הגדול לבן' },
-      { en: 'I see five birds', he: 'אני רואה חמש ציפורים' },
-      { en: 'my shirt is green', he: 'החולצה שלי ירוקה' },
-      { en: 'one coffee please', he: 'קפה אחד בבקשה' },
-    ],
-  },
-  {
-    id: 'u5',
-    title: 'בעלי חיים',
-    subtitle: 'חיות מסביב לעולם',
-    color: '#ff4b4b',
-    icon: '🐶',
-    words: [
-      { en: 'dog', he: 'כלב', emoji: '🐶' },
-      { en: 'cat', he: 'חתול', emoji: '🐱' },
-      { en: 'bird', he: 'ציפור', emoji: '🐦' },
-      { en: 'fish', he: 'דג', emoji: '🐟' },
-      { en: 'horse', he: 'סוס', emoji: '🐴' },
-      { en: 'cow', he: 'פרה', emoji: '🐮' },
-      { en: 'lion', he: 'אריה', emoji: '🦁' },
-      { en: 'monkey', he: 'קוף', emoji: '🐵' },
-      { en: 'elephant', he: 'פיל', emoji: '🐘' },
-      { en: 'rabbit', he: 'ארנב', emoji: '🐰' },
-      { en: 'sheep', he: 'כבשה', emoji: '🐑' },
-      { en: 'duck', he: 'ברווז', emoji: '🦆' },
-      { en: 'turtle', he: 'צב', emoji: '🐢' },
-      { en: 'animal', he: 'חיה', emoji: '🦓' },
-    ],
-    sentences: [
       { en: 'the dog is my friend', he: 'הכלב הוא החבר שלי' },
-      { en: 'the cat drinks milk', he: 'החתול שותה חלב' },
       { en: 'the bird sings in the morning', he: 'הציפור שרה בבוקר' },
       { en: 'the lion is a big animal', he: 'האריה הוא חיה גדולה' },
-      { en: 'I see a horse', he: 'אני רואה סוס' },
-      { en: 'the rabbit eats salad', he: 'הארנב אוכל סלט' },
       { en: 'the fish swims in the water', he: 'הדג שוחה במים' },
-      { en: 'the monkey eats a banana', he: 'הקוף אוכל בננה' },
     ],
   },
   {
-    id: 'u6',
-    title: 'פעלים בהווה',
-    subtitle: 'מה אנחנו עושים?',
-    color: '#00cd9c',
-    icon: '🏃',
-    words: [
-      { en: 'to go', he: 'ללכת', emoji: '🚶' },
-      { en: 'to run', he: 'לרוץ', emoji: '🏃' },
-      { en: 'to see', he: 'לראות', emoji: '👀' },
-      { en: 'to read', he: 'לקרוא', emoji: '📖' },
-      { en: 'to write', he: 'לכתוב', emoji: '✍️' },
-      { en: 'to speak', he: 'לדבר', emoji: '🗣️' },
-      { en: 'to learn', he: 'ללמוד', emoji: '🎓' },
-      { en: 'to work', he: 'לעבוד', emoji: '💼' },
-      { en: 'to play', he: 'לשחק', emoji: '⚽' },
-      { en: 'to sleep', he: 'לישון', emoji: '😴' },
-      { en: 'to love', he: 'לאהוב', emoji: '❤️' },
-      { en: 'to want', he: 'לרצות', emoji: '🌟' },
-      { en: 'to listen', he: 'להקשיב', emoji: '👂' },
-      { en: 'to sing', he: 'לשיר', emoji: '🎤' },
-    ],
-    sentences: [
-      { en: 'I learn English every day', he: 'אני לומד אנגלית כל יום' },
-      { en: 'she reads a good book', he: 'היא קוראת ספר טוב' },
-      { en: 'we play in the park', he: 'אנחנו משחקים בפארק' },
-      { en: 'he works in the city', he: 'הוא עובד בעיר' },
-      { en: 'they speak English', he: 'הם מדברים אנגלית' },
-      { en: 'I want to sleep', he: 'אני רוצה לישון' },
-      { en: 'the children run fast', he: 'הילדים רצים מהר' },
-      { en: 'I love to sing', he: 'אני אוהב לשיר' },
-    ],
-  },
-  {
-    id: 'u7',
-    title: 'בבית ובעיר',
-    subtitle: 'המקומות שלנו',
+    id: 'l5',
+    title: 'בית, עיר ותחבורה',
+    subtitle: 'מתמצאים במרחב ומתארים מקומות',
     color: '#1899d6',
     icon: '🏠',
     words: [
@@ -235,69 +171,105 @@ export const UNITS = [
     ],
   },
   {
-    id: 'u8',
-    title: 'משפטים לטיול',
-    subtitle: 'אנגלית שימושית בחו"ל',
-    color: '#ffc800',
-    icon: '✈️',
+    id: 'l6',
+    title: 'פעלים ושגרה',
+    subtitle: 'מספרים מה אנחנו עושים ביומיום',
+    color: '#00cd9c',
+    icon: '🏃',
     words: [
-      { en: 'airport', he: 'שדה תעופה', emoji: '✈️' },
-      { en: 'hotel', he: 'מלון', emoji: '🏨' },
-      { en: 'passport', he: 'דרכון', emoji: '🛂' },
-      { en: 'money', he: 'כסף', emoji: '💵' },
-      { en: 'ticket', he: 'כרטיס', emoji: '🎫' },
-      { en: 'map', he: 'מפה', emoji: '🗺️' },
-      { en: 'restaurant', he: 'מסעדה', emoji: '🍽️' },
-      { en: 'beach', he: 'חוף', emoji: '🏖️' },
-      { en: 'taxi', he: 'מונית', emoji: '🚕' },
-      { en: 'help', he: 'עזרה', emoji: '🆘' },
-      { en: 'where', he: 'איפה', emoji: '📍' },
-      { en: 'how much', he: 'כמה עולה', emoji: '💰' },
-      { en: 'left', he: 'שמאלה', emoji: '⬅️' },
-      { en: 'right', he: 'ימינה', emoji: '➡️' },
+      { en: 'to go', he: 'ללכת', emoji: '🚶' },
+      { en: 'to run', he: 'לרוץ', emoji: '🏃' },
+      { en: 'to see', he: 'לראות', emoji: '👀' },
+      { en: 'to read', he: 'לקרוא', emoji: '📖' },
+      { en: 'to write', he: 'לכתוב', emoji: '✍️' },
+      { en: 'to speak', he: 'לדבר', emoji: '🗣️' },
+      { en: 'to learn', he: 'ללמוד', emoji: '🎓' },
+      { en: 'to work', he: 'לעבוד', emoji: '💼' },
+      { en: 'to play', he: 'לשחק', emoji: '⚽' },
+      { en: 'to sleep', he: 'לישון', emoji: '😴' },
+      { en: 'to love', he: 'לאהוב', emoji: '❤️' },
+      { en: 'to want', he: 'לרצות', emoji: '🌟' },
+      { en: 'to listen', he: 'להקשיב', emoji: '👂' },
+      { en: 'to sing', he: 'לשיר', emoji: '🎤' },
     ],
     sentences: [
-      { en: 'where is the hotel', he: 'איפה המלון' },
-      { en: 'how much does it cost', he: 'כמה זה עולה' },
-      { en: 'I need a taxi please', he: 'אני צריך מונית בבקשה' },
-      { en: 'the restaurant is on the right', he: 'המסעדה מימין' },
-      { en: 'here is my passport', he: 'הנה הדרכון שלי' },
-      { en: 'can you help me', he: 'אתה יכול לעזור לי' },
-      { en: 'the beach is beautiful', he: 'החוף יפה' },
-      { en: 'two tickets to the museum please', he: 'שני כרטיסים למוזיאון בבקשה' },
+      { en: 'I learn English every day', he: 'אני לומד אנגלית כל יום' },
+      { en: 'she reads a good book', he: 'היא קוראת ספר טוב' },
+      { en: 'we play in the park', he: 'אנחנו משחקים בפארק' },
+      { en: 'he works in the city', he: 'הוא עובד בעיר' },
+      { en: 'they speak English', he: 'הם מדברים אנגלית' },
+      { en: 'I want to sleep', he: 'אני רוצה לישון' },
+      { en: 'the children run fast', he: 'הילדים רצים מהר' },
+      { en: 'I love to sing', he: 'אני אוהב לשיר' },
+    ],
+  },
+  {
+    id: 'l7',
+    title: 'שיחה מתקדמת',
+    subtitle: 'מילים מופשטות, דעות ורעיונות',
+    color: '#ff4b4b',
+    icon: '🧠',
+    words: [
+      { en: 'to think', he: 'לחשוב', emoji: '🤔' },
+      { en: 'to understand', he: 'להבין', emoji: '💡' },
+      { en: 'to remember', he: 'לזכור', emoji: '🧠' },
+      { en: 'to forget', he: 'לשכוח', emoji: '🫥' },
+      { en: 'to know', he: 'לדעת', emoji: '📚' },
+      { en: 'to try', he: 'לנסות', emoji: '💪' },
+      { en: 'to believe', he: 'להאמין', emoji: '🙌' },
+      { en: 'always', he: 'תמיד', emoji: '♾️' },
+      { en: 'never', he: 'אף פעם', emoji: '🚫' },
+      { en: 'sometimes', he: 'לפעמים', emoji: '🎲' },
+      { en: 'maybe', he: 'אולי', emoji: '🤷' },
+      { en: 'important', he: 'חשוב', emoji: '⭐' },
+      { en: 'difficult', he: 'קשה', emoji: '🧗' },
+      { en: 'easy', he: 'קל', emoji: '🍃' },
+      { en: 'together', he: 'ביחד', emoji: '🤝' },
+      { en: 'idea', he: 'רעיון', emoji: '💭' },
+    ],
+    sentences: [
+      { en: 'I think this is a good idea', he: 'אני חושב שזה רעיון טוב' },
+      { en: 'I do not understand the question', he: 'אני לא מבין את השאלה' },
+      { en: 'she always remembers my birthday', he: 'היא תמיד זוכרת את יום ההולדת שלי' },
+      { en: 'sometimes I forget words in English', he: 'לפעמים אני שוכח מילים באנגלית' },
+      { en: 'it is important to learn every day', he: 'חשוב ללמוד כל יום' },
+      { en: 'English is not difficult', he: 'אנגלית היא לא קשה' },
+      { en: 'we can try together', he: 'אנחנו יכולים לנסות ביחד' },
+      { en: 'maybe he knows the answer', he: 'אולי הוא יודע את התשובה' },
     ],
   },
 ]
 
-export const LESSONS_PER_UNIT = 4
+export const LESSONS_PER_LEVEL = 4
 
-// שיעור = פרוסה של אוצר המילים של היחידה + משפטים. השיעור האחרון הוא חזרה על הכול.
-export function getLesson(unitId, lessonIndex) {
-  const unit = UNITS.find((u) => u.id === unitId)
-  if (!unit) return null
+// שיעור = פרוסה של אוצר המילים של הרמה + משפטים. השיעור האחרון הוא חזרה על הכול.
+export function getLesson(levelId, lessonIndex) {
+  const levelIdx = LEVELS.findIndex((l) => l.id === levelId)
+  if (levelIdx < 0) return null
+  const level = LEVELS[levelIdx]
   const i = Number(lessonIndex)
-  if (Number.isNaN(i) || i < 0 || i >= LESSONS_PER_UNIT) return null
+  if (Number.isNaN(i) || i < 0 || i >= LESSONS_PER_LEVEL) return null
 
-  const perLesson = Math.ceil(unit.words.length / (LESSONS_PER_UNIT - 1))
-  const sentencesPerLesson = Math.ceil(unit.sentences.length / (LESSONS_PER_UNIT - 1))
+  const perLesson = Math.ceil(level.words.length / (LESSONS_PER_LEVEL - 1))
+  const sentencesPerLesson = Math.ceil(level.sentences.length / (LESSONS_PER_LEVEL - 1))
 
-  if (i === LESSONS_PER_UNIT - 1) {
-    // שיעור חזרה: כל היחידה
-    return { unit, index: i, title: 'חזרה', words: unit.words, sentences: unit.sentences, isReview: true }
+  const base = { level, levelIndex: levelIdx, difficulty: levelIdx, index: i }
+  if (i === LESSONS_PER_LEVEL - 1) {
+    // שיעור חזרה: כל הרמה
+    return { ...base, title: 'חזרה', words: level.words, sentences: level.sentences, isReview: true }
   }
   return {
-    unit,
-    index: i,
+    ...base,
     title: `שיעור ${i + 1}`,
-    words: unit.words.slice(i * perLesson, (i + 1) * perLesson),
-    sentences: unit.sentences.slice(i * sentencesPerLesson, (i + 1) * sentencesPerLesson),
+    words: level.words.slice(i * perLesson, (i + 1) * perLesson),
+    sentences: level.sentences.slice(i * sentencesPerLesson, (i + 1) * sentencesPerLesson),
     isReview: false,
   }
 }
 
-export function lessonKey(unitId, lessonIndex) {
-  return `${unitId}-l${lessonIndex}`
+export function lessonKey(levelId, lessonIndex) {
+  return `${levelId}-l${lessonIndex}`
 }
 
 // מאגר מילים גלובלי להסחות דעת בתרגילים
-export const ALL_WORDS = UNITS.flatMap((u) => u.words)
+export const ALL_WORDS = LEVELS.flatMap((l) => l.words)

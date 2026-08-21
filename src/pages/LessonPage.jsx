@@ -5,17 +5,18 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { getLesson } from '../data/course'
 import { generateExercises } from '../lib/exerciseGen'
 import { useProgress } from '../hooks/useProgress'
+import { HEART_REGEN_MINUTES } from '../lib/progress'
 import LessonEngine from '../components/LessonEngine'
 import Confetti from '../components/Confetti'
 import Button from '../components/Button'
 import { playFanfare } from '../lib/speech'
 
 export default function LessonPage() {
-  const { unitId, lessonId } = useParams()
+  const { levelId, lessonId } = useParams()
   const navigate = useNavigate()
   const { state, completeLesson } = useProgress()
 
-  const lesson = useMemo(() => getLesson(unitId, lessonId), [unitId, lessonId])
+  const lesson = useMemo(() => getLesson(levelId, lessonId), [levelId, lessonId])
   const exercises = useMemo(() => (lesson ? generateExercises(lesson) : []), [lesson])
 
   const [finished, setFinished] = useState(null) // { perfect, xpGained, newAchievements }
@@ -47,7 +48,7 @@ export default function LessonPage() {
       useHearts
       onOutOfHearts={() => setOutOfHearts(true)}
       onFinish={({ perfect }) => {
-        const result = completeLesson(lesson.unit.id, lesson.index, perfect)
+        const result = completeLesson(lesson.level.id, lesson.index, perfect)
         playFanfare()
         setFinished({ perfect, xpGained: result.xpGained, newAchievements: result.newAchievements })
       }}
@@ -61,9 +62,8 @@ function OutOfHeartsScreen() {
       <div className="animate-pop-in text-7xl">💔</div>
       <h1 className="text-2xl font-extrabold">נגמרו הלבבות!</h1>
       <p className="max-w-sm font-bold text-duo-muted">
-        לב חוזר כל 30 דקות, או שאפשר לתרגל טעויות ולהרוויח לב מיד 💪
+        לב חוזר כל {HEART_REGEN_MINUTES} דקות — קח הפסקה קצרה ותחזור חזק 💪
       </p>
-      <Link to="/practice"><Button variant="blue">לתרגול שמחזיר לב</Button></Link>
       <Link to="/"><Button variant="white">חזרה למפה</Button></Link>
     </div>
   )
@@ -78,7 +78,7 @@ function FinishScreen({ lesson, finished, onContinue }) {
         {finished.perfect ? 'שיעור מושלם!' : 'כל הכבוד!'}
       </h1>
       <p className="text-lg font-bold text-duo-muted">
-        סיימת את {lesson.title} ביחידה "{lesson.unit.title}"
+        סיימת את {lesson.title} ברמה {lesson.levelIndex + 1} — "{lesson.level.title}"
       </p>
 
       <div className="flex gap-4">

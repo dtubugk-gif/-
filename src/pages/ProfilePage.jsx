@@ -2,20 +2,21 @@
 
 import { Link } from 'react-router-dom'
 import { useProgress } from '../hooks/useProgress'
-import { ACHIEVEMENTS, levelName, isLessonCompleted } from '../lib/progress'
-import { UNITS, LESSONS_PER_UNIT } from '../data/course'
+import { ACHIEVEMENTS, levelName, isLessonCompleted, currentLevel } from '../lib/progress'
+import { LEVELS, LESSONS_PER_LEVEL } from '../data/course'
 
 const GOALS = [10, 30, 50, 100]
 
 export default function ProfilePage() {
   const { state, setDailyGoal } = useProgress()
 
-  const lessonsDone = UNITS.reduce((sum, u) => {
+  const lessonsDone = LEVELS.reduce((sum, l) => {
     let c = 0
-    for (let i = 0; i < LESSONS_PER_UNIT; i++) if (isLessonCompleted(state, u.id, i)) c++
+    for (let i = 0; i < LESSONS_PER_LEVEL; i++) if (isLessonCompleted(state, l.id, i)) c++
     return sum + c
   }, 0)
-  const totalLessonCount = UNITS.length * LESSONS_PER_UNIT
+  const totalLessonCount = LEVELS.length * LESSONS_PER_LEVEL
+  const level = currentLevel(state)
 
   const stats = [
     { icon: '🔥', label: 'רצף ימים', value: state.streak, color: 'text-duo-orange' },
@@ -32,7 +33,7 @@ export default function ProfilePage() {
           <h1 className="text-2xl font-extrabold">הפרופיל שלי</h1>
           <p className="font-bold text-duo-muted">לומד/ת אנגלית 🇬🇧</p>
           <span className="mt-1 inline-block rounded-full bg-duo-blue px-3 py-0.5 text-sm font-extrabold text-white">
-            🏅 רמה: {levelName(state.profile?.placementLevel || 1)}
+            🏅 רמה {level}/7 · {levelName(level)}
           </span>
         </div>
       </div>

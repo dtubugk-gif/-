@@ -2,16 +2,13 @@
 
 import { NavLink, Outlet } from 'react-router-dom'
 import TopBar from './TopBar'
-import { useProgress } from '../hooks/useProgress'
 
 const NAV = [
   { to: '/', icon: '🏠', label: 'למידה' },
-  { to: '/practice', icon: '💪', label: 'תרגול' },
   { to: '/profile', icon: '👤', label: 'פרופיל' },
 ]
 
 export default function Layout() {
-  const { state } = useProgress()
   return (
     <div className="flex min-h-screen flex-col bg-white">
       <TopBar />
@@ -32,11 +29,6 @@ export default function Layout() {
             >
               <span className="text-2xl">{item.icon}</span>
               <span>{item.label}</span>
-              {item.to === '/practice' && state.mistakes.length > 0 && (
-                <span className="absolute top-1 right-[calc(50%-24px)] flex h-5 min-w-5 items-center justify-center rounded-full bg-duo-red px-1 text-[10px] text-white">
-                  {state.mistakes.length}
-                </span>
-              )}
             </NavLink>
           ))}
         </div>

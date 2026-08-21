@@ -1,6 +1,6 @@
 // ניהול התקדמות ב-localStorage: XP, רצף, לבבות, כתרים, טעויות והישגים.
 
-import { UNITS, LESSONS_PER_UNIT, lessonKey } from '../data/course'
+import { LEVELS, LESSONS_PER_LEVEL, lessonKey } from '../data/course'
 
 const STORAGE_KEY = 'linguago-progress-v1'
 
@@ -31,7 +31,6 @@ function defaultState() {
     achievements: [], // achievement ids
     totalLessons: 0,
     perfectLessons: 0,
-    practiceSessions: 0,
   }
 }
 
@@ -121,9 +120,9 @@ function bumpStreakAndXp(next, xpGained) {
 }
 
 // סיום שיעור: מחזיר { state, xpGained, newAchievements }
-export function completeLesson(state, unitId, lessonIndex, perfect) {
+export function completeLesson(state, levelId, lessonIndex, perfect) {
   const next = { ...state, lessons: { ...state.lessons } }
-  const key = lessonKey(unitId, lessonIndex)
+  const key = lessonKey(levelId, lessonIndex)
   const prev = next.lessons[key] || { crowns: 0 }
   next.lessons[key] = { crowns: Math.min(MAX_CROWNS, prev.crowns + 1) }
   next.totalLessons += 1
@@ -135,20 +134,6 @@ export function completeLesson(state, unitId, lessonIndex, perfect) {
   const newAchievements = checkAchievements(next)
   saveState(next)
   return { state: next, xpGained, newAchievements }
-}
-
-// סיום תרגול טעויות: XP קטן + החזרת לב
-export function completePractice(state) {
-  const next = { ...state }
-  next.practiceSessions += 1
-  bumpStreakAndXp(next, 5)
-  if (next.hearts < MAX_HEARTS) {
-    if (next.hearts === MAX_HEARTS - 1) next.lastHeartTime = Date.now()
-    next.hearts += 1
-  }
-  const newAchievements = checkAchievements(next)
-  saveState(next)
-  return { state: next, xpGained: 5, newAchievements }
 }
 
 export function setDailyGoal(state, goal) {
@@ -173,41 +158,46 @@ export function saveProfile(state, { goal, selfLevel, placementLevel, dailyGoal 
   return next
 }
 
-export function levelName(placementLevel) {
-  if (placementLevel <= 1) return 'מתחיל'
-  if (placementLevel <= 3) return 'בסיסי'
-  if (placementLevel <= 5) return 'בינוני'
-  if (placementLevel <= 7) return 'מתקדם'
-  return 'מצטיין'
+export function levelName(level) {
+  const names = ['מתחיל', 'בסיסי', 'טרום-בינוני', 'בינוני', 'בינוני-גבוה', 'מתקדם', 'שולט']
+  return names[Math.min(Math.max(level, 1), 7) - 1]
 }
 
-export function getCrowns(state, unitId, lessonIndex) {
-  return state.lessons[lessonKey(unitId, lessonIndex)]?.crowns || 0
+export function getCrowns(state, levelId, lessonIndex) {
+  return state.lessons[lessonKey(levelId, lessonIndex)]?.crowns || 0
 }
 
-export function isLessonCompleted(state, unitId, lessonIndex) {
-  return getCrowns(state, unitId, lessonIndex) > 0
+export function isLessonCompleted(state, levelId, lessonIndex) {
+  return getCrowns(state, levelId, lessonIndex) > 0
 }
 
-export function isUnitCompleted(state, unitId) {
-  for (let i = 0; i < LESSONS_PER_UNIT; i++) {
-    if (!isLessonCompleted(state, unitId, i)) return false
+export function isLevelCompleted(state, levelId) {
+  for (let i = 0; i < LESSONS_PER_LEVEL; i++) {
+    if (!isLessonCompleted(state, levelId, i)) return false
   }
   return true
 }
 
-// יחידה פתוחה אם היא הראשונה, אם מבחן הרמה פתח אותה, או שהקודמת הושלמה
-export function isUnitUnlocked(state, unitIndex) {
-  if (unitIndex === 0) return true
-  if (unitIndex < (state.profile?.placementLevel || 1)) return true
-  return isUnitCompleted(state, UNITS[unitIndex - 1].id)
+// רמה פתוחה אם היא הראשונה, אם מבחן הרמה פתח אותה, או שהקודמת הושלמה
+export function isLevelUnlocked(state, levelIndex) {
+  if (levelIndex === 0) return true
+  if (levelIndex < (state.profile?.placementLevel || 1)) return true
+  return isLevelCompleted(state, LEVELS[levelIndex - 1].id)
 }
 
-// שיעור פתוח אם היחידה פתוחה והשיעור הקודם בה הושלם
-export function isLessonUnlocked(state, unitIndex, lessonIndex) {
-  if (!isUnitUnlocked(state, unitIndex)) return false
+// שיעור פתוח אם הרמה פתוחה והשיעור הקודם בה הושלם
+export function isLessonUnlocked(state, levelIndex, lessonIndex) {
+  if (!isLevelUnlocked(state, levelIndex)) return false
   if (lessonIndex === 0) return true
-  return isLessonCompleted(state, UNITS[unitIndex].id, lessonIndex - 1)
+  return isLessonCompleted(state, LEVELS[levelIndex].id, lessonIndex - 1)
+}
+
+// הרמה הנוכחית של המשתמש: הרמה הפתוחה הגבוהה ביותר שעוד לא הושלמה
+export function currentLevel(state) {
+  for (let i = LEVELS.length - 1; i >= 0; i--) {
+    if (isLevelUnlocked(state, i) && !isLevelCompleted(state, LEVELS[i].id)) return i + 1
+  }
+  return LEVELS.length
 }
 
 export const ACHIEVEMENTS = [
@@ -219,13 +209,13 @@ export const ACHIEVEMENTS = [
   { id: 'streak-7', icon: '🌋', title: 'שבוע בוער', desc: 'רצף של 7 ימים', check: (s) => s.streak >= 7 },
   { id: 'xp-100', icon: '⭐', title: 'כוכב עולה', desc: 'צברת 100 XP', check: (s) => s.xp >= 100 },
   { id: 'xp-500', icon: '🌟', title: 'סופרסטאר', desc: 'צברת 500 XP', check: (s) => s.xp >= 500 },
-  { id: 'unit-done', icon: '👑', title: 'כובש יחידות', desc: 'השלמת יחידה שלמה', check: (s) => UNITS.some((u) => isUnitCompletedRaw(s, u.id)) },
-  { id: 'practice-5', icon: '💪', title: 'אלוף התרגול', desc: '5 אימוני חזרה על טעויות', check: (s) => s.practiceSessions >= 5 },
+  { id: 'level-done', icon: '👑', title: 'כובש רמות', desc: 'השלמת רמה שלמה', check: (s) => LEVELS.some((l) => isLevelCompletedRaw(s, l.id)) },
+  { id: 'three-levels', icon: '🏔️', title: 'מטפס', desc: 'השלמת 3 רמות', check: (s) => LEVELS.filter((l) => isLevelCompletedRaw(s, l.id)).length >= 3 },
 ]
 
-function isUnitCompletedRaw(state, unitId) {
-  for (let i = 0; i < LESSONS_PER_UNIT; i++) {
-    if (!(state.lessons[lessonKey(unitId, i)]?.crowns > 0)) return false
+function isLevelCompletedRaw(state, levelId) {
+  for (let i = 0; i < LESSONS_PER_LEVEL; i++) {
+    if (!(state.lessons[lessonKey(levelId, i)]?.crowns > 0)) return false
   }
   return true
 }

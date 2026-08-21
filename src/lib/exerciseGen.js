@@ -1,4 +1,5 @@
-// מחולל תרגילים: בונה רשימת תרגילים מעורבת מתוכן שיעור.
+// מחולל תרגילים: בונה רשימת תרגילים מעורבת משיעור, עם תמהיל שמשתנה לפי רמה —
+// רמות נמוכות מקבלות יותר בחירה מרובה, רמות גבוהות יותר הקלדה ובניית משפטים.
 
 import { ALL_WORDS } from '../data/course'
 
@@ -68,53 +69,39 @@ function makeMatchPairs(words) {
   return { type: 'matchPairs', pairs: words.slice(0, 5) }
 }
 
-// בונה ~10 תרגילים משיעור { words, sentences }
-export function generateExercises({ words, sentences }) {
+// תמהיל תרגילים לפי קושי הרמה (0-6)
+function mixForDifficulty(d) {
+  if (d <= 1) return { mc: 4, listen: 2, type: 1, build: 1, match: 1 } // מתחילים: זיהוי בעיקר
+  if (d <= 4) return { mc: 3, listen: 2, type: 2, build: 2, match: 1 } // ביניים: מאוזן
+  return { mc: 1, listen: 2, type: 3, build: 3, match: 1 } // מתקדמים: שליפה אקטיבית
+}
+
+// בונה ~10 תרגילים משיעור { words, sentences, difficulty }
+export function generateExercises({ words, sentences, difficulty = 0 }) {
+  const mix = mixForDifficulty(difficulty)
   const exercises = []
   const pool = words
-  const shuffledWords = shuffle(words)
 
-  // בחירה מרובה לכל מילה (לסירוגין בשני הכיוונים)
-  shuffledWords.slice(0, 4).forEach((w, i) => {
+  shuffle(words).slice(0, mix.mc).forEach((w, i) => {
     exercises.push(makeMultipleChoice(w, pool, i % 2 === 0 ? 'en2he' : 'he2en'))
   })
-
-  // האזנה
-  shuffle(words).slice(0, 2).forEach((w) => exercises.push(makeListening(w, pool)))
-
-  // הקלדת תרגום
-  shuffle(words).slice(0, 2).forEach((w) => exercises.push(makeTypeTranslation(w)))
-
-  // בניית משפטים
-  shuffle(sentences).slice(0, 2).forEach((s) => exercises.push(makeSentenceBuild(s, pool)))
-
-  // התאמת זוגות (אם יש מספיק מילים)
-  if (words.length >= 5) exercises.push(makeMatchPairs(shuffle(words)))
+  shuffle(words).slice(0, mix.listen).forEach((w) => exercises.push(makeListening(w, pool)))
+  shuffle(words).slice(0, mix.type).forEach((w) => exercises.push(makeTypeTranslation(w)))
+  shuffle(sentences).slice(0, mix.build).forEach((s) => exercises.push(makeSentenceBuild(s, pool)))
+  if (mix.match && words.length >= 5) exercises.push(makeMatchPairs(shuffle(words)))
 
   return shuffle(exercises)
 }
 
-// תרגול טעויות: תרגילים קלים ממוקדים במילים שטעו בהן
-export function generatePracticeExercises(mistakes) {
-  const exercises = []
-  const pool = mistakes.length >= 4 ? mistakes : ALL_WORDS
-  for (const w of shuffle(mistakes).slice(0, 6)) {
-    exercises.push(makeMultipleChoice(w, pool, Math.random() > 0.5 ? 'en2he' : 'he2en'))
-    exercises.push(makeTypeTranslation(w))
-  }
-  if (mistakes.length >= 5) exercises.push(makeMatchPairs(shuffle(mistakes)))
-  return shuffle(exercises).slice(0, 10)
-}
-
-// שאלת מבחן רמה: בחירה מרובה ממילות יחידה מסוימת (הקושי עולה עם האינדקס)
-export function makePlacementQuestion(unit) {
-  const word = shuffle(unit.words)[0]
+// שאלת מבחן רמה: בחירה מרובה ממילות רמה מסוימת (הקושי עולה עם האינדקס)
+export function makePlacementQuestion(level) {
+  const word = shuffle(level.words)[0]
   const direction = Math.random() > 0.5 ? 'en2he' : 'he2en'
   return {
     type: 'multipleChoice',
     direction,
     word,
-    options: shuffle([word, ...pickDistractors(word, unit.words, 3)]),
+    options: shuffle([word, ...pickDistractors(word, level.words, 3)]),
   }
 }
 

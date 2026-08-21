@@ -1,8 +1,8 @@
-// מסלול מותאם אישית: שאלון היכרות + מבחן רמה אדפטיבי שקובע אילו יחידות ייפתחו.
+// מסלול מותאם אישית: שאלון היכרות + מבחן רמה אדפטיבי שקובע באיזו רמה מתחילים.
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { UNITS } from '../data/course'
+import { LEVELS } from '../data/course'
 import { makePlacementQuestion } from '../lib/exerciseGen'
 import { levelName } from '../lib/progress'
 import { useProgress } from '../hooks/useProgress'
@@ -18,7 +18,7 @@ const GOALS = [
   { id: 'fun', icon: '🎉', label: 'בשביל הכיף' },
 ]
 
-const LEVELS = [
+const SELF_LEVELS = [
   { id: 'zero', icon: '🌱', label: 'מתחיל מאפס', desc: 'אני לא יודע כמעט כלום' },
   { id: 'some', icon: '🌿', label: 'יודע קצת', desc: 'מילים בסיסיות פה ושם' },
   { id: 'confident', icon: '🌳', label: 'מסתדר', desc: 'מבין ומרכיב משפטים פשוטים' },
@@ -30,8 +30,8 @@ const COMMITMENTS = [
   { id: 50, icon: '🔥', label: '15+ דקות ביום', desc: 'תותח' },
 ]
 
-// כמה שאלות לכל יחידה במבחן הרמה
-const QUESTIONS_PER_UNIT = 2
+// כמה שאלות לכל רמה במבחן
+const QUESTIONS_PER_LEVEL = 2
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
@@ -95,7 +95,7 @@ export default function OnboardingPage() {
 
       {step === 'selfLevel' && (
         <QuestionScreen title="כמה אנגלית אתה כבר יודע? 📊" progress={2}>
-          {LEVELS.map((l) => (
+          {SELF_LEVELS.map((l) => (
             <ChoiceCard key={l.id} icon={l.icon} label={l.label} desc={l.desc} selected={selfLevel === l.id}
               onClick={() => { setSelfLevel(l.id); setStep('commitment') }} />
           ))}
@@ -124,17 +124,17 @@ export default function OnboardingPage() {
           <Confetti count={30} />
           <div className="animate-pop-in text-8xl">🏅</div>
           <h1 className="text-3xl font-extrabold text-duo-green">
-            הרמה שלך: {levelName(result.placementLevel)}
+            רמה {result.placementLevel}/7 · {levelName(result.placementLevel)}
           </h1>
           <p className="max-w-sm text-lg font-bold text-duo-muted">
             {result.placementLevel > 1
-              ? `מעולה! פתחנו לך את ${result.placementLevel} היחידות הראשונות — אפשר לדלג קדימה או לחזק את הבסיס.`
+              ? `מעולה! אתה מתחיל ברמה ${result.placementLevel} מתוך 7 — הרמות שמתחתיה פתוחות לחיזוק הבסיס.`
               : 'נתחיל מהיסודות ונבנה בסיס חזק, צעד אחר צעד.'}
           </p>
           <div className="flex flex-wrap justify-center gap-2">
-            {UNITS.slice(0, result.placementLevel).map((u) => (
-              <span key={u.id} className="rounded-full px-3 py-1 text-sm font-extrabold text-white" style={{ backgroundColor: u.color }}>
-                {u.icon} {u.title}
+            {LEVELS.slice(0, result.placementLevel).map((l, i) => (
+              <span key={l.id} className="rounded-full px-3 py-1 text-sm font-extrabold text-white" style={{ backgroundColor: l.color }}>
+                רמה {i + 1} · {l.icon} {l.title}
               </span>
             ))}
           </div>
@@ -149,13 +149,13 @@ function PlacementTest({ startUnit, onFinish, onSkip }) {
   const [unitIndex, setUnitIndex] = useState(startUnit)
   const [qInUnit, setQInUnit] = useState(0)
   const [correctInUnit, setCorrectInUnit] = useState(0)
-  const [lastPassed, setLastPassed] = useState(-1) // רק יחידות שנבחנו בפועל
-  const [failedMin, setFailedMin] = useState(null) // היחידה הנמוכה ביותר שנכשלו בה
+  const [lastPassed, setLastPassed] = useState(-1) // רק רמות שנבחנו בפועל
+  const [failedMin, setFailedMin] = useState(null) // הרמה הנמוכה ביותר שנכשלו בה
   const [asked, setAsked] = useState(0)
-  const [question, setQuestion] = useState(() => makePlacementQuestion(UNITS[startUnit]))
+  const [question, setQuestion] = useState(() => makePlacementQuestion(LEVELS[startUnit]))
   const [picked, setPicked] = useState(null) // האפשרות שנבחרה (אחרי בחירה יש משוב קצר)
 
-  const maxQuestions = QUESTIONS_PER_UNIT * (UNITS.length - startUnit)
+  const maxQuestions = QUESTIONS_PER_LEVEL * (LEVELS.length - startUnit)
 
   function pick(opt) {
     if (picked) return
@@ -170,35 +170,35 @@ function PlacementTest({ startUnit, onFinish, onSkip }) {
       setAsked((a) => a + 1)
       setPicked(null)
 
-      if (nQ < QUESTIONS_PER_UNIT) {
+      if (nQ < QUESTIONS_PER_LEVEL) {
         setQInUnit(nQ)
         setCorrectInUnit(nCorrect)
-        setQuestion(makePlacementQuestion(UNITS[unitIndex]))
+        setQuestion(makePlacementQuestion(LEVELS[unitIndex]))
         return
       }
-      // סיימנו יחידה — מחליטים לאן ממשיכים (אדפטיבי לשני הכיוונים)
+      // סיימנו רמה — מחליטים לאן ממשיכים (אדפטיבי לשני הכיוונים)
       const moveTo = (idx) => {
         setUnitIndex(idx)
         setQInUnit(0)
         setCorrectInUnit(0)
-        setQuestion(makePlacementQuestion(UNITS[idx]))
+        setQuestion(makePlacementQuestion(LEVELS[idx]))
       }
 
       if (nCorrect >= 1) {
-        // עבר את היחידה
+        // עבר את הרמה
         const next = unitIndex + 1
-        if (next >= UNITS.length || (failedMin !== null && next >= failedMin)) {
-          onFinish(Math.min(UNITS.length, unitIndex + 2))
+        if (next >= LEVELS.length || (failedMin !== null && next >= failedMin)) {
+          onFinish(Math.min(LEVELS.length, unitIndex + 2))
           return
         }
         setLastPassed(unitIndex)
         moveTo(next)
       } else {
-        // נכשל ביחידה
+        // נכשל ברמה
         setFailedMin((f) => (f === null ? unitIndex : Math.min(f, unitIndex)))
         if (lastPassed >= 0) {
           // כבר הוכיח רמה קודמת — מסיימים לפיה
-          onFinish(Math.max(1, Math.min(UNITS.length, lastPassed + 2)))
+          onFinish(Math.max(1, Math.min(LEVELS.length, lastPassed + 2)))
         } else if (unitIndex > 1) {
           // עוד לא עבר כלום — יורדים לבדוק רמה נמוכה יותר
           moveTo(unitIndex - 1)
