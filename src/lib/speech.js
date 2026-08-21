@@ -1,6 +1,17 @@
-// השמעת אנגלית עם Web Speech API + צלילי משוב עם WebAudio.
+// השמעת אנגלית: TTS נייטיבי באפליקציית אנדרואיד (WebView לא תומך ב-Web Speech API),
+// ו-Web Speech API בדפדפן. צלילי משוב עם WebAudio.
+
+import { Capacitor } from '@capacitor/core'
+import { TextToSpeech } from '@capacitor-community/text-to-speech'
+
+const isNative = Capacitor.isNativePlatform()
 
 export function speak(text, rate = 0.9) {
+  if (isNative) {
+    TextToSpeech.stop().catch(() => {})
+    TextToSpeech.speak({ text, lang: 'en-US', rate, category: 'playback' }).catch(() => {})
+    return
+  }
   try {
     if (!('speechSynthesis' in window)) return
     window.speechSynthesis.cancel()
@@ -23,6 +34,8 @@ function ctx() {
     if (!AC) return null
     audioCtx = new AC()
   }
+  // דפדפנים משעים את ה-AudioContext עד אינטראקציית משתמש — מעירים אותו
+  if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
   return audioCtx
 }
 

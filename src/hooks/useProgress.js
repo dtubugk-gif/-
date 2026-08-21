@@ -24,6 +24,7 @@ export function useProgressProvider() {
   const addMistakes = useCallback((words) => apply(P.addMistakes(stateRef.current, words)), [apply])
   const clearMistakes = useCallback((ens) => apply(P.clearMistakes(stateRef.current, ens)), [apply])
   const setDailyGoal = useCallback((goal) => apply(P.setDailyGoal(stateRef.current, goal)), [apply])
+  const saveProfile = useCallback((profile) => apply(P.saveProfile(stateRef.current, profile)), [apply])
 
   const completeLesson = useCallback(
     (unitId, lessonIndex, perfect) => {
@@ -47,6 +48,7 @@ export function useProgressProvider() {
     addMistakes,
     clearMistakes,
     setDailyGoal,
+    saveProfile,
     completeLesson,
     completePractice,
   }

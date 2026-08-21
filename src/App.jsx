@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage'
 import LessonPage from './pages/LessonPage'
 import PracticePage from './pages/PracticePage'
 import ProfilePage from './pages/ProfilePage'
+import OnboardingPage from './pages/OnboardingPage'
 import NotFoundPage from './pages/NotFoundPage'
 import { ProgressContext, useProgressProvider } from './hooks/useProgress'
 
@@ -18,8 +19,9 @@ export default function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
-        {/* שיעור במסך מלא, בלי ניווט */}
+        {/* מסכים מלאים, בלי ניווט תחתון */}
         <Route path="/lesson/:unitId/:lessonId" element={<LessonPage />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
       </Routes>
     </ProgressContext.Provider>
   )

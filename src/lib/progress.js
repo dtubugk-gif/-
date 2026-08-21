@@ -17,6 +17,7 @@ function todayStr() {
 
 function defaultState() {
   return {
+    profile: { done: false, goal: null, selfLevel: null, placementLevel: 1 },
     xp: 0,
     streak: 0,
     lastActiveDate: null,
@@ -156,6 +157,30 @@ export function setDailyGoal(state, goal) {
   return next
 }
 
+// שמירת פרופיל מהשאלון + מבחן הרמה. ברמה חוזרת — שומרים את הגבוהה מביניהן.
+export function saveProfile(state, { goal, selfLevel, placementLevel, dailyGoal }) {
+  const next = {
+    ...state,
+    profile: {
+      done: true,
+      goal: goal ?? state.profile?.goal ?? null,
+      selfLevel: selfLevel ?? state.profile?.selfLevel ?? null,
+      placementLevel: Math.max(placementLevel || 1, state.profile?.placementLevel || 1),
+    },
+  }
+  if (dailyGoal) next.dailyGoal = dailyGoal
+  saveState(next)
+  return next
+}
+
+export function levelName(placementLevel) {
+  if (placementLevel <= 1) return 'מתחיל'
+  if (placementLevel <= 3) return 'בסיסי'
+  if (placementLevel <= 5) return 'בינוני'
+  if (placementLevel <= 7) return 'מתקדם'
+  return 'מצטיין'
+}
+
 export function getCrowns(state, unitId, lessonIndex) {
   return state.lessons[lessonKey(unitId, lessonIndex)]?.crowns || 0
 }
@@ -171,9 +196,10 @@ export function isUnitCompleted(state, unitId) {
   return true
 }
 
-// יחידה פתוחה אם היא הראשונה או שהקודמת הושלמה
+// יחידה פתוחה אם היא הראשונה, אם מבחן הרמה פתח אותה, או שהקודמת הושלמה
 export function isUnitUnlocked(state, unitIndex) {
   if (unitIndex === 0) return true
+  if (unitIndex < (state.profile?.placementLevel || 1)) return true
   return isUnitCompleted(state, UNITS[unitIndex - 1].id)
 }
 

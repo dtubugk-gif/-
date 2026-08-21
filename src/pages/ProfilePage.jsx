@@ -1,9 +1,9 @@
 // עמוד פרופיל: סטטיסטיקות, יעד יומי והישגים.
 
+import { Link } from 'react-router-dom'
 import { useProgress } from '../hooks/useProgress'
-import { ACHIEVEMENTS } from '../lib/progress'
+import { ACHIEVEMENTS, levelName, isLessonCompleted } from '../lib/progress'
 import { UNITS, LESSONS_PER_UNIT } from '../data/course'
-import { isLessonCompleted } from '../lib/progress'
 
 const GOALS = [10, 30, 50, 100]
 
@@ -31,8 +31,18 @@ export default function ProfilePage() {
         <div>
           <h1 className="text-2xl font-extrabold">הפרופיל שלי</h1>
           <p className="font-bold text-duo-muted">לומד/ת אנגלית 🇬🇧</p>
+          <span className="mt-1 inline-block rounded-full bg-duo-blue px-3 py-0.5 text-sm font-extrabold text-white">
+            🏅 רמה: {levelName(state.profile?.placementLevel || 1)}
+          </span>
         </div>
       </div>
+
+      <Link
+        to="/onboarding"
+        className="btn-3d mb-8 block rounded-2xl border-2 border-duo-blue-dark bg-duo-blue p-4 text-center font-extrabold text-white"
+      >
+        🧭 מבחן רמה מחדש — עדכן את המסלול שלך
+      </Link>
 
       <div className="mb-8 grid grid-cols-2 gap-3">
         {stats.map((s) => (

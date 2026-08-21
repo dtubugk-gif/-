@@ -106,6 +106,18 @@ export function generatePracticeExercises(mistakes) {
   return shuffle(exercises).slice(0, 10)
 }
 
+// שאלת מבחן רמה: בחירה מרובה ממילות יחידה מסוימת (הקושי עולה עם האינדקס)
+export function makePlacementQuestion(unit) {
+  const word = shuffle(unit.words)[0]
+  const direction = Math.random() > 0.5 ? 'en2he' : 'he2en'
+  return {
+    type: 'multipleChoice',
+    direction,
+    word,
+    options: shuffle([word, ...pickDistractors(word, unit.words, 3)]),
+  }
+}
+
 // המילים שנבדקות בתרגיל — לרישום טעויות
 export function exerciseWords(exercise) {
   switch (exercise.type) {

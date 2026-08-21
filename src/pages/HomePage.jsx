@@ -1,5 +1,6 @@
 // מפת הלמידה: שביל יחידות ושיעורים בסגנון דואלינגו.
 
+import { Navigate } from 'react-router-dom'
 import { UNITS, LESSONS_PER_UNIT } from '../data/course'
 import { useProgress } from '../hooks/useProgress'
 import { getCrowns, isLessonUnlocked, isUnitUnlocked } from '../lib/progress'
@@ -11,6 +12,11 @@ const OFFSETS = [0, -55, 0, 55]
 
 export default function HomePage() {
   const { state } = useProgress()
+
+  // כניסה ראשונה — בניית מסלול מותאם אישית
+  if (!state.profile?.done) {
+    return <Navigate to="/onboarding" replace />
+  }
 
   return (
     <div>
