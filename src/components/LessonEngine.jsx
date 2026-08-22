@@ -1,10 +1,11 @@
-// מנוע התרגול: מציג תרגילים בזה אחר זה, בודק תשובות, מנהל לבבות,
+// מנוע התרגול: מציג תרגילים בזה אחר זה, בודק תשובות,
 // מחזיר תרגילים שגויים לסוף התור (כמו דואלינגו) ומדווח על סיום.
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Button from './Button'
 import ProgressBar from './ProgressBar'
+import TeachCard from './exercises/TeachCard'
 import MultipleChoice from './exercises/MultipleChoice'
 import Listening from './exercises/Listening'
 import TypeTranslation from './exercises/TypeTranslation'
@@ -16,6 +17,7 @@ import { playCorrect, playWrong, speak } from '../lib/speech'
 import { useProgress } from '../hooks/useProgress'
 
 const EXERCISE_COMPONENTS = {
+  teach: TeachCard,
   multipleChoice: MultipleChoice,
   listening: Listening,
   typeTranslation: TypeTranslation,
@@ -23,9 +25,12 @@ const EXERCISE_COMPONENTS = {
   matchPairs: MatchPairs,
 }
 
-export default function LessonEngine({ exercises: initialExercises, useHearts = true, onFinish, onOutOfHearts }) {
+// מחמאות מתחלפות — כיף גם לילדים
+const PRAISES = ['מעולה! תשובה נכונה 🎉', 'איזה אלוף! 🌟', 'מדהים! ממשיכים ככה 🚀', 'בול! 🎯', 'וואו, יפה מאוד! 👏', 'נכון מאוד! 💪']
+
+export default function LessonEngine({ exercises: initialExercises, onFinish }) {
   const navigate = useNavigate()
-  const { state, loseHeart, addMistakes } = useProgress()
+  const { addMistakes } = useProgress()
 
   const [queue, setQueue] = useState(initialExercises)
   const [current, setCurrent] = useState(0)
@@ -40,9 +45,21 @@ export default function LessonEngine({ exercises: initialExercises, useHearts = 
   const total = queue.length
   const Component = exercise ? EXERCISE_COMPONENTS[exercise.type] : null
 
+  // כרטיסיית לימוד: אין בדיקה — פשוט ממשיכים הלאה
+  function handleTeachContinue() {
+    setTotalDone((d) => d + 1)
+    setAnswer(null)
+    if (current + 1 >= queue.length) {
+      onFinish({ perfect: !hadMistake, wrongWords })
+    } else {
+      setCurrent((c) => c + 1)
+    }
+  }
+
   function handleCheck() {
     const result = checkAnswer(exercise, answer)
-    // טעויות בהתאמת זוגות נרשמות לתרגול אבל לא עולות לב
+    result.praise = PRAISES[Math.floor(Math.random() * PRAISES.length)]
+    // טעויות בהתאמת זוגות נרשמות אבל לא נחשבות טעות בשיעור
     if (exercise.type === 'matchPairs' && answer?.wrongWords?.length) {
       addMistakes(answer.wrongWords)
       setWrongWords((w) => [...w, ...answer.wrongWords])
@@ -57,16 +74,11 @@ export default function LessonEngine({ exercises: initialExercises, useHearts = 
       const words = exerciseWords(exercise)
       addMistakes(words)
       setWrongWords((w) => [...w, ...words])
-      if (useHearts) loseHeart()
     }
   }
 
   function handleContinue() {
     const wasCorrect = lastResult?.correct
-    if (!wasCorrect && useHearts && state.hearts <= 0) {
-      onOutOfHearts?.()
-      return
-    }
     let nextQueue = queue
     if (!wasCorrect) {
       // מחזירים את התרגיל לסוף התור עד שעונים נכון
@@ -89,7 +101,7 @@ export default function LessonEngine({ exercises: initialExercises, useHearts = 
 
   return (
     <div className="mx-auto flex min-h-screen max-w-2xl flex-col px-4">
-      {/* פס עליון: יציאה + התקדמות + לבבות */}
+      {/* פס עליון: יציאה + התקדמות */}
       <div className="flex items-center gap-3 py-4">
         <button
           type="button"
@@ -100,12 +112,6 @@ export default function LessonEngine({ exercises: initialExercises, useHearts = 
           ✕
         </button>
         <ProgressBar value={Math.min(totalDone, total)} max={total} className="flex-1" />
-        {useHearts && (
-          <div className="flex items-center gap-1 font-extrabold text-duo-red">
-            <span>❤️</span>
-            <span>{state.hearts}</span>
-          </div>
-        )}
       </div>
 
       <div className="flex-1 pb-40 pt-4">
@@ -124,16 +130,25 @@ export default function LessonEngine({ exercises: initialExercises, useHearts = 
         }`}
       >
         <div className="mx-auto flex max-w-2xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          {checked ? (
+          {exercise.type === 'teach' ? (
+            <>
+              <div className="hidden text-duo-muted sm:block" />
+              <Button variant="blue" onClick={handleTeachContinue} className="w-full sm:w-auto">
+                הבנתי, המשך
+              </Button>
+            </>
+          ) : checked ? (
             <>
               <div className="flex items-start gap-3">
-                <span className="text-3xl">{lastResult?.correct ? '✅' : '❌'}</span>
+                <span className="text-3xl">{lastResult?.correct ? (lastResult?.almost ? '🤏' : '✅') : '❌'}</span>
                 <div>
                   <div className={`text-lg font-extrabold ${lastResult?.correct ? 'text-duo-green-darker' : 'text-duo-red-dark'}`}>
-                    {lastResult?.correct ? 'מעולה! תשובה נכונה' : 'לא נורא, ננסה שוב בהמשך'}
+                    {lastResult?.correct
+                      ? lastResult?.almost ? 'כמעט מושלם! שים לב לאיות' : lastResult?.praise
+                      : 'לא נורא, ננסה שוב בהמשך'}
                   </div>
-                  {!lastResult?.correct && lastResult?.correctText && (
-                    <div className="font-bold text-duo-red-dark">
+                  {(!lastResult?.correct || lastResult?.almost) && lastResult?.correctText && (
+                    <div className={`font-bold ${lastResult?.correct ? 'text-duo-green-darker' : 'text-duo-red-dark'}`}>
                       התשובה הנכונה: <bdi dir="ltr">{lastResult.correctText}</bdi>{' '}
                       <button type="button" onClick={() => speak(lastResult.correctText)} title="השמע">🔊</button>
                     </div>

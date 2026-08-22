@@ -1,11 +1,11 @@
-// עמוד שיעור: מנוע התרגול + מסכי "נגמרו הלבבות" וסיום חגיגי.
+// עמוד שיעור: מנוע התרגול + מסך סיום חגיגי.
 
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { getLesson } from '../data/course'
 import { generateExercises } from '../lib/exerciseGen'
 import { useProgress } from '../hooks/useProgress'
-import { HEART_REGEN_MINUTES } from '../lib/progress'
+import { getCrowns } from '../lib/progress'
 import LessonEngine from '../components/LessonEngine'
 import Confetti from '../components/Confetti'
 import Button from '../components/Button'
@@ -17,12 +17,21 @@ export default function LessonPage() {
   const { state, completeLesson } = useProgress()
 
   const lesson = useMemo(() => getLesson(levelId, lessonId), [levelId, lessonId])
-  const exercises = useMemo(() => (lesson ? generateExercises(lesson) : []), [lesson])
+  // בפעם הראשונה מלמדים כל מילה לפני שבוחנים עליה; בשיעור חוזר או בשיעור
+  // "חזרה" (המילים כבר נלמדו בשיעורים הקודמים) ניגשים ישר לתרגול
+  const exercises = useMemo(
+    () =>
+      lesson
+        ? generateExercises({
+            ...lesson,
+            teach: !lesson.isReview && getCrowns(state, lesson.level.id, lesson.index) === 0,
+          })
+        : [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lesson]
+  )
 
   const [finished, setFinished] = useState(null) // { perfect, xpGained, newAchievements }
-  const [outOfHearts, setOutOfHearts] = useState(false)
-  // לבבות בכניסה לשיעור — כדי לא לזרוק החוצה באמצע שיעור לפני שראו משוב
-  const [enteredWithoutHearts] = useState(() => state.hearts <= 0)
 
   if (!lesson) {
     return (
@@ -34,10 +43,6 @@ export default function LessonPage() {
     )
   }
 
-  if (enteredWithoutHearts || outOfHearts) {
-    return <OutOfHeartsScreen />
-  }
-
   if (finished) {
     return <FinishScreen lesson={lesson} finished={finished} onContinue={() => navigate('/')} />
   }
@@ -45,27 +50,12 @@ export default function LessonPage() {
   return (
     <LessonEngine
       exercises={exercises}
-      useHearts
-      onOutOfHearts={() => setOutOfHearts(true)}
       onFinish={({ perfect }) => {
         const result = completeLesson(lesson.level.id, lesson.index, perfect)
         playFanfare()
         setFinished({ perfect, xpGained: result.xpGained, newAchievements: result.newAchievements })
       }}
     />
-  )
-}
-
-function OutOfHeartsScreen() {
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
-      <div className="animate-pop-in text-7xl">💔</div>
-      <h1 className="text-2xl font-extrabold">נגמרו הלבבות!</h1>
-      <p className="max-w-sm font-bold text-duo-muted">
-        לב חוזר כל {HEART_REGEN_MINUTES} דקות — קח הפסקה קצרה ותחזור חזק 💪
-      </p>
-      <Link to="/"><Button variant="white">חזרה למפה</Button></Link>
-    </div>
   )
 }
 

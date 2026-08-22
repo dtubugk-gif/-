@@ -1,10 +1,19 @@
 // תרגיל בחירה מרובה: תרגום מילה עם 4 אפשרויות.
 
+import { useEffect } from 'react'
 import { speak } from '../../lib/speech'
 
 export default function MultipleChoice({ exercise, answer, setAnswer, checked }) {
   const { word, options, direction } = exercise
   const en2he = direction === 'en2he'
+
+  // כמו בדואלינגו — המילה באנגלית מושמעת אוטומטית כשהתרגיל מופיע
+  useEffect(() => {
+    if (en2he) {
+      const t = setTimeout(() => speak(word.en), 400)
+      return () => clearTimeout(t)
+    }
+  }, [word.en, en2he])
 
   return (
     <div>

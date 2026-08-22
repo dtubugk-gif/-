@@ -69,28 +69,43 @@ function makeMatchPairs(words) {
   return { type: 'matchPairs', pairs: words.slice(0, 5) }
 }
 
-// תמהיל תרגילים לפי קושי הרמה (0-6)
-function mixForDifficulty(d) {
-  if (d <= 1) return { mc: 4, listen: 2, type: 1, build: 1, match: 1 } // מתחילים: זיהוי בעיקר
-  if (d <= 4) return { mc: 3, listen: 2, type: 2, build: 2, match: 1 } // ביניים: מאוזן
-  return { mc: 1, listen: 2, type: 3, build: 3, match: 1 } // מתקדמים: שליפה אקטיבית
+function makeTeachCard(word) {
+  return { type: 'teach', word }
 }
 
-// בונה ~10 תרגילים משיעור { words, sentences, difficulty }
-export function generateExercises({ words, sentences, difficulty = 0 }) {
-  const mix = mixForDifficulty(difficulty)
-  const exercises = []
+// תרגילי המשך לפי קושי הרמה (0-6) — אחרי שלב הלימוד וההיכרות
+function tailForDifficulty(d) {
+  if (d <= 1) return { listen: 1, type: 0, build: 1, match: 1 } // לילדים ומתחילים: בלי הקלדה
+  if (d <= 4) return { listen: 2, type: 1, build: 1, match: 1 } // ביניים: מאוזן
+  return { listen: 2, type: 2, build: 2, match: 1 } // מתקדמים: שליפה אקטיבית
+}
+
+// בונה שיעור בסגנון דואלינגו: קודם מלמדים כל מילה (כרטיסיית "מילה חדשה"),
+// מיד אחר כך בוחנים עליה בקלות, ובסוף מחזקים עם תרגילים מגוונים.
+// { words, sentences, difficulty, teach } — teach=false בשיעור חוזר (המילים כבר מוכרות).
+export function generateExercises({ words, sentences, difficulty = 0, teach = true }) {
   const pool = words
+  const focus = shuffle(words).slice(0, 4) // עד 4 מילים חדשות בשיעור — קצר וקליל
+  const exercises = []
 
-  shuffle(words).slice(0, mix.mc).forEach((w, i) => {
-    exercises.push(makeMultipleChoice(w, pool, i % 2 === 0 ? 'en2he' : 'he2en'))
-  })
-  shuffle(words).slice(0, mix.listen).forEach((w) => exercises.push(makeListening(w, pool)))
-  shuffle(words).slice(0, mix.type).forEach((w) => exercises.push(makeTypeTranslation(w)))
-  shuffle(sentences).slice(0, mix.build).forEach((s) => exercises.push(makeSentenceBuild(s, pool)))
-  if (mix.match && words.length >= 5) exercises.push(makeMatchPairs(shuffle(words)))
+  // שלב 1: לימוד ותרגול ראשוני בזוגות — מלמדים שתי מילים, בוחנים עליהן, וכן הלאה
+  for (let i = 0; i < focus.length; i += 2) {
+    const pair = focus.slice(i, i + 2)
+    if (teach) pair.forEach((w) => exercises.push(makeTeachCard(w)))
+    pair.forEach((w, j) => exercises.push(makeMultipleChoice(w, pool, j % 2 === 0 ? 'en2he' : 'he2en')))
+  }
 
-  return shuffle(exercises)
+  // שלב 2: חיזוק — תרגילים מגוונים לפי הרמה.
+  // בשיעור ראשון בוחנים רק מילים שנלמדו; בשיעור חוזר — מכל מילות השיעור.
+  const tested = teach ? focus : words
+  const tail = tailForDifficulty(difficulty)
+  const rest = []
+  shuffle(tested).slice(0, tail.listen).forEach((w) => rest.push(makeListening(w, pool)))
+  shuffle(tested).slice(0, tail.type).forEach((w) => rest.push(makeTypeTranslation(w)))
+  shuffle(sentences).slice(0, tail.build).forEach((s) => rest.push(makeSentenceBuild(s, pool)))
+  if (tail.match && tested.length >= 4) rest.push(makeMatchPairs(shuffle(tested)))
+
+  return [...exercises, ...shuffle(rest)]
 }
 
 // שאלת מבחן רמה: בחירה מרובה ממילות רמה מסוימת (הקושי עולה עם האינדקס)
@@ -108,6 +123,8 @@ export function makePlacementQuestion(level) {
 // המילים שנבדקות בתרגיל — לרישום טעויות
 export function exerciseWords(exercise) {
   switch (exercise.type) {
+    case 'teach':
+      return []
     case 'multipleChoice':
     case 'listening':
       return [exercise.word]

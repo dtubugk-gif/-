@@ -19,8 +19,6 @@ export function useProgressProvider() {
     return next
   }, [])
 
-  const loseHeart = useCallback(() => apply(P.loseHeart(stateRef.current)), [apply])
-  const refillHearts = useCallback(() => apply(P.refillHearts(stateRef.current)), [apply])
   const addMistakes = useCallback((words) => apply(P.addMistakes(stateRef.current, words)), [apply])
   const clearMistakes = useCallback((ens) => apply(P.clearMistakes(stateRef.current, ens)), [apply])
   const setDailyGoal = useCallback((goal) => apply(P.setDailyGoal(stateRef.current, goal)), [apply])
@@ -37,8 +35,6 @@ export function useProgressProvider() {
 
   return {
     state,
-    loseHeart,
-    refillHearts,
     addMistakes,
     clearMistakes,
     setDailyGoal,

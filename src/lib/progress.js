@@ -1,11 +1,9 @@
-// ניהול התקדמות ב-localStorage: XP, רצף, לבבות, כתרים, טעויות והישגים.
+// ניהול התקדמות ב-localStorage: XP, רצף, כתרים, טעויות והישגים.
 
 import { LEVELS, LESSONS_PER_LEVEL, lessonKey } from '../data/course'
 
 const STORAGE_KEY = 'linguago-progress-v1'
 
-export const MAX_HEARTS = 5
-export const HEART_REGEN_MINUTES = 30
 export const MAX_CROWNS = 3
 export const XP_PER_LESSON = 10
 export const XP_PERFECT_BONUS = 5
@@ -21,8 +19,6 @@ function defaultState() {
     xp: 0,
     streak: 0,
     lastActiveDate: null,
-    hearts: MAX_HEARTS,
-    lastHeartTime: Date.now(),
     dailyGoal: DEFAULT_DAILY_GOAL,
     xpTodayDate: todayStr(),
     xpToday: 0,
@@ -40,14 +36,6 @@ export function loadState() {
     state = { ...defaultState(), ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') }
   } catch {
     state = defaultState()
-  }
-  // חידוש לבבות לפי זמן שעבר
-  if (state.hearts < MAX_HEARTS) {
-    const regen = Math.floor((Date.now() - state.lastHeartTime) / (HEART_REGEN_MINUTES * 60 * 1000))
-    if (regen > 0) {
-      state.hearts = Math.min(MAX_HEARTS, state.hearts + regen)
-      state.lastHeartTime = state.hearts === MAX_HEARTS ? Date.now() : state.lastHeartTime + regen * HEART_REGEN_MINUTES * 60 * 1000
-    }
   }
   // איפוס XP יומי אם התחלף יום
   if (state.xpTodayDate !== todayStr()) {
@@ -68,20 +56,6 @@ export function saveState(state) {
 
 function daysBetween(a, b) {
   return Math.round((new Date(b) - new Date(a)) / (24 * 60 * 60 * 1000))
-}
-
-export function loseHeart(state) {
-  const next = { ...state }
-  if (next.hearts === MAX_HEARTS) next.lastHeartTime = Date.now()
-  next.hearts = Math.max(0, next.hearts - 1)
-  saveState(next)
-  return next
-}
-
-export function refillHearts(state) {
-  const next = { ...state, hearts: MAX_HEARTS, lastHeartTime: Date.now() }
-  saveState(next)
-  return next
 }
 
 export function addMistakes(state, words) {

@@ -1,7 +1,6 @@
-// פס עליון: רצף, XP ולבבות — מוצג בכל עמודי האפליקציה.
+// פס עליון: רצף ו-XP — מוצג בכל עמודי האפליקציה.
 
 import { useProgress } from '../hooks/useProgress'
-import { MAX_HEARTS } from '../lib/progress'
 
 export default function TopBar() {
   const { state } = useProgress()
@@ -20,12 +19,6 @@ export default function TopBar() {
           <div className="flex items-center gap-1" title="נקודות ניסיון">
             <span>⚡</span>
             <span className="text-duo-yellow-dark">{state.xp}</span>
-          </div>
-          <div className="flex items-center gap-1" title="לבבות">
-            <span>{state.hearts > 0 ? '❤️' : '💔'}</span>
-            <span className={state.hearts > 0 ? 'text-duo-red' : 'text-duo-muted'}>
-              {state.hearts}/{MAX_HEARTS}
-            </span>
           </div>
         </div>
       </div>
