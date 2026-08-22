@@ -240,7 +240,7 @@ export const LEVELS = [
   },
 ]
 
-export const LESSONS_PER_LEVEL = 4
+export const LESSONS_PER_LEVEL = 5
 
 // שיעור = פרוסה של אוצר המילים של הרמה + משפטים. השיעור האחרון הוא חזרה על הכול.
 export function getLesson(levelId, lessonIndex) {

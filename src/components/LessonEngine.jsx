@@ -26,7 +26,7 @@ const EXERCISE_COMPONENTS = {
 }
 
 // מחמאות מתחלפות — כיף גם לילדים
-const PRAISES = ['מעולה! תשובה נכונה 🎉', 'איזה אלוף! 🌟', 'מדהים! ממשיכים ככה 🚀', 'בול! 🎯', 'וואו, יפה מאוד! 👏', 'נכון מאוד! 💪']
+const PRAISES = ['כל הכבוד! 🎉', 'תשובה של אלופים! 🌟', 'מדהים! ממשיכים ככה 🚀', 'בול! 🎯', 'וואו, איזה יופי! 👏', 'נכון מאוד! 💪']
 
 export default function LessonEngine({ exercises: initialExercises, onFinish }) {
   const navigate = useNavigate()
@@ -81,8 +81,11 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
     const wasCorrect = lastResult?.correct
     let nextQueue = queue
     if (!wasCorrect) {
-      // מחזירים את התרגיל לסוף התור עד שעונים נכון
-      nextQueue = [...queue, exercise]
+      // מחזירים את התרגיל לסוף התור עד שעונים נכון,
+      // ולפניו כרטיס לימוד מחדש של המילה — כדי שלא ננסה שוב בלי הקשר
+      const word = exerciseWords(exercise)[0]
+      const reteach = word && exercise.type !== 'matchPairs' ? [{ type: 'teach', word }] : []
+      nextQueue = [...queue, ...reteach, exercise]
       setQueue(nextQueue)
     }
     setTotalDone((d) => d + 1)
@@ -140,17 +143,19 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
           ) : checked ? (
             <>
               <div className="flex items-start gap-3">
-                <span className="text-3xl">{lastResult?.correct ? (lastResult?.almost ? '🤏' : '✅') : '❌'}</span>
+                <span className="text-3xl">{lastResult?.correct ? (lastResult?.almost ? '✏️' : '✅') : '❌'}</span>
                 <div>
                   <div className={`text-lg font-extrabold ${lastResult?.correct ? 'text-duo-green-darker' : 'text-duo-red-dark'}`}>
                     {lastResult?.correct
-                      ? lastResult?.almost ? 'כמעט מושלם! שים לב לאיות' : lastResult?.praise
+                      ? lastResult?.almost ? 'כמעט מושלם! יש טעות קטנה בכתיב' : lastResult?.praise
                       : 'לא נורא, ננסה שוב בהמשך'}
                   </div>
                   {(!lastResult?.correct || lastResult?.almost) && lastResult?.correctText && (
                     <div className={`font-bold ${lastResult?.correct ? 'text-duo-green-darker' : 'text-duo-red-dark'}`}>
-                      התשובה הנכונה: <bdi dir="ltr">{lastResult.correctText}</bdi>{' '}
-                      <button type="button" onClick={() => speak(lastResult.correctText)} title="השמע">🔊</button>
+                      התשובה הנכונה: <bdi dir="auto">{lastResult.correctText}</bdi>{' '}
+                      {!/[\u0590-\u05FF]/.test(lastResult.correctText) && (
+                        <button type="button" onClick={() => speak(lastResult.correctText)} title="השמע">🔊</button>
+                      )}
                     </div>
                   )}
                 </div>

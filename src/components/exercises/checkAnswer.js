@@ -33,8 +33,9 @@ export function checkAnswer(exercise, answer) {
       const given = normalize(answer || '')
       const expected = normalize(exercise.item.en)
       if (given === expected) return { correct: true, correctText: exercise.item.en }
-      // שגיאת כתיב אחת קטנה — עדיין נכון, עם הערה
-      if (given.length > 2 && editDistance(given, expected) === 1) {
+      // שגיאת כתיב אחת קטנה — עדיין נכון, עם הערה (רק במילים ארוכות מספיק,
+      // כדי שמילה אמיתית אחרת כמו not במקום no לא תתקבל)
+      if (given.length > 2 && expected.length > 3 && editDistance(given, expected) === 1) {
         return { correct: true, almost: true, correctText: exercise.item.en }
       }
       return { correct: false, correctText: exercise.item.en }
