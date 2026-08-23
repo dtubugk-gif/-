@@ -1,6 +1,8 @@
 // תרגיל הקלדה: כותבים את התרגום באנגלית.
 
-export default function TypeTranslation({ exercise, answer, setAnswer, checked }) {
+import HintText from '../HintText'
+
+export default function TypeTranslation({ exercise, answer, setAnswer, checked, onHint }) {
   const { item } = exercise
   return (
     <div>
@@ -8,7 +10,7 @@ export default function TypeTranslation({ exercise, answer, setAnswer, checked }
 
       <div className="mb-8 flex items-center justify-center gap-3 rounded-2xl border-2 border-duo-gray px-6 py-5 text-3xl font-extrabold">
         {item.emoji && <span>{item.emoji}</span>}
-        <span>{item.he}</span>
+        <HintText text={item.he} dir="rtl" onHint={onHint} />
       </div>
 
       <input

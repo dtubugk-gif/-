@@ -2,8 +2,9 @@
 
 import { useEffect } from 'react'
 import { speak } from '../../lib/speech'
+import HintText from '../HintText'
 
-export default function MultipleChoice({ exercise, answer, setAnswer, checked }) {
+export default function MultipleChoice({ exercise, answer, setAnswer, checked, onHint }) {
   const { word, options, direction } = exercise
   const en2he = direction === 'en2he'
 
@@ -23,19 +24,17 @@ export default function MultipleChoice({ exercise, answer, setAnswer, checked })
 
       <div className="mb-8 flex items-center justify-center gap-3">
         {en2he ? (
-          <button
-            type="button"
-            onClick={() => speak(word.en)}
-            className="flex items-center gap-3 rounded-2xl border-2 border-duo-gray px-6 py-4 text-3xl font-extrabold text-duo-blue transition-colors hover:bg-sky-50"
+          <div
+            className="flex items-center gap-3 rounded-2xl border-2 border-duo-gray px-6 py-4 text-3xl font-extrabold"
             dir="ltr"
           >
-            <span>🔊</span>
-            <span className="text-duo-text">{word.en}</span>
-          </button>
+            <button type="button" onClick={() => speak(word.en)} className="text-duo-blue" title="השמע שוב">🔊</button>
+            <HintText text={word.en} dir="ltr" onHint={onHint} />
+          </div>
         ) : (
           <div className="rounded-2xl border-2 border-duo-gray px-6 py-4 text-3xl font-extrabold">
             {word.emoji && <span className="ml-3">{word.emoji}</span>}
-            {word.he}
+            <HintText text={word.he} dir="rtl" onHint={onHint} />
           </div>
         )}
       </div>

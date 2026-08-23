@@ -1,8 +1,9 @@
 // תרגיל בניית משפט: בוחרים מילים מהמאגר ומסדרים אותן למשפט באנגלית.
 
 import { speak } from '../../lib/speech'
+import HintText from '../HintText'
 
-export default function SentenceBuild({ exercise, answer, setAnswer, checked }) {
+export default function SentenceBuild({ exercise, answer, setAnswer, checked, onHint }) {
   const chosen = answer || [] // רשימת אינדקסים במאגר
   const { sentence, bank } = exercise
 
@@ -23,8 +24,8 @@ export default function SentenceBuild({ exercise, answer, setAnswer, checked }) 
     <div>
       <h2 className="mb-6 text-2xl font-extrabold">תרגם את המשפט 🧩</h2>
 
-      <div className="mb-6 rounded-2xl border-2 border-duo-gray px-5 py-4 text-xl font-bold">
-        {sentence.he}
+      <div className="mb-6 rounded-2xl border-2 border-duo-gray px-5 py-4 text-xl font-bold leading-9">
+        <HintText text={sentence.he} dir="rtl" onHint={onHint} />
       </div>
 
       {/* אזור המשפט הנבנה */}

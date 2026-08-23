@@ -25,8 +25,8 @@ export function useProgressProvider() {
   const saveProfile = useCallback((profile) => apply(P.saveProfile(stateRef.current, profile)), [apply])
 
   const completeLesson = useCallback(
-    (unitId, lessonIndex, perfect) => {
-      const result = P.completeLesson(stateRef.current, unitId, lessonIndex, perfect)
+    (levelId, lessonIndex, perfect, hintsUsed) => {
+      const result = P.completeLesson(stateRef.current, levelId, lessonIndex, perfect, hintsUsed)
       apply(result.state)
       return result
     },

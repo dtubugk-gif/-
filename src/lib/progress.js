@@ -93,8 +93,9 @@ function bumpStreakAndXp(next, xpGained) {
   next.xpToday += xpGained
 }
 
-// סיום שיעור: מחזיר { state, xpGained, newAchievements }
-export function completeLesson(state, levelId, lessonIndex, perfect) {
+// סיום שיעור: מחזיר { state, xpGained, hintPenalty, newAchievements }.
+// כל רמז שנפתח בשיעור מוריד נקודת XP (עד רצפה של 3 — תמיד מרוויחים משהו).
+export function completeLesson(state, levelId, lessonIndex, perfect, hintsUsed = 0) {
   const next = { ...state, lessons: { ...state.lessons } }
   const key = lessonKey(levelId, lessonIndex)
   const prev = next.lessons[key] || { crowns: 0 }
@@ -102,12 +103,14 @@ export function completeLesson(state, levelId, lessonIndex, perfect) {
   next.totalLessons += 1
   if (perfect) next.perfectLessons += 1
 
-  const xpGained = XP_PER_LESSON + (perfect ? XP_PERFECT_BONUS : 0)
+  const baseXp = XP_PER_LESSON + (perfect ? XP_PERFECT_BONUS : 0)
+  const xpGained = Math.max(3, baseXp - hintsUsed)
+  const hintPenalty = baseXp - xpGained
   bumpStreakAndXp(next, xpGained)
 
   const newAchievements = checkAchievements(next)
   saveState(next)
-  return { state: next, xpGained, newAchievements }
+  return { state: next, xpGained, hintPenalty, newAchievements }
 }
 
 export function setDailyGoal(state, goal) {

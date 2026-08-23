@@ -40,6 +40,17 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
   const [totalDone, setTotalDone] = useState(0)
   const [hadMistake, setHadMistake] = useState(false)
   const [wrongWords, setWrongWords] = useState([])
+  // רמזים שנפתחו (מילים ייחודיות) — כל רמז מוריד נקודה מה-XP של השיעור
+  const [hintedWords, setHintedWords] = useState(() => new Set())
+
+  function registerHint(wordKey) {
+    setHintedWords((prev) => {
+      if (prev.has(wordKey)) return prev
+      const next = new Set(prev)
+      next.add(wordKey)
+      return next
+    })
+  }
 
   const exercise = queue[current]
   const total = queue.length
@@ -50,7 +61,7 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
     setTotalDone((d) => d + 1)
     setAnswer(null)
     if (current + 1 >= queue.length) {
-      onFinish({ perfect: !hadMistake, wrongWords })
+      onFinish({ perfect: !hadMistake, wrongWords, hintsUsed: hintedWords.size })
     } else {
       setCurrent((c) => c + 1)
     }
@@ -94,7 +105,7 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
     setLastResult(null)
 
     if (current + 1 >= nextQueue.length) {
-      onFinish({ perfect: !hadMistake, wrongWords })
+      onFinish({ perfect: !hadMistake, wrongWords, hintsUsed: hintedWords.size })
     } else {
       setCurrent((c) => c + 1)
     }
@@ -119,7 +130,12 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
 
       <div className="flex-1 pb-40 pt-4">
         {/* key מאפס state פנימי (למשל בהתאמת זוגות) בין תרגילים מאותו סוג */}
-        <Component key={current} exercise={exercise} answer={answer} setAnswer={setAnswer} checked={checked} />
+        <Component key={current} exercise={exercise} answer={answer} setAnswer={setAnswer} checked={checked} onHint={registerHint} />
+        {hintedWords.size > 0 && (
+          <div className="mt-6 text-center text-sm font-bold text-duo-muted">
+            🔍 רמזים בשיעור הזה: {hintedWords.size} (כל רמז מוריד נקודה)
+          </div>
+        )}
       </div>
 
       {/* פס תחתון: בדיקה / משוב */}

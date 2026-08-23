@@ -50,10 +50,15 @@ export default function LessonPage() {
   return (
     <LessonEngine
       exercises={exercises}
-      onFinish={({ perfect }) => {
-        const result = completeLesson(lesson.level.id, lesson.index, perfect)
+      onFinish={({ perfect, hintsUsed }) => {
+        const result = completeLesson(lesson.level.id, lesson.index, perfect, hintsUsed)
         playFanfare()
-        setFinished({ perfect, xpGained: result.xpGained, newAchievements: result.newAchievements })
+        setFinished({
+          perfect,
+          xpGained: result.xpGained,
+          hintPenalty: result.hintPenalty,
+          newAchievements: result.newAchievements,
+        })
       }}
     />
   )
@@ -80,6 +85,12 @@ function FinishScreen({ lesson, finished, onContinue }) {
           <div className="animate-pop-in rounded-2xl border-2 border-duo-green bg-green-50 px-6 py-3">
             <div className="text-sm font-extrabold text-duo-green-darker">בונוס דיוק</div>
             <div className="text-2xl font-extrabold text-duo-green-darker">💯</div>
+          </div>
+        )}
+        {finished.hintPenalty > 0 && (
+          <div className="animate-pop-in rounded-2xl border-2 border-duo-blue bg-sky-50 px-6 py-3">
+            <div className="text-sm font-extrabold text-duo-blue-dark">רמזים 🔍</div>
+            <div dir="ltr" className="text-2xl font-extrabold text-duo-blue-dark">−{finished.hintPenalty}</div>
           </div>
         )}
       </div>
