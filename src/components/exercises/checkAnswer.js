@@ -21,6 +21,7 @@ function editDistance(a, b) {
 export function checkAnswer(exercise, answer) {
   switch (exercise.type) {
     case 'teach':
+    case 'grammar':
       return { correct: true, correctText: '' }
     case 'multipleChoice': {
       const correct = answer?.en === exercise.word.en
@@ -59,6 +60,7 @@ export function checkAnswer(exercise, answer) {
 export function isAnswerReady(exercise, answer) {
   switch (exercise.type) {
     case 'teach':
+    case 'grammar':
       return true
     case 'multipleChoice':
     case 'listening':

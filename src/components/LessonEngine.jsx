@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import Button from './Button'
 import ProgressBar from './ProgressBar'
 import TeachCard from './exercises/TeachCard'
+import GrammarCard from './exercises/GrammarCard'
 import MultipleChoice from './exercises/MultipleChoice'
 import Listening from './exercises/Listening'
 import TypeTranslation from './exercises/TypeTranslation'
@@ -18,6 +19,7 @@ import { useProgress } from '../hooks/useProgress'
 
 const EXERCISE_COMPONENTS = {
   teach: TeachCard,
+  grammar: GrammarCard,
   multipleChoice: MultipleChoice,
   listening: Listening,
   typeTranslation: TypeTranslation,
@@ -149,7 +151,7 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
         }`}
       >
         <div className="mx-auto flex max-w-2xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          {exercise.type === 'teach' ? (
+          {exercise.type === 'teach' || exercise.type === 'grammar' ? (
             <>
               <div className="hidden text-duo-muted sm:block" />
               <Button variant="blue" onClick={handleTeachContinue} className="w-full sm:w-auto">

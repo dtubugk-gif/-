@@ -107,7 +107,15 @@ export function generateExercises({ words, sentences, difficulty = 0, teach = tr
   shuffle(sentences).slice(0, tail.build).forEach((s) => rest.push(makeSentenceBuild(s, pool)))
   if (tail.match && tested.length >= 4) rest.push(makeMatchPairs(shuffle(tested)))
 
-  return [...exercises, ...shuffle(rest)]
+  const ordered = [...exercises, ...shuffle(rest)]
+
+  // לפני הרכבת המשפט הראשון בשיעור לימוד — מלמדים את to be
+  if (teach) {
+    const firstBuild = ordered.findIndex((e) => e.type === 'sentenceBuild')
+    if (firstBuild >= 0) ordered.splice(firstBuild, 0, { type: 'grammar' })
+  }
+
+  return ordered
 }
 
 // שאלת מבחן רמה: בחירה מרובה ממילות רמה מסוימת (הקושי עולה עם האינדקס)
@@ -126,6 +134,7 @@ export function makePlacementQuestion(level) {
 export function exerciseWords(exercise) {
   switch (exercise.type) {
     case 'teach':
+    case 'grammar':
       return []
     case 'multipleChoice':
     case 'listening':

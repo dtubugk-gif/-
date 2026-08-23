@@ -3,10 +3,10 @@
 // כל פתיחת רמז מדווחת החוצה דרך onHint — ומורידה מניקוד השיעור.
 
 import { useEffect, useState } from 'react'
-import { ALL_WORDS } from '../data/course'
+import { ALL_WORDS, FUNCTION_WORDS } from '../data/course'
 import { speak } from '../lib/speech'
 
-const EN_TO_HE = new Map()
+const EN_TO_HE = new Map(Object.entries(FUNCTION_WORDS))
 const HE_TO_EN = new Map()
 for (const w of ALL_WORDS) {
   const en = w.en.toLowerCase()
