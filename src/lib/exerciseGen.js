@@ -73,11 +73,13 @@ function makeTeachCard(word) {
   return { type: 'teach', word }
 }
 
-// תרגילי המשך לפי קושי הרמה (0-6) — אחרי שלב הלימוד וההיכרות
+// תרגילי המשך לפי קושי הרמה (0-6) — אחרי שלב הלימוד וההיכרות.
+// בניית משפטים נכנסת רק מרמה 4 (d=3) — ברמות הראשונות לומדים מילים בודדות.
 function tailForDifficulty(d) {
-  if (d <= 1) return { listen: 1, type: 0, build: 1, match: 1 } // לילדים ומתחילים: בלי הקלדה
-  if (d <= 4) return { listen: 2, type: 1, build: 1, match: 1 } // ביניים: מאוזן
-  return { listen: 2, type: 2, build: 2, match: 1 } // מתקדמים: שליפה אקטיבית
+  if (d <= 1) return { listen: 2, type: 0, build: 0, match: 1 } // רמות 1-2: זיהוי והאזנה בלבד
+  if (d === 2) return { listen: 2, type: 1, build: 0, match: 1 } // רמה 3: מוסיפים הקלדה
+  if (d <= 4) return { listen: 2, type: 1, build: 1, match: 1 } // רמות 4-5: משפט ראשון
+  return { listen: 2, type: 2, build: 2, match: 1 } // רמות 6-7: שליפה אקטיבית מלאה
 }
 
 // בונה שיעור בסגנון דואלינגו: קודם מלמדים כל מילה (כרטיסיית "מילה חדשה"),
