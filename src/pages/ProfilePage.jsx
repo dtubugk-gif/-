@@ -34,7 +34,7 @@ export default function ProfilePage() {
           <h1 className="text-2xl font-extrabold">הפרופיל שלי</h1>
           <p className="font-bold text-duo-muted">לומד/ת אנגלית 🇬🇧</p>
           <span className="mt-1 inline-block rounded-full bg-duo-blue px-3 py-0.5 text-sm font-extrabold text-white">
-            🏅 רמה {level}/7 · {levelName(level)}
+            🏅 רמה {level}/{LEVELS.length} · {levelName(level)}
           </span>
         </div>
       </div>

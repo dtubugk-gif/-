@@ -36,7 +36,7 @@ export default function HomePage() {
         <div className="mb-3 flex items-center justify-between">
           <span className="font-extrabold">הרמה שלי 🏅</span>
           <span className="rounded-full bg-duo-blue px-3 py-0.5 text-sm font-extrabold text-white">
-            רמה {current}/7 · {levelName(current)}
+            רמה {current}/{LEVELS.length} · {levelName(current)}
           </span>
         </div>
         <div className="mb-2 flex items-center justify-between font-extrabold">
@@ -98,7 +98,7 @@ export default function HomePage() {
       })}
 
       <div className="pb-4 text-center text-sm font-bold text-duo-muted">
-        סיימת את כל 7 הרמות? אלוף! 🦉🏆
+        סיימת את כל {LEVELS.length} הרמות? אנגלית מושלמת! 🦉🏆
       </div>
     </div>
   )

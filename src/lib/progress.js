@@ -138,8 +138,15 @@ export function saveProfile(state, { goal, selfLevel, placementLevel, dailyGoal 
 }
 
 export function levelName(level) {
-  const names = ['מתחיל', 'בסיסי', 'טרום-בינוני', 'בינוני', 'בינוני-גבוה', 'מתקדם', 'שולט']
-  return names[Math.min(Math.max(level, 1), 7) - 1]
+  const l = Math.min(Math.max(level, 1), LEVELS.length)
+  if (l <= 2) return 'מתחיל'
+  if (l <= 5) return 'בסיסי'
+  if (l <= 8) return 'טרום-בינוני'
+  if (l <= 11) return 'בינוני'
+  if (l <= 14) return 'בינוני-גבוה'
+  if (l <= 17) return 'מתקדם'
+  if (l <= 19) return 'שולט'
+  return 'אנגלית מושלמת! 🏆'
 }
 
 export function getCrowns(state, levelId, lessonIndex) {
@@ -190,8 +197,9 @@ export const ACHIEVEMENTS = [
   { id: 'xp-500', icon: '🌟', title: 'סופרסטאר', desc: 'צברת 500 XP', check: (s) => s.xp >= 500 },
   { id: 'level-done', icon: '👑', title: 'כובש רמות', desc: 'השלמת רמה שלמה', check: (s) => LEVELS.some((l) => isLevelCompletedRaw(s, l.id)) },
   { id: 'three-levels', icon: '🏔️', title: 'מטפס', desc: 'השלמת 3 רמות', check: (s) => LEVELS.filter((l) => isLevelCompletedRaw(s, l.id)).length >= 3 },
+  { id: 'ten-levels', icon: '🗻', title: 'חצי הדרך', desc: 'השלמת 10 רמות', check: (s) => LEVELS.filter((l) => isLevelCompletedRaw(s, l.id)).length >= 10 },
   { id: 'combo-5', icon: '⚡', title: 'על הגל', desc: '5 תשובות נכונות ברצף', check: (s) => (s.bestCombo || 0) >= 5 },
-  { id: 'course-done', icon: '🏆', title: 'אלוף הקורס', desc: 'השלמת את כל 7 הרמות!', check: (s) => LEVELS.every((l) => isLevelCompletedRaw(s, l.id)) },
+  { id: 'course-done', icon: '🏆', title: 'אנגלית מושלמת', desc: `השלמת את כל ${LEVELS.length} הרמות!`, check: (s) => LEVELS.every((l) => isLevelCompletedRaw(s, l.id)) },
 ]
 
 function isLevelCompletedRaw(state, levelId) {

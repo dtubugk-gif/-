@@ -113,13 +113,14 @@ function makeTeachCard(word) {
   return { type: 'teach', word }
 }
 
-// תרגילי המשך לפי קושי הרמה (0-6) — אחרי שלב הלימוד וההיכרות.
+// תרגילי המשך לפי קושי הרמה (0-19) — אחרי שלב הלימוד וההיכרות.
 // בניית משפטים נכנסת רק מרמה 4 (d=3) — ברמות הראשונות לומדים מילים בודדות.
 function tailForDifficulty(d) {
   if (d <= 1) return { listen: 2, type: 0, build: 0, fill: 0, match: 1 } // רמות 1-2: זיהוי והאזנה בלבד
   if (d === 2) return { listen: 2, type: 1, build: 0, fill: 1, match: 1 } // רמה 3: הקלדה והשלמת משפט
-  if (d <= 4) return { listen: 1, type: 1, build: 1, fill: 1, match: 1 } // רמות 4-5: משפט ראשון
-  return { listen: 1, type: 2, build: 2, fill: 1, match: 1 } // רמות 6-7: שליפה אקטיבית מלאה
+  if (d <= 8) return { listen: 1, type: 1, build: 1, fill: 1, match: 1 } // רמות 4-9: משפט ראשון
+  if (d <= 13) return { listen: 1, type: 2, build: 1, fill: 1, match: 1 } // רמות 10-14: יותר הקלדה
+  return { listen: 1, type: 2, build: 2, fill: 1, match: 1 } // רמות 15-20: שליפה אקטיבית מלאה
 }
 
 // בונה שיעור בסגנון דואלינגו: קודם מלמדים כל מילה (כרטיסיית "מילה חדשה"),
@@ -136,7 +137,7 @@ export function generateExercises({ words, sentences, difficulty = 0, teach = tr
     const pair = focus.slice(i, i + 2)
     if (teach) pair.forEach((w) => exercises.push(makeTeachCard(w)))
     pair.forEach((w, j) => {
-      if (j % 2 === 0 && difficulty <= 2) exercises.push(makePickImage(w, pool))
+      if (j % 2 === 0 && difficulty <= 8 && w.emoji) exercises.push(makePickImage(w, pool))
       else exercises.push(makeMultipleChoice(w, pool, j % 2 === 0 ? 'en2he' : 'he2en'))
     })
   }

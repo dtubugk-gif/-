@@ -113,7 +113,7 @@ export default function OnboardingPage() {
 
       {step === 'test' && (
         <PlacementTest
-          startUnit={selfLevel === 'confident' ? 2 : 1}
+          startUnit={selfLevel === 'confident' ? 4 : 1}
           onFinish={finish}
           onSkip={skipAll}
         />
@@ -124,17 +124,17 @@ export default function OnboardingPage() {
           <Confetti count={30} />
           <div className="animate-pop-in text-8xl">🏅</div>
           <h1 className="text-3xl font-extrabold text-duo-green">
-            רמה {result.placementLevel}/7 · {levelName(result.placementLevel)}
+            רמה {result.placementLevel}/{LEVELS.length} · {levelName(result.placementLevel)}
           </h1>
           <p className="max-w-sm text-lg font-bold text-duo-muted">
             {result.placementLevel > 1
-              ? `מעולה! אתה מתחיל ברמה ${result.placementLevel} מתוך 7 — הרמות שמתחתיה פתוחות לחיזוק הבסיס.`
+              ? `מעולה! אתה מתחיל ברמה ${result.placementLevel} מתוך ${LEVELS.length} — הרמות שמתחתיה פתוחות לחיזוק הבסיס.`
               : 'נתחיל מהיסודות ונבנה בסיס חזק, צעד אחר צעד.'}
           </p>
           <div className="flex flex-wrap justify-center gap-2">
-            {LEVELS.slice(0, result.placementLevel).map((l, i) => (
+            {LEVELS.slice(Math.max(0, result.placementLevel - 4), result.placementLevel).map((l, i) => (
               <span key={l.id} className="rounded-full px-3 py-1 text-sm font-extrabold text-white" style={{ backgroundColor: l.color }}>
-                רמה {i + 1} · {l.icon} {l.title}
+                רמה {Math.max(0, result.placementLevel - 4) + i + 1} · {l.icon} {l.title}
               </span>
             ))}
           </div>
@@ -185,14 +185,14 @@ function PlacementTest({ startUnit, onFinish, onSkip }) {
       }
 
       if (nCorrect >= 1) {
-        // עבר את הרמה
-        const next = unitIndex + 1
-        if (next >= LEVELS.length || (failedMin !== null && next >= failedMin)) {
+        // עבר את הרמה — קופצים 3 רמות קדימה (מבחן קצר גם עם 20 רמות)
+        const next = unitIndex + 3
+        if (unitIndex + 1 >= LEVELS.length || (failedMin !== null && unitIndex + 1 >= failedMin)) {
           onFinish(Math.min(LEVELS.length, unitIndex + 2))
           return
         }
         setLastPassed(unitIndex)
-        moveTo(next)
+        moveTo(Math.min(next, failedMin !== null ? failedMin - 1 : LEVELS.length - 1))
       } else {
         // נכשל ברמה
         setFailedMin((f) => (f === null ? unitIndex : Math.min(f, unitIndex)))
@@ -201,7 +201,7 @@ function PlacementTest({ startUnit, onFinish, onSkip }) {
           onFinish(Math.max(1, Math.min(LEVELS.length, lastPassed + 2)))
         } else if (unitIndex > 1) {
           // עוד לא עבר כלום — יורדים לבדוק רמה נמוכה יותר
-          moveTo(unitIndex - 1)
+          moveTo(Math.max(1, unitIndex - 2))
         } else {
           onFinish(1)
         }
