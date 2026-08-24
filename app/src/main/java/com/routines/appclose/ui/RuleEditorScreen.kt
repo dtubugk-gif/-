@@ -1,6 +1,7 @@
 package com.routines.appclose.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,9 +34,13 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,12 +59,27 @@ fun RuleEditorScreen(
 ) {
     val context = LocalContext.current
 
-    var loaded by remember { mutableStateOf(ruleId == 0L) }
-    var name by remember { mutableStateOf("") }
-    var watchedPackage by remember { mutableStateOf("") }
-    var watchedLabel by remember { mutableStateOf("") }
-    var enabled by remember { mutableStateOf(true) }
-    val actions = remember { mutableListOf<RuleAction>().toMutableStateList() }
+    // rememberSaveable — כדי שסיבוב מסך או הריגת תהליך לא ימחקו קלט באמצע עריכה.
+    var loaded by rememberSaveable { mutableStateOf(ruleId == 0L) }
+    var name by rememberSaveable { mutableStateOf("") }
+    var watchedPackage by rememberSaveable { mutableStateOf("") }
+    var watchedLabel by rememberSaveable { mutableStateOf("") }
+    var enabled by rememberSaveable { mutableStateOf(true) }
+    val actions = rememberSaveable(
+        saver = listSaver<SnapshotStateList<RuleAction>, ArrayList<Any?>>(
+            save = { list -> list.map { arrayListOf<Any?>(it.type.name, it.intValue, it.stringValue) } },
+            restore = { saved ->
+                saved.map {
+                    RuleAction(
+                        ruleId = 0,
+                        type = ActionType.valueOf(it[0] as String),
+                        intValue = it[1] as Int?,
+                        stringValue = it[2] as String?,
+                    )
+                }.toMutableStateList()
+            },
+        ),
+    ) { mutableStateListOf<RuleAction>() }
 
     var showWatchedPicker by remember { mutableStateOf(false) }
     var showOpenAppPickerFor by remember { mutableStateOf<Int?>(null) }
@@ -67,7 +87,8 @@ fun RuleEditorScreen(
     var error by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(ruleId) {
-        if (ruleId != 0L) {
+        // נטען מה-DB רק פעם אחת — אחרי שחזור state (סיבוב מסך) לא דורסים עריכות.
+        if (ruleId != 0L && !loaded) {
             viewModel.getRule(ruleId)?.let { existing ->
                 name = existing.rule.name
                 watchedPackage = existing.rule.watchedPackage
@@ -140,19 +161,22 @@ fun RuleEditorScreen(
                 }
             }
 
-            OutlinedButton(onClick = { showAddMenu = true }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Filled.Add, contentDescription = null)
-                Text("הוספת פעולה")
-            }
-            DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
-                ActionType.entries.forEach { type ->
-                    DropdownMenuItem(
-                        text = { Text(type.hebrewName()) },
-                        onClick = {
-                            showAddMenu = false
-                            actions.add(defaultActionFor(type))
-                        },
-                    )
+            // Box עוגן — כדי שהתפריט ייפתח צמוד לכפתור ולא ביחס לכל המסך.
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = { showAddMenu = true }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Text("הוספת פעולה")
+                }
+                DropdownMenu(expanded = showAddMenu, onDismissRequest = { showAddMenu = false }) {
+                    ActionType.entries.forEach { type ->
+                        DropdownMenuItem(
+                            text = { Text(type.hebrewName()) },
+                            onClick = {
+                                showAddMenu = false
+                                actions.add(defaultActionFor(type))
+                            },
+                        )
+                    }
                 }
             }
 

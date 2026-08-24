@@ -2,6 +2,8 @@ package com.routines.appclose.service
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.inputmethod.InputMethodManager
@@ -18,12 +20,19 @@ import kotlinx.coroutines.launch
 class AppExitAccessibilityService : AccessibilityService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val handler = Handler(Looper.getMainLooper())
     private lateinit var detector: ExitDetector
     private lateinit var executor: ActionExecutor
 
+    // כל הגישה ל-detector נשארת על ה-main thread (גם האירועים וגם האישור המושהה).
+    private val confirmRunnable = Runnable {
+        val exitedPackage = detector.confirmPending(System.currentTimeMillis()) ?: return@Runnable
+        scope.launch { runRulesFor(exitedPackage) }
+    }
+
     override fun onServiceConnected() {
         super.onServiceConnected()
-        detector = ExitDetector(buildIgnoredPackages())
+        detector = ExitDetector(buildIgnoredPackages(), MIN_FOREGROUND_MS, CONFIRM_MS)
         executor = ActionExecutor(this)
         Log.i(TAG, "Accessibility service connected")
     }
@@ -33,10 +42,15 @@ class AppExitAccessibilityService : AccessibilityService() {
         if (!::detector.isInitialized) return
         val pkg = event.packageName?.toString() ?: return
 
-        val exitedPackage = detector.onWindowChanged(pkg, System.currentTimeMillis()) ?: return
-
-        scope.launch {
-            runRulesFor(exitedPackage)
+        val result = detector.onWindowChanged(pkg, System.currentTimeMillis())
+        result.confirmedExit?.let { exited ->
+            scope.launch { runRulesFor(exited) }
+        }
+        if (result.pendingCreated) {
+            // יציאה ממתינה — מאשרים רק אחרי שהחלון החדש החזיק מעמד,
+            // כדי שחלונות זמניים (share sheet, דיאלוגים) לא יפעילו שגרות בטעות.
+            handler.removeCallbacks(confirmRunnable)
+            handler.postDelayed(confirmRunnable, CONFIRM_MS + CONFIRM_SLACK_MS)
         }
     }
 
@@ -61,11 +75,18 @@ class AppExitAccessibilityService : AccessibilityService() {
         }
     }
 
-    /** SystemUI, מקלדות והאפליקציה שלנו — חלונות שאינם "אפליקציה" מבחינת המשתמש. */
+    /**
+     * חלונות שאינם "אפליקציה" מבחינת המשתמש: SystemUI, מקלדות, האפליקציה שלנו,
+     * וחלונות מערכת זמניים כמו share sheet ודיאלוגי הרשאות.
+     */
     private fun buildIgnoredPackages(): Set<String> {
         val ignored = mutableSetOf(
             packageName,
+            "android",
             "com.android.systemui",
+            "com.android.intentresolver",
+            "com.android.permissioncontroller",
+            "com.google.android.permissioncontroller",
         )
         try {
             val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -81,11 +102,15 @@ class AppExitAccessibilityService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        handler.removeCallbacks(confirmRunnable)
         scope.cancel()
         super.onDestroy()
     }
 
     companion object {
         private const val TAG = "AppExitService"
+        private const val MIN_FOREGROUND_MS = 1500L
+        private const val CONFIRM_MS = 1500L
+        private const val CONFIRM_SLACK_MS = 100L
     }
 }
