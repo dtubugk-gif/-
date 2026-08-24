@@ -1,3 +1,9 @@
+/* ערכת עיצוב "Playful Meadow" — ירוק שובב, גופן Rubik מעוגל, צללים רכים */
+
+@import '@fontsource/rubik/400.css';
+@import '@fontsource/rubik/500.css';
+@import '@fontsource/rubik/700.css';
+@import '@fontsource/rubik/800.css';
 @import "tailwindcss";
 
 @theme {
@@ -13,12 +19,14 @@
   --color-duo-purple: #ce82ff;
   --color-duo-orange: #ff9600;
   --color-duo-gray: #e5e5e5;
+  --color-duo-bg: #f7f8fa;
   --color-duo-text: #3c3c3c;
-  --color-duo-muted: #afafaf;
+  --color-duo-muted: #a8a8a8;
+  --font-sans: 'Rubik', 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
 html {
-  font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  font-family: 'Rubik', 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
 body {
@@ -27,10 +35,10 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* 3D-style buttons like Duolingo */
+/* כפתורים תלת-ממדיים בסגנון דואלינגו */
 .btn-3d {
   border-bottom-width: 4px;
-  transition: filter 0.15s, transform 0.05s;
+  transition: filter 0.15s, transform 0.05s, box-shadow 0.15s;
   user-select: none;
 }
 .btn-3d:active:not(:disabled) {
@@ -42,12 +50,56 @@ body {
   cursor: not-allowed;
 }
 
+/* כרטיס מוגבה עדין */
+.card-soft {
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.04), 0 8px 24px -12px rgba(60, 60, 60, 0.18);
+}
+
+/* כותרת רמה עם הדרגתי עדין מהצבע של הרמה */
+.level-header {
+  background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(0, 0, 0, 0.08));
+  box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.35);
+}
+
+/* רקע חגיגי למסכי סיום */
+.celebration-bg {
+  background:
+    radial-gradient(circle at 20% 15%, rgba(88, 204, 2, 0.12), transparent 45%),
+    radial-gradient(circle at 80% 25%, rgba(28, 176, 246, 0.12), transparent 45%),
+    radial-gradient(circle at 50% 90%, rgba(255, 200, 0, 0.14), transparent 50%),
+    #ffffff;
+}
+
+/* רקע עדין למסך הפתיחה */
+.onboarding-bg {
+  background:
+    radial-gradient(circle at 15% 10%, rgba(88, 204, 2, 0.1), transparent 40%),
+    radial-gradient(circle at 85% 85%, rgba(206, 130, 255, 0.1), transparent 40%),
+    #ffffff;
+}
+
+/* קו מחבר מקווקו בין שיעורים על השביל */
+.path-connector {
+  width: 6px;
+  height: 26px;
+  border-radius: 9999px;
+  background-image: linear-gradient(#d7d7d7 55%, transparent 45%);
+  background-size: 6px 12px;
+}
+
 @keyframes pop-in {
   0% { transform: scale(0.6); opacity: 0; }
   70% { transform: scale(1.06); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
 }
 .animate-pop-in { animation: pop-in 0.35s ease-out both; }
+
+/* כניסת תרגיל: החלקה עדינה פנימה */
+@keyframes exercise-enter {
+  0% { transform: translateY(14px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.animate-exercise-enter { animation: exercise-enter 0.28s ease-out both; }
 
 @keyframes slide-up {
   from { transform: translateY(100%); }

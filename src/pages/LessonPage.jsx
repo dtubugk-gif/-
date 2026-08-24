@@ -78,7 +78,7 @@ export default function LessonPage() {
 function FinishScreen({ lesson, finished, onContinue }) {
   const nextLevel = LEVELS[lesson.levelIndex + 1]
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center gap-5 overflow-hidden p-6 text-center">
+    <div className="celebration-bg relative flex min-h-screen flex-col items-center justify-center gap-5 overflow-hidden p-6 text-center">
       <Confetti count={finished.levelJustCompleted ? 70 : 40} />
       <div className="animate-bounce-slow text-8xl">{finished.levelJustCompleted ? '👑' : '🦉'}</div>
       <h1 className="animate-pop-in text-3xl font-extrabold text-duo-green">

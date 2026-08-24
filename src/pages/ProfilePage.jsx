@@ -48,7 +48,7 @@ export default function ProfilePage() {
 
       <div className="mb-8 grid grid-cols-2 gap-3">
         {stats.map((s) => (
-          <div key={s.label} className="rounded-2xl border-2 border-duo-gray p-4">
+          <div key={s.label} className="rounded-2xl border-2 border-duo-gray p-4 card-soft">
             <div className="text-2xl">{s.icon}</div>
             <div className={`text-2xl font-extrabold ${s.color}`}>{s.value}</div>
             <div className="text-sm font-bold text-duo-muted">{s.label}</div>
@@ -56,7 +56,7 @@ export default function ProfilePage() {
         ))}
       </div>
 
-      <div className="mb-8 rounded-2xl border-2 border-duo-gray p-4">
+      <div className="mb-8 rounded-2xl border-2 border-duo-gray p-4 card-soft">
         <div className="mb-2 flex items-center justify-between font-extrabold">
           <span>התקדמות בקורס 🗺️</span>
           <span className="text-duo-green-darker">{Math.round((lessonsDone / totalLessonCount) * 100)}%</span>

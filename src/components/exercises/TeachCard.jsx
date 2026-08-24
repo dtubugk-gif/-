@@ -21,7 +21,7 @@ export default function TeachCard({ exercise }) {
       <button
         type="button"
         onClick={() => speak(word.en)}
-        className="btn-3d w-full max-w-sm rounded-3xl border-2 border-duo-gray bg-white p-8 transition-transform hover:scale-[1.02]"
+        className="btn-3d card-soft w-full max-w-sm rounded-3xl border-2 border-duo-gray bg-white p-8 transition-transform hover:scale-[1.02]"
         title="לחץ להשמעה"
       >
         <div className="mb-4 text-8xl">{word.emoji || '⭐'}</div>

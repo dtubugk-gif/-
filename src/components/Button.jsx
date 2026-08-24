@@ -14,7 +14,7 @@ export default function Button({ variant = 'primary', className = '', disabled, 
   return (
     <button
       disabled={disabled}
-      className={`btn-3d cursor-pointer rounded-2xl border-2 px-6 py-3 text-base font-extrabold tracking-wide uppercase ${style} ${className}`}
+      className={`btn-3d cursor-pointer rounded-2xl border-2 px-6 py-3 text-base font-extrabold ${style} ${className}`}
       {...props}
     >
       {children}

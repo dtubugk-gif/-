@@ -69,7 +69,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-2xl flex-col px-6 py-8">
+    <div className="onboarding-bg mx-auto flex min-h-screen max-w-2xl flex-col px-6 py-8">
       {step === 'welcome' && (
         <CenterCard>
           <div className="animate-bounce-slow text-8xl">🦉</div>

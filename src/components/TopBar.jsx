@@ -5,7 +5,7 @@ import { useProgress } from '../hooks/useProgress'
 export default function TopBar() {
   const { state } = useProgress()
   return (
-    <div className="sticky top-0 z-20 border-b-2 border-duo-gray bg-white/95 backdrop-blur">
+    <div className="sticky top-0 z-20 border-b-2 border-duo-gray bg-white/95 backdrop-blur card-soft">
       <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
         <div className="flex items-center gap-1.5 text-lg font-extrabold">
           <span className="text-2xl">🦉</span>

@@ -152,8 +152,10 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
       </div>
 
       <div className="flex-1 pb-40 pt-4">
-        {/* key מאפס state פנימי (למשל בהתאמת זוגות) בין תרגילים מאותו סוג */}
-        <Component key={current} exercise={exercise} answer={answer} setAnswer={setAnswer} checked={checked} onHint={registerHint} />
+        {/* key מאפס state פנימי בין תרגילים וגם מפעיל את אנימציית הכניסה */}
+        <div key={current} className="animate-exercise-enter">
+          <Component exercise={exercise} answer={answer} setAnswer={setAnswer} checked={checked} onHint={registerHint} />
+        </div>
         {hintedWords.size > 0 && (
           <div className="mt-6 text-center text-sm font-bold text-duo-muted">
             🔍 רמזים בשיעור הזה: {hintedWords.size} (כל רמז מוריד נקודה)

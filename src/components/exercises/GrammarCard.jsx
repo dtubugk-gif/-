@@ -27,7 +27,7 @@ export default function GrammarCard() {
             key={row.en}
             type="button"
             onClick={() => speak(row.example)}
-            className="btn-3d rounded-2xl border-2 border-duo-gray bg-white p-4 text-start"
+            className="btn-3d card-soft rounded-2xl border-2 border-duo-gray bg-white p-4 text-start"
             title="לחץ להשמעה"
           >
             <div className="flex items-center justify-between gap-2">

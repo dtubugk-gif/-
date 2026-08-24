@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import { Navigate } from 'react-router-dom'
 import { LEVELS, LESSONS_PER_LEVEL } from '../data/course'
 import { useProgress } from '../hooks/useProgress'
-import { getCrowns, isLessonUnlocked, isLevelUnlocked, isLevelCompleted, currentLevel, levelName } from '../lib/progress'
+import { getCrowns, isLessonUnlocked, isLevelUnlocked, isLevelCompleted, isLessonCompleted, currentLevel, levelName } from '../lib/progress'
 import LessonNode from '../components/LessonNode'
 import ProgressBar from '../components/ProgressBar'
 
@@ -32,7 +32,7 @@ export default function HomePage() {
   return (
     <div>
       {/* הרמה שלי + יעד יומי */}
-      <div className="mb-6 rounded-2xl border-2 border-duo-gray p-4">
+      <div className="mb-6 rounded-2xl border-2 border-duo-gray p-4 card-soft">
         <div className="mb-3 flex items-center justify-between">
           <span className="font-extrabold">הרמה שלי 🏅</span>
           <span className="rounded-full bg-duo-blue px-3 py-0.5 text-sm font-extrabold text-white">
@@ -55,10 +55,12 @@ export default function HomePage() {
         const unlocked = isLevelUnlocked(state, levelIndex)
         const completed = isLevelCompleted(state, level.id)
         const isCurrent = levelIndex + 1 === current
+        let lessonsDone = 0
+        for (let i = 0; i < LESSONS_PER_LEVEL; i++) if (isLessonCompleted(state, level.id, i)) lessonsDone++
         return (
           <section key={level.id} ref={isCurrent ? currentRef : null} className="mb-10 scroll-mt-20">
             <div
-              className={`mb-6 rounded-2xl p-4 text-white shadow-md ${isCurrent ? 'ring-4 ring-duo-yellow' : ''}`}
+              className={`level-header mb-6 rounded-2xl p-4 text-white ${isCurrent ? 'ring-4 ring-duo-yellow' : ''}`}
               style={{ backgroundColor: unlocked ? level.color : '#afafaf' }}
             >
               <div className="flex items-center justify-between">
@@ -71,6 +73,11 @@ export default function HomePage() {
                 <div className="text-end">
                   {!unlocked && <span className="text-3xl">🔒</span>}
                   {completed && <span className="text-3xl">✅</span>}
+                  {unlocked && !completed && lessonsDone > 0 && !isCurrent && (
+                    <span className="rounded-full bg-white/25 px-2.5 py-1 text-sm font-extrabold">
+                      {lessonsDone}/{LESSONS_PER_LEVEL}
+                    </span>
+                  )}
                   {isCurrent && !completed && (
                     <span className="rounded-full bg-white px-3 py-1 text-sm font-extrabold" style={{ color: level.color }}>
                       אתה כאן 📍
@@ -80,17 +87,24 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="flex flex-col items-center gap-6">
+            <div className="flex flex-col items-center gap-1.5">
               {Array.from({ length: LESSONS_PER_LEVEL }, (_, li) => (
-                <LessonNode
-                  key={li}
-                  level={level}
-                  lessonIndex={li}
-                  unlocked={isLessonUnlocked(state, levelIndex, li)}
-                  crowns={getCrowns(state, level.id, li)}
-                  title={li === LESSONS_PER_LEVEL - 1 ? 'חזרה' : `שיעור ${li + 1}`}
-                  offset={OFFSETS[li % OFFSETS.length]}
-                />
+                <div key={li} className="flex flex-col items-center gap-1.5">
+                  {li > 0 && (
+                    <div
+                      className="path-connector"
+                      style={{ transform: `translateX(${(OFFSETS[(li - 1) % OFFSETS.length] + OFFSETS[li % OFFSETS.length]) / 2}px)` }}
+                    />
+                  )}
+                  <LessonNode
+                    level={level}
+                    lessonIndex={li}
+                    unlocked={isLessonUnlocked(state, levelIndex, li)}
+                    crowns={getCrowns(state, level.id, li)}
+                    title={li === LESSONS_PER_LEVEL - 1 ? 'חזרה' : `שיעור ${li + 1}`}
+                    offset={OFFSETS[li % OFFSETS.length]}
+                  />
+                </div>
               ))}
             </div>
           </section>
