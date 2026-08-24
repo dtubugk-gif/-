@@ -12,9 +12,11 @@ import Listening from './exercises/Listening'
 import TypeTranslation from './exercises/TypeTranslation'
 import SentenceBuild from './exercises/SentenceBuild'
 import MatchPairs from './exercises/MatchPairs'
+import PickImage from './exercises/PickImage'
+import FillBlank from './exercises/FillBlank'
 import { checkAnswer, isAnswerReady } from './exercises/checkAnswer'
 import { exerciseWords } from '../lib/exerciseGen'
-import { playCorrect, playWrong, speak } from '../lib/speech'
+import { playCorrect, playWrong, playCombo, speak } from '../lib/speech'
 import { useProgress } from '../hooks/useProgress'
 
 const EXERCISE_COMPONENTS = {
@@ -25,6 +27,8 @@ const EXERCISE_COMPONENTS = {
   typeTranslation: TypeTranslation,
   sentenceBuild: SentenceBuild,
   matchPairs: MatchPairs,
+  pickImage: PickImage,
+  fillBlank: FillBlank,
 }
 
 // מחמאות מתחלפות — כיף גם לילדים
@@ -44,6 +48,9 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
   const [wrongWords, setWrongWords] = useState([])
   // רמזים שנפתחו (מילים ייחודיות) — כל רמז מוריד נקודה מה-XP של השיעור
   const [hintedWords, setHintedWords] = useState(() => new Set())
+  // רצף תשובות נכונות ברציפות — קומבו כמו בדואלינגו
+  const [combo, setCombo] = useState(0)
+  const [maxCombo, setMaxCombo] = useState(0)
 
   function registerHint(wordKey) {
     setHintedWords((prev) => {
@@ -63,7 +70,7 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
     setTotalDone((d) => d + 1)
     setAnswer(null)
     if (current + 1 >= queue.length) {
-      onFinish({ perfect: !hadMistake, wrongWords, hintsUsed: hintedWords.size })
+      onFinish({ perfect: !hadMistake, wrongWords, hintsUsed: hintedWords.size, maxCombo })
     } else {
       setCurrent((c) => c + 1)
     }
@@ -80,8 +87,17 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
     setChecked(true)
     setLastResult(result)
     if (result.correct) {
-      playCorrect()
+      const streakNow = combo + 1
+      setCombo(streakNow)
+      setMaxCombo((m) => Math.max(m, streakNow))
+      if (streakNow >= 3) {
+        result.praise = `🔥 ${streakNow} ברצף! ${result.praise}`
+        playCombo(streakNow)
+      } else {
+        playCorrect()
+      }
     } else {
+      setCombo(0)
       playWrong()
       setHadMistake(true)
       const words = exerciseWords(exercise)
@@ -107,7 +123,7 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
     setLastResult(null)
 
     if (current + 1 >= nextQueue.length) {
-      onFinish({ perfect: !hadMistake, wrongWords, hintsUsed: hintedWords.size })
+      onFinish({ perfect: !hadMistake, wrongWords, hintsUsed: hintedWords.size, maxCombo })
     } else {
       setCurrent((c) => c + 1)
     }

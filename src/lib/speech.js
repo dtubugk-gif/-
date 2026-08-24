@@ -3,6 +3,7 @@
 
 import { Capacitor } from '@capacitor/core'
 import { TextToSpeech } from '@capacitor-community/text-to-speech'
+import { hapticCorrect, hapticWrong, hapticSuccess } from './haptics'
 
 const isNative = Capacitor.isNativePlatform()
 
@@ -55,6 +56,7 @@ function tone(freq, start, duration, type = 'sine', volume = 0.2) {
 }
 
 export function playCorrect() {
+  hapticCorrect()
   try {
     tone(523.25, 0, 0.12)
     tone(659.25, 0.1, 0.12)
@@ -63,6 +65,7 @@ export function playCorrect() {
 }
 
 export function playWrong() {
+  hapticWrong()
   try {
     tone(220, 0, 0.2, 'square', 0.12)
     tone(174, 0.18, 0.3, 'square', 0.12)
@@ -70,10 +73,22 @@ export function playWrong() {
 }
 
 export function playFanfare() {
+  hapticSuccess()
   try {
     tone(523.25, 0, 0.15)
     tone(659.25, 0.12, 0.15)
     tone(783.99, 0.24, 0.15)
     tone(1046.5, 0.36, 0.4)
+  } catch { /* בלי קול */ }
+}
+
+// צליל קומבו: ארפג'ו שעולה עם אורך הרצף
+export function playCombo(n) {
+  hapticCorrect()
+  try {
+    const base = 523.25 * Math.pow(1.06, Math.min(n, 8))
+    tone(base, 0, 0.1)
+    tone(base * 1.25, 0.08, 0.1)
+    tone(base * 1.5, 0.16, 0.2)
   } catch { /* בלי קול */ }
 }

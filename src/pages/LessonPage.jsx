@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
-import { getLesson } from '../data/course'
+import { getLesson, LEVELS } from '../data/course'
 import { generateExercises } from '../lib/exerciseGen'
 import { useProgress } from '../hooks/useProgress'
-import { getCrowns } from '../lib/progress'
+import { getCrowns, isLevelCompleted } from '../lib/progress'
 import LessonEngine from '../components/LessonEngine'
 import Confetti from '../components/Confetti'
 import Button from '../components/Button'
@@ -50,14 +50,23 @@ export default function LessonPage() {
   return (
     <LessonEngine
       exercises={exercises}
-      onFinish={({ perfect, hintsUsed }) => {
-        const result = completeLesson(lesson.level.id, lesson.index, perfect, hintsUsed)
+      onFinish={({ perfect, hintsUsed, maxCombo }) => {
+        // state כאן הוא המצב שלפני סיום השיעור — לזיהוי רגעי חגיגה
+        const wasLevelDone = isLevelCompleted(state, lesson.level.id)
+        const goalNotHitYet = state.xpToday < state.dailyGoal
+        const today = new Date().toISOString().slice(0, 10)
+        const firstLessonToday = state.lastActiveDate !== today
+
+        const result = completeLesson(lesson.level.id, lesson.index, perfect, hintsUsed, maxCombo)
         playFanfare()
         setFinished({
           perfect,
           xpGained: result.xpGained,
           hintPenalty: result.hintPenalty,
           newAchievements: result.newAchievements,
+          levelJustCompleted: !wasLevelDone && isLevelCompleted(result.state, lesson.level.id),
+          dailyGoalHit: goalNotHitYet && result.state.xpToday >= result.state.dailyGoal,
+          streakCelebration: firstLessonToday ? result.state.streak : 0,
         })
       }}
     />
@@ -65,16 +74,36 @@ export default function LessonPage() {
 }
 
 function FinishScreen({ lesson, finished, onContinue }) {
+  const nextLevel = LEVELS[lesson.levelIndex + 1]
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center gap-5 overflow-hidden p-6 text-center">
-      <Confetti />
-      <div className="animate-bounce-slow text-8xl">🦉</div>
+      <Confetti count={finished.levelJustCompleted ? 70 : 40} />
+      <div className="animate-bounce-slow text-8xl">{finished.levelJustCompleted ? '👑' : '🦉'}</div>
       <h1 className="animate-pop-in text-3xl font-extrabold text-duo-green">
-        {finished.perfect ? 'שיעור מושלם!' : 'כל הכבוד!'}
+        {finished.levelJustCompleted
+          ? `כבשת את רמה ${lesson.levelIndex + 1}!`
+          : finished.perfect ? 'שיעור מושלם!' : 'כל הכבוד!'}
       </h1>
       <p className="text-lg font-bold text-duo-muted">
-        סיימת את {lesson.title} ברמה {lesson.levelIndex + 1} — "{lesson.level.title}"
+        {finished.levelJustCompleted
+          ? `השלמת את כל "${lesson.level.title}"${nextLevel ? ` — רמה ${lesson.levelIndex + 2} "${nextLevel.title}" מחכה לך! ${nextLevel.icon}` : ' — סיימת את הקורס כולו! 🏆'}`
+          : `סיימת את ${lesson.title} ברמה ${lesson.levelIndex + 1} — "${lesson.level.title}"`}
       </p>
+
+      {(finished.streakCelebration > 0 || finished.dailyGoalHit) && (
+        <div className="flex flex-wrap justify-center gap-3">
+          {finished.streakCelebration > 0 && (
+            <div className="animate-pop-in rounded-2xl border-2 border-duo-orange bg-orange-50 px-5 py-2 font-extrabold text-duo-orange">
+              <span className="animate-flame inline-block">🔥</span> רצף: {finished.streakCelebration} {finished.streakCelebration === 1 ? 'יום' : 'ימים'}
+            </div>
+          )}
+          {finished.dailyGoalHit && (
+            <div className="animate-pop-in rounded-2xl border-2 border-duo-yellow bg-yellow-50 px-5 py-2 font-extrabold text-duo-yellow-dark">
+              🎯 היעד היומי הושלם!
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex gap-4">
         <div className="animate-pop-in rounded-2xl border-2 border-duo-yellow bg-yellow-50 px-6 py-3">

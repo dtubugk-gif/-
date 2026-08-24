@@ -69,6 +69,38 @@ function makeMatchPairs(words) {
   return { type: 'matchPairs', pairs: words.slice(0, 5) }
 }
 
+// בחירת תמונה: הסחות עם אימוג'י שונה זו מזו
+function makePickImage(word, pool) {
+  const distractors = []
+  const seen = new Set([word.emoji])
+  for (const cand of [...shuffle(pool), ...shuffle(ALL_WORDS)]) {
+    if (cand.en !== word.en && cand.emoji && !seen.has(cand.emoji)) {
+      distractors.push(cand)
+      seen.add(cand.emoji)
+    }
+    if (distractors.length === 3) break
+  }
+  return { type: 'pickImage', word, options: shuffle([word, ...distractors]) }
+}
+
+// השלמת משפט: מסתירים מילת תוכן אחת ונותנים 3 אפשרויות
+function makeFillBlank(sentence, pool) {
+  const tokens = sentence.en.split(' ')
+  const candidates = tokens.map((t, i) => ({ t, i })).filter(({ t }) => t.length > 2)
+  const pick = candidates.length ? candidates[Math.floor(Math.random() * candidates.length)] : { t: tokens[0], i: 0 }
+  const distractors = []
+  const seen = new Set([normalize(pick.t)])
+  for (const t of [...shuffle(pool.flatMap((w) => w.en.split(' '))), ...shuffle(ALL_WORDS.flatMap((w) => w.en.split(' ')))]) {
+    const n = normalize(t)
+    if (t.length > 2 && !seen.has(n)) {
+      distractors.push(t)
+      seen.add(n)
+    }
+    if (distractors.length === 2) break
+  }
+  return { type: 'fillBlank', sentence, missing: pick.t, blankIndex: pick.i, options: shuffle([pick.t, ...distractors]) }
+}
+
 function makeTeachCard(word) {
   return { type: 'teach', word }
 }
@@ -76,10 +108,10 @@ function makeTeachCard(word) {
 // תרגילי המשך לפי קושי הרמה (0-6) — אחרי שלב הלימוד וההיכרות.
 // בניית משפטים נכנסת רק מרמה 4 (d=3) — ברמות הראשונות לומדים מילים בודדות.
 function tailForDifficulty(d) {
-  if (d <= 1) return { listen: 2, type: 0, build: 0, match: 1 } // רמות 1-2: זיהוי והאזנה בלבד
-  if (d === 2) return { listen: 2, type: 1, build: 0, match: 1 } // רמה 3: מוסיפים הקלדה
-  if (d <= 4) return { listen: 2, type: 1, build: 1, match: 1 } // רמות 4-5: משפט ראשון
-  return { listen: 2, type: 2, build: 2, match: 1 } // רמות 6-7: שליפה אקטיבית מלאה
+  if (d <= 1) return { listen: 2, type: 0, build: 0, fill: 0, match: 1 } // רמות 1-2: זיהוי והאזנה בלבד
+  if (d === 2) return { listen: 2, type: 1, build: 0, fill: 1, match: 1 } // רמה 3: הקלדה והשלמת משפט
+  if (d <= 4) return { listen: 1, type: 1, build: 1, fill: 1, match: 1 } // רמות 4-5: משפט ראשון
+  return { listen: 1, type: 2, build: 2, fill: 1, match: 1 } // רמות 6-7: שליפה אקטיבית מלאה
 }
 
 // בונה שיעור בסגנון דואלינגו: קודם מלמדים כל מילה (כרטיסיית "מילה חדשה"),
@@ -90,11 +122,15 @@ export function generateExercises({ words, sentences, difficulty = 0, teach = tr
   const focus = shuffle(words).slice(0, 4) // עד 4 מילים חדשות בשיעור — קצר וקליל
   const exercises = []
 
-  // שלב 1: לימוד ותרגול ראשוני בזוגות — מלמדים שתי מילים, בוחנים עליהן, וכן הלאה
+  // שלב 1: לימוד ותרגול ראשוני בזוגות — מלמדים שתי מילים, בוחנים עליהן, וכן הלאה.
+  // ברמות הנמוכות המבחן הראשון הוא בחירת תמונה — כיפי וקל לילדים.
   for (let i = 0; i < focus.length; i += 2) {
     const pair = focus.slice(i, i + 2)
     if (teach) pair.forEach((w) => exercises.push(makeTeachCard(w)))
-    pair.forEach((w, j) => exercises.push(makeMultipleChoice(w, pool, j % 2 === 0 ? 'en2he' : 'he2en')))
+    pair.forEach((w, j) => {
+      if (j % 2 === 0 && difficulty <= 2) exercises.push(makePickImage(w, pool))
+      else exercises.push(makeMultipleChoice(w, pool, j % 2 === 0 ? 'en2he' : 'he2en'))
+    })
   }
 
   // שלב 2: חיזוק — תרגילים מגוונים לפי הרמה.
@@ -105,6 +141,7 @@ export function generateExercises({ words, sentences, difficulty = 0, teach = tr
   shuffle(tested).slice(0, tail.listen).forEach((w) => rest.push(makeListening(w, pool)))
   shuffle(tested).slice(0, tail.type).forEach((w) => rest.push(makeTypeTranslation(w)))
   shuffle(sentences).slice(0, tail.build).forEach((s) => rest.push(makeSentenceBuild(s, pool)))
+  shuffle(sentences).slice(0, tail.fill).forEach((s) => rest.push(makeFillBlank(s, pool)))
   if (tail.match && tested.length >= 4) rest.push(makeMatchPairs(shuffle(tested)))
 
   const ordered = [...exercises, ...shuffle(rest)]
@@ -138,9 +175,14 @@ export function exerciseWords(exercise) {
       return []
     case 'multipleChoice':
     case 'listening':
+    case 'pickImage':
       return [exercise.word]
     case 'typeTranslation':
       return [exercise.item]
+    case 'fillBlank': {
+      const w = ALL_WORDS.find((x) => x.en === exercise.missing)
+      return w ? [w] : []
+    }
     case 'sentenceBuild':
       return []
     case 'matchPairs':

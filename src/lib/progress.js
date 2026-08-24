@@ -27,6 +27,7 @@ function defaultState() {
     achievements: [], // achievement ids
     totalLessons: 0,
     perfectLessons: 0,
+    bestCombo: 0,
   }
 }
 
@@ -95,13 +96,14 @@ function bumpStreakAndXp(next, xpGained) {
 
 // סיום שיעור: מחזיר { state, xpGained, hintPenalty, newAchievements }.
 // כל רמז שנפתח בשיעור מוריד נקודת XP (עד רצפה של 3 — תמיד מרוויחים משהו).
-export function completeLesson(state, levelId, lessonIndex, perfect, hintsUsed = 0) {
+export function completeLesson(state, levelId, lessonIndex, perfect, hintsUsed = 0, maxCombo = 0) {
   const next = { ...state, lessons: { ...state.lessons } }
   const key = lessonKey(levelId, lessonIndex)
   const prev = next.lessons[key] || { crowns: 0 }
   next.lessons[key] = { crowns: Math.min(MAX_CROWNS, prev.crowns + 1) }
   next.totalLessons += 1
   if (perfect) next.perfectLessons += 1
+  next.bestCombo = Math.max(next.bestCombo || 0, maxCombo)
 
   const baseXp = XP_PER_LESSON + (perfect ? XP_PERFECT_BONUS : 0)
   const xpGained = Math.max(3, baseXp - hintsUsed)
@@ -188,6 +190,8 @@ export const ACHIEVEMENTS = [
   { id: 'xp-500', icon: '🌟', title: 'סופרסטאר', desc: 'צברת 500 XP', check: (s) => s.xp >= 500 },
   { id: 'level-done', icon: '👑', title: 'כובש רמות', desc: 'השלמת רמה שלמה', check: (s) => LEVELS.some((l) => isLevelCompletedRaw(s, l.id)) },
   { id: 'three-levels', icon: '🏔️', title: 'מטפס', desc: 'השלמת 3 רמות', check: (s) => LEVELS.filter((l) => isLevelCompletedRaw(s, l.id)).length >= 3 },
+  { id: 'combo-5', icon: '⚡', title: 'על הגל', desc: '5 תשובות נכונות ברצף', check: (s) => (s.bestCombo || 0) >= 5 },
+  { id: 'course-done', icon: '🏆', title: 'אלוף הקורס', desc: 'השלמת את כל 7 הרמות!', check: (s) => LEVELS.every((l) => isLevelCompletedRaw(s, l.id)) },
 ]
 
 function isLevelCompletedRaw(state, levelId) {

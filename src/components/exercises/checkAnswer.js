@@ -30,6 +30,10 @@ export function checkAnswer(exercise, answer) {
     }
     case 'listening':
       return { correct: answer?.en === exercise.word.en, correctText: exercise.word.en }
+    case 'pickImage':
+      return { correct: answer?.en === exercise.word.en, correctText: `${exercise.word.emoji} ${exercise.word.he}` }
+    case 'fillBlank':
+      return { correct: answer === exercise.missing, correctText: exercise.sentence.en }
     case 'typeTranslation': {
       const given = normalize(answer || '')
       const expected = normalize(exercise.item.en)
@@ -64,7 +68,10 @@ export function isAnswerReady(exercise, answer) {
       return true
     case 'multipleChoice':
     case 'listening':
+    case 'pickImage':
       return answer != null
+    case 'fillBlank':
+      return typeof answer === 'string' && answer.length > 0
     case 'typeTranslation':
       return typeof answer === 'string' && answer.trim().length > 0
     case 'sentenceBuild':

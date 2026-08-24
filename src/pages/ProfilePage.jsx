@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { useProgress } from '../hooks/useProgress'
 import { ACHIEVEMENTS, levelName, isLessonCompleted, currentLevel } from '../lib/progress'
 import { LEVELS, LESSONS_PER_LEVEL } from '../data/course'
+import ProgressBar from '../components/ProgressBar'
 
 const GOALS = [10, 30, 50, 100]
 
@@ -53,6 +54,14 @@ export default function ProfilePage() {
             <div className="text-sm font-bold text-duo-muted">{s.label}</div>
           </div>
         ))}
+      </div>
+
+      <div className="mb-8 rounded-2xl border-2 border-duo-gray p-4">
+        <div className="mb-2 flex items-center justify-between font-extrabold">
+          <span>התקדמות בקורס 🗺️</span>
+          <span className="text-duo-green-darker">{Math.round((lessonsDone / totalLessonCount) * 100)}%</span>
+        </div>
+        <ProgressBar value={lessonsDone} max={totalLessonCount} />
       </div>
 
       <h2 className="mb-3 text-xl font-extrabold">היעד היומי שלי 🎯</h2>
