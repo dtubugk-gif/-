@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">שגרות סגירה</string>
+    <string name="accessibility_service_label">שגרות סגירה — זיהוי יציאה מאפליקציות</string>
+    <string name="accessibility_service_description">השירות מזהה מתי יוצאים מאפליקציה שהגדרת, כדי להפעיל את הפעולות שבחרת (שינוי מצב צליל, פתיחת אפליקציה, תזכורת ועוד). השירות לא קורא תוכן מהמסך.</string>
+
+    <string name="notification_channel_name">תזכורות שגרה</string>
+    <string name="notification_channel_desc">התראות שהוגדרו בשגרות</string>
+</resources>
