@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { useProgress } from '../hooks/useProgress'
 import { ACHIEVEMENTS, levelName, isLessonCompleted, currentLevel } from '../lib/progress'
 import { LEVELS, LESSONS_PER_LEVEL } from '../data/course'
+import { isComputer, setDevice } from '../lib/device'
 import ProgressBar from '../components/ProgressBar'
 
 const GOALS = [10, 30, 50, 100]
@@ -41,10 +42,22 @@ export default function ProfilePage() {
 
       <Link
         to="/onboarding"
-        className="btn-3d mb-8 block rounded-2xl border-2 border-duo-blue-dark bg-duo-blue p-4 text-center font-extrabold text-white"
+        className="btn-3d mb-3 block rounded-2xl border-2 border-duo-blue-dark bg-duo-blue p-4 text-center font-extrabold text-white"
       >
         🧭 מבחן רמה מחדש — עדכן את המסלול שלך
       </Link>
+
+      <button
+        type="button"
+        onClick={() => {
+          setDevice(isComputer() ? 'phone' : 'computer')
+          window.location.hash = '#/'
+          window.location.reload()
+        }}
+        className="btn-3d mb-8 block w-full rounded-2xl border-2 border-duo-gray bg-white p-4 text-center font-extrabold"
+      >
+        {isComputer() ? '📱 מעבר לגרסת טלפון' : '💻 מעבר לגרסת מחשב'}
+      </button>
 
       <div className="mb-8 grid grid-cols-2 gap-3">
         {stats.map((s) => (

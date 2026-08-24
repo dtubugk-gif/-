@@ -7,22 +7,58 @@ import { hapticCorrect, hapticWrong, hapticSuccess } from './haptics'
 
 const isNative = Capacitor.isNativePlatform()
 
-export function speak(text, rate = 0.9) {
+// חימום מנוע הקול בהפעלת האפליקציה — מונע השמעה ראשונה שנבלעת
+let cachedVoices = []
+export function initSpeech() {
   if (isNative) {
-    TextToSpeech.stop().catch(() => {})
-    TextToSpeech.speak({ text, lang: 'en-US', rate, category: 'playback' }).catch(() => {})
+    // פנייה ראשונה למנוע ה-TTS של אנדרואיד מעירה אותו מוקדם
+    TextToSpeech.getSupportedLanguages().catch(() => {})
     return
   }
   try {
     if (!('speechSynthesis' in window)) return
-    window.speechSynthesis.cancel()
+    const load = () => {
+      cachedVoices = window.speechSynthesis.getVoices()
+    }
+    load()
+    // בחלק מהדפדפנים רשימת הקולות נטענת מאוחר — נאזין לעדכון
+    window.speechSynthesis.onvoiceschanged = load
+  } catch {
+    // בלי קול
+  }
+}
+
+// מונה רץ שמונע מרוץ בין stop ל-speak כשמקישים מהר על כמה מילים
+let speakSeq = 0
+
+export function speak(text, rate = 0.9) {
+  if (isNative) {
+    const seq = ++speakSeq
+    // מחכים שה-stop יסתיים לפני ההשמעה — אחרת חלק מהמנועים בולעים את המשפט
+    TextToSpeech.stop()
+      .catch(() => {})
+      .then(() => {
+        if (seq !== speakSeq) return // הקשה חדשה עקפה אותנו
+        TextToSpeech.speak({ text, lang: 'en-US', rate, category: 'playback' }).catch(() => {
+          // ניסיון שני — מנוע שעוד לא התעורר
+          TextToSpeech.speak({ text, lang: 'en-US', rate, category: 'playback' }).catch(() => {})
+        })
+      })
+    return
+  }
+  try {
+    if (!('speechSynthesis' in window)) return
+    const synth = window.speechSynthesis
+    synth.cancel()
+    // באג ידוע בכרום: אחרי השהיה ארוכה המנוע "נתקע" במצב מושהה
+    synth.resume()
     const u = new SpeechSynthesisUtterance(text)
     u.lang = 'en-US'
     u.rate = rate
-    const voices = window.speechSynthesis.getVoices()
-    const enVoice = voices.find((v) => v.lang.startsWith('en'))
+    const voices = synth.getVoices().length ? synth.getVoices() : cachedVoices
+    const enVoice = voices.find((v) => v.lang && v.lang.startsWith('en'))
     if (enVoice) u.voice = enVoice
-    window.speechSynthesis.speak(u)
+    synth.speak(u)
   } catch {
     // דפדפן בלי תמיכה — פשוט בלי קול
   }

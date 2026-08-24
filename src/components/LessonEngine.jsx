@@ -1,7 +1,7 @@
 // מנוע התרגול: מציג תרגילים בזה אחר זה, בודק תשובות,
 // מחזיר תרגילים שגויים לסוף התור (כמו דואלינגו) ומדווח על סיום.
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Button from './Button'
 import ProgressBar from './ProgressBar'
@@ -18,6 +18,7 @@ import { checkAnswer, isAnswerReady } from './exercises/checkAnswer'
 import { exerciseWords } from '../lib/exerciseGen'
 import { playCorrect, playWrong, playCombo, speak } from '../lib/speech'
 import { useProgress } from '../hooks/useProgress'
+import { isComputer } from '../lib/device'
 
 const EXERCISE_COMPONENTS = {
   teach: TeachCard,
@@ -64,6 +65,28 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
   const exercise = queue[current]
   const total = queue.length
   const Component = exercise ? EXERCISE_COMPONENTS[exercise.type] : null
+  const desktop = isComputer()
+
+  // גרסת מחשב: מקשים 1-4 בוחרים תשובה, Enter בודק/ממשיך
+  useEffect(() => {
+    if (!desktop || !exercise) return
+    function onKey(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        if (exercise.type === 'teach' || exercise.type === 'grammar') handleTeachContinue()
+        else if (checked) handleContinue()
+        else if (isAnswerReady(exercise, answer)) handleCheck()
+        return
+      }
+      if (e.target.tagName === 'INPUT') return
+      const n = parseInt(e.key, 10)
+      if (!checked && n >= 1 && n <= 4 && Array.isArray(exercise.options) && exercise.options[n - 1] !== undefined) {
+        setAnswer(exercise.options[n - 1])
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
 
   // כרטיסיית לימוד: אין בדיקה — פשוט ממשיכים הלאה
   function handleTeachContinue() {
@@ -137,7 +160,7 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
   if (!exercise) return null
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-2xl flex-col px-4">
+    <div className={`mx-auto flex min-h-screen flex-col px-4 ${desktop ? 'max-w-3xl' : 'max-w-2xl'}`}>
       {/* פס עליון: יציאה + התקדמות */}
       <div className="flex items-center gap-3 py-4">
         <button
@@ -173,10 +196,10 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
               : 'animate-slide-up border-red-200 bg-red-100'
         }`}
       >
-        <div className="mx-auto flex max-w-2xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className={`mx-auto flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${desktop ? 'max-w-3xl' : 'max-w-2xl'}`}>
           {exercise.type === 'teach' || exercise.type === 'grammar' ? (
             <>
-              <div className="hidden text-duo-muted sm:block" />
+              <div className="hidden font-bold text-duo-muted sm:block">{desktop ? '💡 Enter להמשך' : ''}</div>
               <Button variant="blue" onClick={handleTeachContinue} className="w-full sm:w-auto">
                 הבנתי, המשך
               </Button>
@@ -194,7 +217,7 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
                   {(!lastResult?.correct || lastResult?.almost) && lastResult?.correctText && (
                     <div className={`font-bold ${lastResult?.correct ? 'text-duo-green-darker' : 'text-duo-red-dark'}`}>
                       התשובה הנכונה: <bdi dir="auto">{lastResult.correctText}</bdi>{' '}
-                      {!/[\u0590-\u05FF]/.test(lastResult.correctText) && (
+                      {!/[֐-׿]/.test(lastResult.correctText) && (
                         <button type="button" onClick={() => speak(lastResult.correctText)} title="השמע">🔊</button>
                       )}
                     </div>
@@ -207,7 +230,7 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
             </>
           ) : (
             <>
-              <div className="hidden text-duo-muted sm:block" />
+              <div className="hidden font-bold text-duo-muted sm:block">{desktop ? '💡 מקשים 1–4 לבחירה · Enter לבדיקה' : ''}</div>
               <Button
                 disabled={!isAnswerReady(exercise, answer)}
                 onClick={handleCheck}
