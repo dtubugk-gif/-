@@ -31,7 +31,7 @@ export default function GrammarCard() {
             title="לחץ להשמעה"
           >
             <div className="flex items-center justify-between gap-2">
-              <span dir="ltr" className="text-xl font-extrabold text-duo-blue">🔊 {row.en}</span>
+              <span dir="ltr" className="text-xl font-extrabold text-duo-blue-dark">🔊 {row.en}</span>
               <span className="font-extrabold">{row.he}</span>
             </div>
             <div className="mt-1 text-sm font-bold text-duo-muted">

@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom'
 export default function LessonNode({ level, lessonIndex, unlocked, crowns, title, offset }) {
   const done = crowns > 0
   const inner = (
-    <div className="flex flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-3">
       <div className="relative">
         <div
           className={`btn-3d flex h-16 w-16 items-center justify-center rounded-full border-4 text-3xl shadow-md sm:h-20 sm:w-20 ${
@@ -16,8 +16,8 @@ export default function LessonNode({ level, lessonIndex, unlocked, crowns, title
           {unlocked ? (done ? '⭐' : level.icon) : '🔒'}
         </div>
         {done && (
-          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-white px-1.5 py-0.5 text-[11px] font-extrabold text-duo-yellow-dark shadow">
-            {'👑'.repeat(crowns)}
+          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-white px-1.5 py-0.5 text-[11px] font-extrabold text-duo-yellow-text shadow">
+            <span className="whitespace-nowrap">👑{crowns > 1 ? `×${crowns}` : ''}</span>
           </div>
         )}
       </div>

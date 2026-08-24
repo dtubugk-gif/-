@@ -6,7 +6,7 @@ export default function ProgressBar({ value, max, color = '#58cc02', className =
     <div className={`h-4 w-full overflow-hidden rounded-full bg-duo-gray ${className}`}>
       <div
         className="h-full rounded-full transition-all duration-500 ease-out"
-        style={{ width: `${pct}%`, backgroundColor: color }}
+        style={{ width: `${pct}%`, minWidth: value > 0 ? '1rem' : 0, backgroundColor: color }}
       >
         {pct > 8 && <div className="mx-auto mt-1 h-1 w-3/4 rounded-full bg-white/30" />}
       </div>

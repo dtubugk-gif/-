@@ -151,7 +151,7 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
         <ProgressBar value={Math.min(totalDone, total)} max={total} className="flex-1" />
       </div>
 
-      <div className="flex-1 pb-40 pt-4">
+      <div className={`flex-1 pb-40 pt-4 ${exercise.type === 'teach' || exercise.type === 'grammar' ? 'flex flex-col justify-center' : ''}`}>
         {/* key מאפס state פנימי בין תרגילים וגם מפעיל את אנימציית הכניסה */}
         <div key={current} className="animate-exercise-enter">
           <Component exercise={exercise} answer={answer} setAnswer={setAnswer} checked={checked} onHint={registerHint} />

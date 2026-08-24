@@ -20,8 +20,8 @@ export default function ProfilePage() {
   const level = currentLevel(state)
 
   const stats = [
-    { icon: '🔥', label: 'רצף ימים', value: state.streak, color: 'text-duo-orange' },
-    { icon: '⚡', label: 'סה"כ XP', value: state.xp, color: 'text-duo-yellow-dark' },
+    { icon: '🔥', label: 'רצף ימים', value: state.streak, color: 'text-duo-orange-text' },
+    { icon: '⚡', label: 'סה"כ XP', value: state.xp, color: 'text-duo-yellow-text' },
     { icon: '📗', label: 'שיעורים הושלמו', value: `${lessonsDone}/${totalLessonCount}`, color: 'text-duo-green-darker' },
     { icon: '💯', label: 'שיעורים מושלמים', value: state.perfectLessons, color: 'text-duo-blue-dark' },
   ]

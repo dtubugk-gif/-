@@ -14,7 +14,7 @@ export default function TeachCard({ exercise }) {
 
   return (
     <div className="flex flex-col items-center text-center">
-      <div className="mb-6 animate-pop-in rounded-full bg-purple-100 px-5 py-2 text-lg font-extrabold text-duo-purple">
+      <div className="mb-6 animate-pop-in rounded-full bg-purple-100 px-5 py-2 text-lg font-extrabold text-duo-purple-dark">
         ✨ מילה חדשה! ✨
       </div>
 
@@ -25,7 +25,7 @@ export default function TeachCard({ exercise }) {
         title="לחץ להשמעה"
       >
         <div className="mb-4 text-8xl">{word.emoji || '⭐'}</div>
-        <div dir="ltr" className="mb-2 flex items-center justify-center gap-3 text-4xl font-extrabold text-duo-blue">
+        <div dir="ltr" className="mb-2 flex items-center justify-center gap-3 text-4xl font-extrabold text-duo-blue-dark">
           <span>🔊</span>
           <span>{word.en}</span>
         </div>

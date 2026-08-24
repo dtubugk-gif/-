@@ -41,7 +41,7 @@ export default function HomePage() {
         </div>
         <div className="mb-2 flex items-center justify-between font-extrabold">
           <span>היעד היומי שלך 🎯</span>
-          <span className="text-duo-yellow-dark">
+          <span className="text-duo-yellow-text">
             {Math.min(state.xpToday, state.dailyGoal)}/{state.dailyGoal} XP
           </span>
         </div>

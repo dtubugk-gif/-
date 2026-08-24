@@ -81,7 +81,7 @@ function FinishScreen({ lesson, finished, onContinue }) {
     <div className="celebration-bg relative flex min-h-screen flex-col items-center justify-center gap-5 overflow-hidden p-6 text-center">
       <Confetti count={finished.levelJustCompleted ? 70 : 40} />
       <div className="animate-bounce-slow text-8xl">{finished.levelJustCompleted ? '👑' : '🦉'}</div>
-      <h1 className="animate-pop-in text-3xl font-extrabold text-duo-green">
+      <h1 className="animate-pop-in text-3xl font-extrabold text-duo-green-darker">
         {finished.levelJustCompleted
           ? `כבשת את רמה ${lesson.levelIndex + 1}!`
           : finished.perfect ? 'שיעור מושלם!' : 'כל הכבוד!'}
@@ -95,12 +95,12 @@ function FinishScreen({ lesson, finished, onContinue }) {
       {(finished.streakCelebration > 0 || finished.dailyGoalHit) && (
         <div className="flex flex-wrap justify-center gap-3">
           {finished.streakCelebration > 0 && (
-            <div className="animate-pop-in rounded-2xl border-2 border-duo-orange bg-orange-50 px-5 py-2 font-extrabold text-duo-orange">
+            <div className="animate-pop-in rounded-2xl border-2 border-duo-orange bg-orange-50 px-5 py-2 font-extrabold text-duo-orange-text">
               <span className="animate-flame inline-block">🔥</span> רצף: {finished.streakCelebration} {finished.streakCelebration === 1 ? 'יום' : 'ימים'}
             </div>
           )}
           {finished.dailyGoalHit && (
-            <div className="animate-pop-in rounded-2xl border-2 border-duo-yellow bg-yellow-50 px-5 py-2 font-extrabold text-duo-yellow-dark">
+            <div className="animate-pop-in rounded-2xl border-2 border-duo-yellow bg-yellow-50 px-5 py-2 font-extrabold text-duo-yellow-text">
               🎯 הגעת ליעד היומי!
             </div>
           )}
@@ -109,8 +109,8 @@ function FinishScreen({ lesson, finished, onContinue }) {
 
       <div className="flex gap-4">
         <div className="animate-pop-in rounded-2xl border-2 border-duo-yellow bg-yellow-50 px-6 py-3">
-          <div className="text-sm font-extrabold text-duo-yellow-dark">XP שהרווחת</div>
-          <div dir="ltr" className="text-2xl font-extrabold text-duo-yellow-dark">+{finished.xpGained}</div>
+          <div className="text-sm font-extrabold text-duo-yellow-text">XP שהרווחת</div>
+          <div dir="ltr" className="text-2xl font-extrabold text-duo-yellow-text">+{finished.xpGained}</div>
         </div>
         {finished.perfect && (
           <div className="animate-pop-in rounded-2xl border-2 border-duo-green bg-green-50 px-6 py-3">
@@ -128,7 +128,7 @@ function FinishScreen({ lesson, finished, onContinue }) {
 
       {finished.newAchievements?.length > 0 && (
         <div className="animate-pop-in rounded-2xl border-2 border-duo-purple bg-purple-50 px-6 py-4">
-          <div className="mb-1 font-extrabold text-duo-purple">הישג חדש! 🏆</div>
+          <div className="mb-1 font-extrabold text-duo-purple-dark">הישג חדש! 🏆</div>
           {finished.newAchievements.map((a) => (
             <div key={a.id} className="font-bold">
               {a.icon} {a.title} — {a.desc}
