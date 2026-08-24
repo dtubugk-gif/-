@@ -22,7 +22,7 @@ export default function SentenceBuild({ exercise, answer, setAnswer, checked, on
 
   return (
     <div>
-      <h2 className="mb-6 text-2xl font-extrabold">תרגם את המשפט 🧩</h2>
+      <h2 className="mb-6 text-2xl font-extrabold">הרכיבו את המשפט 🧩</h2>
 
       <div className="mb-6 rounded-2xl border-2 border-duo-gray px-5 py-4 text-xl font-bold leading-9">
         <HintText text={sentence.he} dir="rtl" onHint={onHint} />

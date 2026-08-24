@@ -87,14 +87,19 @@ export default function LessonEngine({ exercises: initialExercises, onFinish }) 
     setChecked(true)
     setLastResult(result)
     if (result.correct) {
-      const streakNow = combo + 1
-      setCombo(streakNow)
-      setMaxCombo((m) => Math.max(m, streakNow))
-      if (streakNow >= 3) {
-        result.praise = `🔥 ${streakNow} ברצף! ${result.praise}`
-        playCombo(streakNow)
-      } else {
+      // התאמת זוגות עם טעויות בדרך "עוברת" אבל לא מגדילה את הקומבו
+      if (exercise.type === 'matchPairs' && answer?.wrongWords?.length) {
         playCorrect()
+      } else {
+        const streakNow = combo + 1
+        setCombo(streakNow)
+        setMaxCombo((m) => Math.max(m, streakNow))
+        if (streakNow >= 3) {
+          result.praise = `🔥 ${streakNow} ברצף! ${result.praise}`
+          playCombo(streakNow)
+        } else {
+          playCorrect()
+        }
       }
     } else {
       setCombo(0)

@@ -93,13 +93,16 @@ function makeFillBlank(sentence, pool, allowed) {
     .filter(({ t }) => t.length > 2 && allowed.has(normalize(t)))
   if (!candidates.length) return null
   const pick = candidates[Math.floor(Math.random() * candidates.length)]
+  const stem = (t) => normalize(t).replace(/s$/, '')
   const distractors = []
   const seen = new Set([normalize(pick.t)])
+  const stems = new Set([stem(pick.t)])
   for (const t of [...shuffle(pool.flatMap((w) => w.en.split(' '))), ...shuffle(ALL_WORDS.flatMap((w) => w.en.split(' ')))]) {
     const n = normalize(t)
-    if (t.length > 2 && !seen.has(n)) {
+    if (t.length > 2 && !seen.has(n) && !stems.has(stem(t))) {
       distractors.push(t)
       seen.add(n)
+      stems.add(stem(t))
     }
     if (distractors.length === 2) break
   }
@@ -192,7 +195,12 @@ export function exerciseWords(exercise) {
     case 'typeTranslation':
       return [exercise.item]
     case 'fillBlank': {
-      const w = ALL_WORDS.find((x) => x.en === exercise.missing)
+      // התאמה גם לפעלים השמורים כ-"to X" וגם לצורת רבים (eggs -> egg)
+      const m = exercise.missing.toLowerCase()
+      const w = ALL_WORDS.find((x) => {
+        const bare = x.en.toLowerCase().replace(/^to /, '')
+        return x.en.toLowerCase() === m || bare === m || bare === m.replace(/s$/, '')
+      })
       return w ? [w] : []
     }
     case 'sentenceBuild':

@@ -53,8 +53,10 @@ export default function LessonPage() {
       onFinish={({ perfect, hintsUsed, maxCombo }) => {
         // state כאן הוא המצב שלפני סיום השיעור — לזיהוי רגעי חגיגה
         const wasLevelDone = isLevelCompleted(state, lesson.level.id)
-        const goalNotHitYet = state.xpToday < state.dailyGoal
         const today = new Date().toISOString().slice(0, 10)
+        // אם עבר יום מאז הטעינה — ה-XP היומי שבזיכרון שייך לאתמול
+        const xpTodayNow = state.xpTodayDate === today ? state.xpToday : 0
+        const goalNotHitYet = xpTodayNow < state.dailyGoal
         const firstLessonToday = state.lastActiveDate !== today
 
         const result = completeLesson(lesson.level.id, lesson.index, perfect, hintsUsed, maxCombo)
@@ -87,7 +89,7 @@ function FinishScreen({ lesson, finished, onContinue }) {
       <p className="text-lg font-bold text-duo-muted">
         {finished.levelJustCompleted
           ? `השלמת את כל "${lesson.level.title}"${nextLevel ? ` — רמה ${lesson.levelIndex + 2} "${nextLevel.title}" מחכה לך! ${nextLevel.icon}` : ' — סיימת את הקורס כולו! 🏆'}`
-          : `סיימת את ${lesson.title} ברמה ${lesson.levelIndex + 1} — "${lesson.level.title}"`}
+          : `סיימת את ${lesson.isReview ? 'שיעור החזרה' : lesson.title} ברמה ${lesson.levelIndex + 1} — "${lesson.level.title}"`}
       </p>
 
       {(finished.streakCelebration > 0 || finished.dailyGoalHit) && (
@@ -99,7 +101,7 @@ function FinishScreen({ lesson, finished, onContinue }) {
           )}
           {finished.dailyGoalHit && (
             <div className="animate-pop-in rounded-2xl border-2 border-duo-yellow bg-yellow-50 px-5 py-2 font-extrabold text-duo-yellow-dark">
-              🎯 היעד היומי הושלם!
+              🎯 הגעת ליעד היומי!
             </div>
           )}
         </div>

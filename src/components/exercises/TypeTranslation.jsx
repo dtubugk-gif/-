@@ -6,7 +6,7 @@ export default function TypeTranslation({ exercise, answer, setAnswer, checked, 
   const { item } = exercise
   return (
     <div>
-      <h2 className="mb-6 text-2xl font-extrabold">כתוב באנגלית ✍️</h2>
+      <h2 className="mb-6 text-2xl font-extrabold">איך כותבים באנגלית? ✍️</h2>
 
       <div className="mb-8 flex items-center justify-center gap-3 rounded-2xl border-2 border-duo-gray px-6 py-5 text-3xl font-extrabold">
         {item.emoji && <span>{item.emoji}</span>}

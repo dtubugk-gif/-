@@ -58,7 +58,7 @@ export default function MatchPairs({ exercise, setAnswer, checked }) {
 
   return (
     <div>
-      <h2 className="mb-6 text-2xl font-extrabold">התאם את הזוגות 🔗</h2>
+      <h2 className="mb-6 text-2xl font-extrabold">התאימו את הזוגות 🔗</h2>
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-3" dir="ltr">
           {enOrder.map((p) => (

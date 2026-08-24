@@ -9,7 +9,7 @@ export default function FillBlank({ exercise, answer, setAnswer, checked, onHint
 
   return (
     <div>
-      <h2 className="mb-6 text-2xl font-extrabold">השלם את המשפט 📝</h2>
+      <h2 className="mb-6 text-2xl font-extrabold">מה המילה החסרה? 📝</h2>
 
       <div className="mb-3 flex flex-wrap items-center justify-center gap-2 rounded-2xl border-2 border-duo-gray px-5 py-4 text-xl font-extrabold" dir="ltr">
         <button type="button" onClick={() => speak(sentence.en)} className="text-duo-blue" title="השמע">🔊</button>
