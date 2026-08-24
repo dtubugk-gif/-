@@ -1,7 +1,7 @@
 // מחולל תרגילים: בונה רשימת תרגילים מעורבת משיעור, עם תמהיל שמשתנה לפי רמה —
 // רמות נמוכות מקבלות יותר בחירה מרובה, רמות גבוהות יותר הקלדה ובניית משפטים.
 
-import { ALL_WORDS } from '../data/course'
+import { ALL_WORDS, FUNCTION_WORDS } from '../data/course'
 
 export function shuffle(arr) {
   const a = [...arr]
@@ -83,11 +83,16 @@ function makePickImage(word, pool) {
   return { type: 'pickImage', word, options: shuffle([word, ...distractors]) }
 }
 
-// השלמת משפט: מסתירים מילת תוכן אחת ונותנים 3 אפשרויות
-function makeFillBlank(sentence, pool) {
+// השלמת משפט: מסתירים מילה אחת ונותנים 3 אפשרויות.
+// המילה החסרה נבחרת רק מבין מילים שכבר נלמדו בשיעור או מילות תפקיד מוכרות —
+// כדי שלא ייבחנו על מילה שעוד לא לימדנו.
+function makeFillBlank(sentence, pool, allowed) {
   const tokens = sentence.en.split(' ')
-  const candidates = tokens.map((t, i) => ({ t, i })).filter(({ t }) => t.length > 2)
-  const pick = candidates.length ? candidates[Math.floor(Math.random() * candidates.length)] : { t: tokens[0], i: 0 }
+  const candidates = tokens
+    .map((t, i) => ({ t, i }))
+    .filter(({ t }) => t.length > 2 && allowed.has(normalize(t)))
+  if (!candidates.length) return null
+  const pick = candidates[Math.floor(Math.random() * candidates.length)]
   const distractors = []
   const seen = new Set([normalize(pick.t)])
   for (const t of [...shuffle(pool.flatMap((w) => w.en.split(' '))), ...shuffle(ALL_WORDS.flatMap((w) => w.en.split(' ')))]) {
@@ -141,7 +146,14 @@ export function generateExercises({ words, sentences, difficulty = 0, teach = tr
   shuffle(tested).slice(0, tail.listen).forEach((w) => rest.push(makeListening(w, pool)))
   shuffle(tested).slice(0, tail.type).forEach((w) => rest.push(makeTypeTranslation(w)))
   shuffle(sentences).slice(0, tail.build).forEach((s) => rest.push(makeSentenceBuild(s, pool)))
-  shuffle(sentences).slice(0, tail.fill).forEach((s) => rest.push(makeFillBlank(s, pool)))
+  // המילה החסרה בהשלמת משפט — רק ממילים שנלמדו או מילות תפקיד
+  const allowedBlanks = new Set(Object.keys(FUNCTION_WORDS).map(normalize))
+  tested.forEach((w) => w.en.split(' ').forEach((t) => allowedBlanks.add(normalize(t))))
+  shuffle(sentences)
+    .map((s) => makeFillBlank(s, pool, allowedBlanks))
+    .filter(Boolean)
+    .slice(0, tail.fill)
+    .forEach((e) => rest.push(e))
   if (tail.match && tested.length >= 4) rest.push(makeMatchPairs(shuffle(tested)))
 
   const ordered = [...exercises, ...shuffle(rest)]
