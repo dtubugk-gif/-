@@ -1,7 +1,10 @@
 package com.routines.appclose.ui
 
+import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +16,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -26,10 +30,12 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,9 +44,11 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.foundation.clickable
+import com.routines.appclose.engine.ActionExecutor
+import com.routines.appclose.service.ServiceStatus
 import com.routines.appclose.util.PermissionsHelper
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,20 +61,21 @@ fun RulesListScreen(
     onOpenDiagnostics: () -> Unit,
 ) {
     val rules by viewModel.rules.collectAsState()
+    val serviceConnected by ServiceStatus.connected.collectAsState()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
-    // רענון סטטוס הנגישות בכל חזרה למסך (אחרי ביקור בהגדרות המערכת).
-    var accessibilityOn by remember { mutableStateOf(PermissionsHelper.isAccessibilityEnabled(context)) }
+    // רענון בדיקות ההרשאות בכל חזרה למסך (אחרי ביקור בהגדרות המערכת).
+    var refreshTick by remember { mutableIntStateOf(0) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                accessibilityOn = PermissionsHelper.isAccessibilityEnabled(context)
-            }
+            if (event == Lifecycle.Event.ON_RESUME) refreshTick++
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
+    val accessibilityOn = remember(refreshTick) { PermissionsHelper.isAccessibilityEnabled(context) }
 
     Scaffold(
         topBar = {
@@ -95,31 +104,16 @@ fun RulesListScreen(
     ) { padding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (!accessibilityOn) {
-                item {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                        ),
-                        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenPermissions),
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                "שירות הזיהוי כבוי",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                            )
-                            Text(
-                                "בלי שירות הנגישות האפליקציה לא יכולה לדעת מתי יצאת מאפליקציה. לחץ כאן להפעלה.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                            )
-                        }
-                    }
-                }
+            item {
+                ServiceBanner(
+                    accessibilityOn = accessibilityOn,
+                    serviceConnected = serviceConnected,
+                    onOpenPermissions = onOpenPermissions,
+                    onOpenDiagnostics = onOpenDiagnostics,
+                )
             }
 
             if (rules.isEmpty()) {
@@ -140,6 +134,9 @@ fun RulesListScreen(
 
             items(rules, key = { it.rule.id }) { ruleWithActions ->
                 val rule = ruleWithActions.rule
+                val missing = remember(ruleWithActions, refreshTick) {
+                    PermissionsHelper.missingForActions(context, ruleWithActions.actions)
+                }
                 Card(
                     modifier = Modifier.fillMaxWidth().clickable { onEditRule(rule.id) },
                 ) {
@@ -156,6 +153,18 @@ fun RulesListScreen(
                                     color = MaterialTheme.colorScheme.secondary,
                                 )
                             }
+                            // הרצת ניסיון: מפעיל את הפעולות עכשיו, בלי לחכות ליציאה —
+                            // כך בודקים אם הבעיה בזיהוי או בפעולות עצמן.
+                            IconButton(onClick = {
+                                Toast.makeText(context, "מריץ את פעולות השגרה…", Toast.LENGTH_SHORT).show()
+                                val actions = ruleWithActions.actions
+                                val appContext = context.applicationContext
+                                scope.launch(Dispatchers.Default) {
+                                    ActionExecutor(appContext).execute(actions)
+                                }
+                            }) {
+                                Icon(Icons.Filled.PlayArrow, contentDescription = "הרצת ניסיון")
+                            }
                             Switch(
                                 checked = rule.enabled,
                                 onCheckedChange = { viewModel.setEnabled(rule, it) },
@@ -171,9 +180,69 @@ fun RulesListScreen(
                                 modifier = Modifier.padding(top = 4.dp),
                             )
                         }
+                        if (missing.isNotEmpty()) {
+                            Text(
+                                "⚠ חסרות הרשאות: ${missing.joinToString(", ")} — לחץ על אייקון המגן לאישור",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(top = 8.dp),
+                            )
+                        }
                     }
                 }
             }
+        }
+    }
+}
+
+/** באנר סטטוס חי: פעיל (ירוק) / מוקפא (כתום) / כבוי (אדום). */
+@Composable
+private fun ServiceBanner(
+    accessibilityOn: Boolean,
+    serviceConnected: Boolean,
+    onOpenPermissions: () -> Unit,
+    onOpenDiagnostics: () -> Unit,
+) {
+    when {
+        !accessibilityOn -> BannerCard(
+            title = "שירות הזיהוי כבוי",
+            body = "בלי שירות הנגישות האפליקציה לא יכולה לדעת מתי יצאת מאפליקציה. לחץ כאן להפעלה.",
+            container = MaterialTheme.colorScheme.errorContainer,
+            content = MaterialTheme.colorScheme.onErrorContainer,
+            onClick = onOpenPermissions,
+        )
+        !serviceConnected -> BannerCard(
+            title = "השירות מסומן פעיל — אבל לא מחובר",
+            body = "כנראה שהמערכת הקפיאה אותו (נפוץ בסמסונג). בטל אופטימיזציית סוללה במסך ההרשאות, ואז כבה והדלק מחדש את השירות בהגדרות הנגישות.",
+            container = MaterialTheme.colorScheme.tertiaryContainer,
+            content = MaterialTheme.colorScheme.onTertiaryContainer,
+            onClick = onOpenPermissions,
+        )
+        else -> BannerCard(
+            title = "✓ שירות הזיהוי פעיל ומחובר",
+            body = "לחץ כאן למסך האבחון כדי לראות אילו יציאות מזוהות.",
+            container = MaterialTheme.colorScheme.primaryContainer,
+            content = MaterialTheme.colorScheme.onPrimaryContainer,
+            onClick = onOpenDiagnostics,
+        )
+    }
+}
+
+@Composable
+private fun BannerCard(
+    title: String,
+    body: String,
+    container: androidx.compose.ui.graphics.Color,
+    content: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = container),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, color = content)
+            Text(body, style = MaterialTheme.typography.bodyMedium, color = content)
         }
     }
 }

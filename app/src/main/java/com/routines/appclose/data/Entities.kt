@@ -16,6 +16,7 @@ enum class ActionType {
     NOTIFY,          // stringValue: טקסט התזכורת
     BRIGHTNESS,      // intValue: אחוז בהירות 0..100
     WIFI_PANEL,      // פתיחת פאנל ה-Wi-Fi של המערכת
+    VIBRATE,         // רטט קצר — משוב מוחשי, לא דורש שום הרשאה מיוחדת
 }
 
 @Entity(tableName = "rules")

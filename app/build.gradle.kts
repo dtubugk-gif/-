@@ -13,13 +13,28 @@ android {
         applicationId = "com.routines.appclose"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
+    }
+
+    // מפתח קבוע בריפו — כדי שכל APK מה-CI ייחתם באותה חתימה ועדכונים
+    // יתקינו מעל הגרסה הקודמת (מפתח debug של runner מתחלף בכל ריצה).
+    signingConfigs {
+        create("shared") {
+            storeFile = rootProject.file("keystore/close-routines.keystore")
+            storePassword = "closeroutines"
+            keyAlias = "closeroutines"
+            keyPassword = "closeroutines"
+        }
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("shared")
+        }
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("shared")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }

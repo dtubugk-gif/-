@@ -8,6 +8,9 @@ import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
 import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.provider.Settings
 import android.util.Log
 import com.routines.appclose.MainActivity
@@ -37,7 +40,19 @@ class ActionExecutor(private val context: Context) {
             ActionType.NOTIFY -> notify(action.stringValue ?: "")
             ActionType.BRIGHTNESS -> setBrightness(action.intValue ?: 50)
             ActionType.WIFI_PANEL -> openWifiPanel()
+            ActionType.VIBRATE -> vibrate()
         }
+    }
+
+    private fun vibrate() {
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val manager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            manager.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+        vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 300, 150, 300), -1))
     }
 
     private fun setSoundMode(mode: Int) {
@@ -93,8 +108,9 @@ class ActionExecutor(private val context: Context) {
             Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE,
         )
+        // אייקון מתוך האפליקציה עצמה — משאב מערכת עלול להקריס את התהליך בחלק מהמכשירים.
         val notification = Notification.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setSmallIcon(R.drawable.ic_stat_routine)
             .setContentTitle(context.getString(R.string.app_name))
             .setContentText(message)
             .setStyle(Notification.BigTextStyle().bigText(message))

@@ -245,6 +245,7 @@ private fun defaultActionFor(type: ActionType): RuleAction = when (type) {
     ActionType.NOTIFY -> RuleAction(ruleId = 0, type = type, stringValue = "")
     ActionType.BRIGHTNESS -> RuleAction(ruleId = 0, type = type, intValue = 50)
     ActionType.WIFI_PANEL -> RuleAction(ruleId = 0, type = type)
+    ActionType.VIBRATE -> RuleAction(ruleId = 0, type = type)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -311,6 +312,13 @@ private fun ActionEditor(
         ActionType.WIFI_PANEL -> {
             Text(
                 "ייפתח פאנל ה-Wi-Fi של המערכת (אנדרואיד לא מאפשר כיבוי/הדלקה ישירים).",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+        }
+        ActionType.VIBRATE -> {
+            Text(
+                "המכשיר ירטוט קצרות — משוב מוחשי שלא דורש שום הרשאה.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.secondary,
             )

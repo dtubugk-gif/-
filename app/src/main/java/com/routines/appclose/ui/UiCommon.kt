@@ -46,6 +46,7 @@ fun ActionType.hebrewName(): String = when (this) {
     ActionType.NOTIFY -> "תזכורת"
     ActionType.BRIGHTNESS -> "בהירות מסך"
     ActionType.WIFI_PANEL -> "פתיחת פאנל Wi-Fi"
+    ActionType.VIBRATE -> "רטט"
 }
 
 /** תיאור קצר של פעולה שמורה, לרשימת הכללים. */
@@ -61,6 +62,7 @@ fun RuleAction.describe(context: Context): String = when (type) {
     ActionType.NOTIFY -> "תזכורת: ${stringValue.orEmpty()}"
     ActionType.BRIGHTNESS -> "בהירות ${intValue ?: 0}%"
     ActionType.WIFI_PANEL -> "פתיחת פאנל Wi-Fi"
+    ActionType.VIBRATE -> "רטט קצר"
 }
 
 private fun appLabel(context: Context, pkg: String?): String {
