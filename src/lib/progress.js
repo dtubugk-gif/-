@@ -28,6 +28,8 @@ function defaultState() {
     totalLessons: 0,
     perfectLessons: 0,
     bestCombo: 0,
+    activeDates: [], // ימי פעילות אחרונים — ללוח הרצף השבועי
+    stickers: [], // אימוג'י מדבקות שנאספו מתיבות הפתעה
   }
 }
 
@@ -86,6 +88,9 @@ function bumpStreakAndXp(next, xpGained) {
     next.streak = diff === 1 ? next.streak + 1 : 1
     next.lastActiveDate = today
   }
+  if (!(next.activeDates || []).includes(today)) {
+    next.activeDates = [...(next.activeDates || []), today].slice(-14)
+  }
   next.xp += xpGained
   if (next.xpTodayDate !== today) {
     next.xpTodayDate = today
@@ -94,8 +99,20 @@ function bumpStreakAndXp(next, xpGained) {
   next.xpToday += xpGained
 }
 
-// סיום שיעור: מחזיר { state, xpGained, hintPenalty, newAchievements }.
+// סיום שיעור: מחזיר { state, xpGained, hintPenalty, dailyBonus, sticker,
+// prevCrowns, newCrowns, newAchievements }.
 // כל רמז שנפתח בשיעור מוריד נקודת XP (עד רצפה של 3 — תמיד מרוויחים משהו).
+// השיעור הראשון בכל יום מזכה במתנה יומית; כל שיעור חמישי — תיבת הפתעה עם מדבקה.
+export const DAILY_GIFT_XP = 5
+export const STICKER_BONUS_XP = 3
+export const STICKER_EVERY = 5
+export const STICKER_POOL = [
+  '🦄', '🐬', '🚀', '🌈', '🦖', '🐼', '⚽', '🎸', '🍕', '🐙',
+  '🦁', '🎨', '🛸', '🐢', '🍩', '🦋', '🏀', '🎮', '🐳', '🌵',
+  '🦊', '🍦', '🎪', '🐨', '⚡', '🎭', '🦜', '🍭', '🏄', '🐉',
+  '🎺', '🦕', '🌺', '🤖', '🎳', '🐧', '🍿', '🎠', '🦩', '💎',
+]
+
 export function completeLesson(state, levelId, lessonIndex, perfect, hintsUsed = 0, maxCombo = 0) {
   const next = { ...state, lessons: { ...state.lessons } }
   const key = lessonKey(levelId, lessonIndex)
@@ -105,14 +122,35 @@ export function completeLesson(state, levelId, lessonIndex, perfect, hintsUsed =
   if (perfect) next.perfectLessons += 1
   next.bestCombo = Math.max(next.bestCombo || 0, maxCombo)
 
+  // תיבת הפתעה: מדבקה אקראית שעוד אין באוסף, כל 5 שיעורים
+  let sticker = null
+  if (next.totalLessons % STICKER_EVERY === 0) {
+    const owned = new Set(next.stickers || [])
+    const available = STICKER_POOL.filter((s) => !owned.has(s))
+    if (available.length > 0) {
+      sticker = available[Math.floor(Math.random() * available.length)]
+      next.stickers = [...(next.stickers || []), sticker]
+    }
+  }
+
+  const dailyBonus = next.lastActiveDate !== todayStr() ? DAILY_GIFT_XP : 0
   const baseXp = XP_PER_LESSON + (perfect ? XP_PERFECT_BONUS : 0)
-  const xpGained = Math.max(3, baseXp - hintsUsed)
-  const hintPenalty = baseXp - xpGained
+  const xpGained = Math.max(3, baseXp - hintsUsed) + dailyBonus + (sticker ? STICKER_BONUS_XP : 0)
+  const hintPenalty = Math.max(0, Math.min(hintsUsed, baseXp - 3))
   bumpStreakAndXp(next, xpGained)
 
   const newAchievements = checkAchievements(next)
   saveState(next)
-  return { state: next, xpGained, hintPenalty, newAchievements }
+  return {
+    state: next,
+    xpGained,
+    hintPenalty,
+    dailyBonus,
+    sticker,
+    prevCrowns: prev.crowns,
+    newCrowns: next.lessons[key].crowns,
+    newAchievements,
+  }
 }
 
 export function setDailyGoal(state, goal) {

@@ -1,7 +1,7 @@
-// מפת הלמידה: 7 רמות בסדר קושי עולה, עם סימון הרמה הנוכחית וגלילה אליה.
+// מפת הלמידה: הרמות בסדר קושי עולה, עם סימון הרמה הנוכחית וגלילה אליה.
 
-import { useEffect, useRef } from 'react'
-import { Navigate } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Navigate, useLocation } from 'react-router-dom'
 import { LEVELS, LESSONS_PER_LEVEL } from '../data/course'
 import { useProgress } from '../hooks/useProgress'
 import { getCrowns, isLessonUnlocked, isLevelUnlocked, isLevelCompleted, isLessonCompleted, currentLevel, levelName } from '../lib/progress'
@@ -11,11 +11,55 @@ import ProgressBar from '../components/ProgressBar'
 // הזחות "שביל מתפתל"
 const OFFSETS = [0, -55, 0, 55]
 
+// ברכת הינשוף לפי שעת היום
+function owlGreeting() {
+  const h = new Date().getHours()
+  if (h < 5) return 'לילה טוב'
+  if (h < 12) return 'בוקר טוב'
+  if (h < 18) return 'צהריים טובים'
+  return 'ערב טוב'
+}
+const OWL_NUDGES = ['מוכנים לתרגל קצת אנגלית?', 'שיעור קטן ביום — וזה מצטבר!', 'בואו נלמד משהו חדש!', 'האנגלית מחכה לנו! 💪']
+
 export default function HomePage() {
   const { state } = useProgress()
   const currentRef = useRef(null)
+  const nudge = useMemo(() => OWL_NUDGES[Math.floor(Math.random() * OWL_NUDGES.length)], [])
+  // חזרה משיעור שהושלם הרגע: טקס קטן על השביל — כתר נוחת ומנעול נפתח.
+  // נלכד פעם אחת ב-state כדי שרענון הדף לא ינגן את הטקס שוב.
+  const location = useLocation()
+  const [justCompleted] = useState(() => location.state?.justCompleted || null)
+  useEffect(() => {
+    if (location.state?.justCompleted) window.history.replaceState({}, '')
+  }, [location.state])
+
+  // השיעור שנפתח הרגע: היורש הישיר של השיעור שהושלם (שיעור הבא באותה רמה,
+  // או השיעור הראשון ברמה הבאה אם הושלם שיעור החזרה)
+  const justUnlockedKey = useMemo(() => {
+    if (!justCompleted) return null
+    const [doneLevelId, doneIndexStr] = justCompleted.split(':')
+    const doneIndex = Number(doneIndexStr)
+    const doneLevelIdx = LEVELS.findIndex((l) => l.id === doneLevelId)
+    if (doneLevelIdx === -1) return null
+    if (doneIndex < LESSONS_PER_LEVEL - 1) return `${doneLevelId}:${doneIndex + 1}`
+    const next = LEVELS[doneLevelIdx + 1]
+    return next ? `${next.id}:0` : null
+  }, [justCompleted])
 
   const current = state.profile?.done ? currentLevel(state) : 1
+
+  // השיעור הבא: השיעור הפתוח הראשון שעוד לא הושלם החל מהרמה הנוכחית
+  // (לא מרמה 1 — מי שעבר מבחן רמה מתחיל גבוה יותר), עליו קופצת בועת "התחל"
+  const nextLesson = useMemo(() => {
+    for (let li = current - 1; li < LEVELS.length; li++) {
+      for (let i = 0; i < LESSONS_PER_LEVEL; i++) {
+        if (isLessonUnlocked(state, li, i) && !isLessonCompleted(state, LEVELS[li].id, i)) {
+          return { levelId: LEVELS[li].id, index: i }
+        }
+      }
+    }
+    return null
+  }, [state, current])
 
   // גלילה אוטומטית לרמה הנוכחית
   useEffect(() => {
@@ -31,8 +75,14 @@ export default function HomePage() {
 
   return (
     <div>
-      {/* הרמה שלי + יעד יומי */}
+      {/* ברכת הינשוף + הרמה שלי + יעד יומי */}
       <div className="mb-6 rounded-2xl border-2 border-duo-gray p-4 card-soft">
+        <div className="mb-3 flex items-center gap-2 border-b-2 border-duo-gray/60 pb-3">
+          <span className="animate-owl text-3xl">🦉</span>
+          <span className="font-bold text-duo-text">
+            {owlGreeting()}! {nudge}
+          </span>
+        </div>
         <div className="mb-3 flex items-center justify-between">
           <span className="font-extrabold">הרמה שלי 🏅</span>
           <span className="rounded-full bg-duo-blue px-3 py-0.5 text-sm font-extrabold text-white">
@@ -89,7 +139,12 @@ export default function HomePage() {
 
             <div className="flex flex-col items-center gap-1.5">
               {Array.from({ length: LESSONS_PER_LEVEL }, (_, li) => (
-                <div key={li} className="flex flex-col items-center gap-1.5">
+                <div
+                  key={li}
+                  className={`flex flex-col items-center gap-1.5 ${
+                    li === 0 && nextLesson?.levelId === level.id && nextLesson?.index === 0 ? 'mt-8' : ''
+                  }`}
+                >
                   {li > 0 && (
                     <div
                       className="path-connector"
@@ -103,6 +158,9 @@ export default function HomePage() {
                     crowns={getCrowns(state, level.id, li)}
                     title={li === LESSONS_PER_LEVEL - 1 ? 'חזרה' : `שיעור ${li + 1}`}
                     offset={OFFSETS[li % OFFSETS.length]}
+                    isNext={nextLesson?.levelId === level.id && nextLesson?.index === li}
+                    justEarned={justCompleted === `${level.id}:${li}`}
+                    justUnlocked={justUnlockedKey === `${level.id}:${li}` && getCrowns(state, level.id, li) === 0 && isLessonUnlocked(state, levelIndex, li)}
                   />
                 </div>
               ))}

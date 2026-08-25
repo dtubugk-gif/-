@@ -37,7 +37,7 @@ export default function Layout() {
         <Outlet />
       </main>
       {!desktop && (
-      <nav className="fixed bottom-0 right-0 left-0 z-20 border-t-2 border-duo-gray bg-white">
+      <nav className="safe-bottom fixed bottom-0 right-0 left-0 z-20 border-t-2 border-duo-gray bg-white">
         <div className="mx-auto flex max-w-2xl items-stretch justify-around">
           {NAV.map((item) => (
             <NavLink

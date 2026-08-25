@@ -10,6 +10,11 @@ const isNative = Capacitor.isNativePlatform()
 // חימום מנוע הקול בהפעלת האפליקציה — מונע השמעה ראשונה שנבלעת
 let cachedVoices = []
 export function initSpeech() {
+  // חימום ה-AudioContext בנגיעה הראשונה במסך — אחרת הצליל הראשון של
+  // הסשן נבלע בזמן שהדפדפן "מעיר" את מנוע האודיו
+  try {
+    document.addEventListener('pointerdown', () => { ctx() }, { once: true, passive: true })
+  } catch { /* בלי קול */ }
   if (isNative) {
     // פנייה ראשונה למנוע ה-TTS של אנדרואיד מעירה אותו מוקדם
     TextToSpeech.getSupportedLanguages().catch(() => {})
@@ -91,12 +96,25 @@ function tone(freq, start, duration, type = 'sine', volume = 0.2) {
   osc.stop(c.currentTime + start + duration)
 }
 
+// כמה לחנים קצרים לתשובה נכונה — גיוון שומר על תחושת פרס גם אחרי 40 תרגילים
+const CORRECT_RIFFS = [
+  () => { tone(523.25, 0, 0.12); tone(659.25, 0.1, 0.12); tone(783.99, 0.2, 0.25) },
+  () => { tone(987.77, 0, 0.07, 'square', 0.1); tone(1318.5, 0.08, 0.22, 'square', 0.1) },
+  () => { tone(523.25, 0, 0.06); tone(587.33, 0.06, 0.06); tone(659.25, 0.12, 0.06); tone(783.99, 0.18, 0.06); tone(880, 0.24, 0.2) },
+  () => { tone(659.25, 0, 0.1, 'triangle', 0.22); tone(830.61, 0.09, 0.1, 'triangle', 0.22); tone(987.77, 0.18, 0.28, 'triangle', 0.24) },
+]
+
 export function playCorrect() {
   hapticCorrect()
   try {
-    tone(523.25, 0, 0.12)
-    tone(659.25, 0.1, 0.12)
-    tone(783.99, 0.2, 0.25)
+    CORRECT_RIFFS[Math.floor(Math.random() * CORRECT_RIFFS.length)]()
+  } catch { /* בלי קול */ }
+}
+
+// קליק עדין לבחירת תשובה — נותן לכל הקשה תחושת "כפתור אמיתי"
+export function playTick() {
+  try {
+    tone(660, 0, 0.05, 'sine', 0.07)
   } catch { /* בלי קול */ }
 }
 
@@ -118,7 +136,19 @@ export function playFanfare() {
   } catch { /* בלי קול */ }
 }
 
-// צליל קומבו: ארפג'ו שעולה עם אורך הרצף
+// צליל מתנה: גליסנדו נוצץ שעולה — לרגע פתיחת המתנה היומית
+export function playGift() {
+  hapticSuccess()
+  try {
+    tone(659.25, 0, 0.09, 'triangle', 0.16)
+    tone(783.99, 0.08, 0.09, 'triangle', 0.16)
+    tone(987.77, 0.16, 0.09, 'triangle', 0.16)
+    tone(1318.5, 0.24, 0.35, 'triangle', 0.18)
+    tone(1975.5, 0.3, 0.3, 'sine', 0.08)
+  } catch { /* בלי קול */ }
+}
+
+// צליל קומבו: ארפג'ו שעולה עם אורך הרצף; מרצף 5 נוספים תווי נצנוץ
 export function playCombo(n) {
   hapticCorrect()
   try {
@@ -126,5 +156,9 @@ export function playCombo(n) {
     tone(base, 0, 0.1)
     tone(base * 1.25, 0.08, 0.1)
     tone(base * 1.5, 0.16, 0.2)
+    if (n >= 5) {
+      tone(1568, 0.28, 0.08, 'triangle', 0.14)
+      tone(2093, 0.36, 0.12, 'triangle', 0.12)
+    }
   } catch { /* בלי קול */ }
 }

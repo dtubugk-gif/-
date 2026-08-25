@@ -2,7 +2,7 @@
 
 import { Link } from 'react-router-dom'
 import { useProgress } from '../hooks/useProgress'
-import { ACHIEVEMENTS, levelName, isLessonCompleted, currentLevel } from '../lib/progress'
+import { ACHIEVEMENTS, STICKER_POOL, STICKER_EVERY, levelName, isLessonCompleted, currentLevel } from '../lib/progress'
 import { LEVELS, LESSONS_PER_LEVEL } from '../data/course'
 import { isComputer, setDevice } from '../lib/device'
 import ProgressBar from '../components/ProgressBar'
@@ -93,6 +93,27 @@ export default function ProfilePage() {
             {g} XP
           </button>
         ))}
+      </div>
+
+      <h2 className="mb-3 text-xl font-extrabold">אוסף המדבקות שלי 🎁</h2>
+      <p className="mb-3 text-sm font-bold text-duo-muted">
+        כל {STICKER_EVERY} שיעורים מקבלים תיבת הפתעה עם מדבקה חדשה!
+        {' '}נאספו {(state.stickers || []).length}/{STICKER_POOL.length}
+      </p>
+      <div className="mb-8 grid grid-cols-5 gap-2 sm:grid-cols-8">
+        {STICKER_POOL.map((s) => {
+          const owned = (state.stickers || []).includes(s)
+          return (
+            <div
+              key={s}
+              className={`flex aspect-square items-center justify-center rounded-2xl border-2 text-3xl ${
+                owned ? 'border-duo-purple bg-purple-50' : 'border-duo-gray bg-gray-50 text-lg'
+              }`}
+            >
+              {owned ? s : '❓'}
+            </div>
+          )
+        })}
       </div>
 
       <h2 className="mb-3 text-xl font-extrabold">הישגים 🏆</h2>
