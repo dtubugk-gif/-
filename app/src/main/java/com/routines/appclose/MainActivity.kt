@@ -10,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.routines.appclose.ui.DiagnosticsScreen
 import com.routines.appclose.ui.HistoryScreen
 import com.routines.appclose.ui.PermissionsScreen
 import com.routines.appclose.ui.RuleEditorScreen
@@ -41,6 +42,7 @@ private fun AppNav() {
                 onEditRule = { id -> navController.navigate("edit/$id") },
                 onOpenPermissions = { navController.navigate("permissions") },
                 onOpenHistory = { navController.navigate("history") },
+                onOpenDiagnostics = { navController.navigate("diagnostics") },
             )
         }
         composable(
@@ -58,6 +60,9 @@ private fun AppNav() {
         }
         composable("history") {
             HistoryScreen(viewModel = viewModel, onBack = { navController.popBackStack() })
+        }
+        composable("diagnostics") {
+            DiagnosticsScreen(onBack = { navController.popBackStack() })
         }
     }
 }

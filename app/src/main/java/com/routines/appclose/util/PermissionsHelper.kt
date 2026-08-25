@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.content.ContextCompat
 import com.routines.appclose.service.AppExitAccessibilityService
@@ -34,6 +35,18 @@ object PermissionsHelper {
     fun canWriteSettings(context: Context): Boolean = Settings.System.canWrite(context)
 
     fun canDrawOverlays(context: Context): Boolean = Settings.canDrawOverlays(context)
+
+    fun isIgnoringBatteryOptimizations(context: Context): Boolean {
+        val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        return pm.isIgnoringBatteryOptimizations(context.packageName)
+    }
+
+    @Suppress("BatteryLife")
+    fun batteryOptimizationIntent(context: Context): Intent =
+        Intent(
+            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+            Uri.parse("package:${context.packageName}"),
+        )
 
     fun accessibilitySettingsIntent(): Intent =
         Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)

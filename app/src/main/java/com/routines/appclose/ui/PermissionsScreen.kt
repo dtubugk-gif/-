@@ -97,6 +97,18 @@ fun PermissionsScreen(onBack: () -> Unit) {
                     onClick = { context.startActivity(PermissionsHelper.accessibilitySettingsIntent()) },
                 )
                 PermissionCard(
+                    title = "ביטול אופטימיזציית סוללה (חשוב בסמסונג)",
+                    description = "בלי זה סמסונג עלולה להקפיא את השירות — הוא נראה \"מופעל\" אבל השגרות לא רצות. אשר, ובנוסף: הגדרות ← סוללה ← אפליקציות במצב שינה — ודא שהאפליקציה לא שם.",
+                    granted = PermissionsHelper.isIgnoringBatteryOptimizations(context),
+                    onClick = {
+                        try {
+                            context.startActivity(PermissionsHelper.batteryOptimizationIntent(context))
+                        } catch (_: Exception) {
+                            context.startActivity(android.content.Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                        }
+                    },
+                )
+                PermissionCard(
                     title = "התראות",
                     description = "נדרש לפעולת \"תזכורת\".",
                     granted = notificationGranted,

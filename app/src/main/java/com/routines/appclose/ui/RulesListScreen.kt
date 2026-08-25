@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -49,6 +50,7 @@ fun RulesListScreen(
     onEditRule: (Long) -> Unit,
     onOpenPermissions: () -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenDiagnostics: () -> Unit,
 ) {
     val rules by viewModel.rules.collectAsState()
     val context = LocalContext.current
@@ -71,6 +73,9 @@ fun RulesListScreen(
             TopAppBar(
                 title = { Text("שגרות סגירה") },
                 actions = {
+                    IconButton(onClick = onOpenDiagnostics) {
+                        Icon(Icons.Filled.MonitorHeart, contentDescription = "אבחון")
+                    }
                     IconButton(onClick = onOpenHistory) {
                         Icon(Icons.Filled.History, contentDescription = "היסטוריה")
                     }

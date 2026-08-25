@@ -14,8 +14,8 @@ package com.routines.appclose.engine
  *    ישירות מתוך [onWindowChanged] כשמעבר חדש מגיע אחרי שהיציאה כבר בשלה
  *    ([WindowResult.confirmedExit]), כדי שרצף מעברים לא ימחק יציאה אמיתית.
  *
- * חבילות ב-[ignoredPackages] (SystemUI, מקלדות, האפליקציה שלנו) שקופות:
- * לא נחשבות לא כ"אפליקציה שנסגרה" ולא כ"אפליקציה חדשה בחזית".
+ * חבילות ב-[ignoredPackages] (SystemUI, מקלדות, האפליקציה שלנו, חלונות
+ * מערכת של סמסונג) שקופות: לא נחשבות לא כ"אפליקציה שנסגרה" ולא כ"חזית חדשה".
  */
 class ExitDetector(
     private val ignoredPackages: Set<String>,
