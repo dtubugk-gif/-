@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- צבעי המותג של LinguaGo -->
+    <color name="colorPrimary">#58cc02</color>
+    <color name="colorPrimaryDark">#4aa802</color>
+    <color name="colorAccent">#1cb0f6</color>
+    <!-- פסי המערכת לבנים עם אייקונים כהים — מתמזגים עם הממשק הלבן -->
+    <color name="systemBar">#ffffff</color>
+    <color name="splashBackground">#58cc02</color>
+</resources>
