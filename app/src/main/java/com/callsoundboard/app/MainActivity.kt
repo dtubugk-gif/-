@@ -1,0 +1,179 @@
+package com.callsoundboard.app
+
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.provider.OpenableColumns
+import android.provider.Settings
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.callsoundboard.app.audio.SoundPlayer
+import com.callsoundboard.app.data.AppSettings
+import com.callsoundboard.app.data.SoundRepository
+import com.callsoundboard.app.databinding.ActivityMainBinding
+import com.callsoundboard.app.model.SoundClip
+import com.callsoundboard.app.overlay.OverlayService
+import com.callsoundboard.app.ui.SoundAdapter
+import java.util.UUID
+
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityMainBinding
+    private lateinit var repository: SoundRepository
+    private lateinit var adapter: SoundAdapter
+
+    private val pickAudio =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) onAudioPicked(uri)
+        }
+
+    private val requestPhone =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+            updatePermissionUi()
+        }
+
+    private val requestNotifications =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        repository = SoundRepository(this)
+
+        adapter = SoundAdapter(
+            onPlay = { clip -> SoundPlayer.play(this, Uri.parse(clip.uri)) },
+            onDelete = { clip ->
+                repository.remove(clip.id)
+                refreshList()
+            }
+        )
+        binding.rvClips.layoutManager = LinearLayoutManager(this)
+        binding.rvClips.adapter = adapter
+
+        binding.btnAddClip.setOnClickListener {
+            pickAudio.launch(arrayOf("audio/*"))
+        }
+
+        binding.btnShowBubble.setOnClickListener { showBubble() }
+
+        binding.btnStop.setOnClickListener { SoundPlayer.stop() }
+
+        binding.switchAutoBubble.isChecked = AppSettings.isAutoBubbleEnabled(this)
+        binding.switchAutoBubble.setOnCheckedChangeListener { _, checked ->
+            AppSettings.setAutoBubbleEnabled(this, checked)
+        }
+
+        binding.btnGrantOverlay.setOnClickListener { openOverlaySettings() }
+        binding.btnGrantPhone.setOnClickListener {
+            requestPhone.launch(Manifest.permission.READ_PHONE_STATE)
+        }
+
+        maybeRequestNotifications()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshList()
+        updatePermissionUi()
+    }
+
+    // ---- Clip management ----------------------------------------------------
+
+    private fun onAudioPicked(uri: Uri) {
+        try {
+            contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        } catch (_: Exception) {
+            // Some providers don't support persistable grants; the URI may still
+            // work for this session, but warn the user it might not persist.
+        }
+        val label = queryDisplayName(uri)
+        repository.add(SoundClip(UUID.randomUUID().toString(), label, uri.toString()))
+        refreshList()
+        Toast.makeText(this, R.string.toast_clip_added, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun queryDisplayName(uri: Uri): String {
+        var name = getString(R.string.default_clip_label)
+        try {
+            contentResolver.query(
+                uri,
+                arrayOf(OpenableColumns.DISPLAY_NAME),
+                null, null, null
+            )?.use { c ->
+                if (c.moveToFirst()) {
+                    val idx = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (idx >= 0) c.getString(idx)?.let { name = it }
+                }
+            }
+        } catch (_: Exception) {
+        }
+        return name
+    }
+
+    private fun refreshList() {
+        val clips = repository.getAll()
+        adapter.submit(clips)
+        binding.tvEmpty.visibility = if (clips.isEmpty()) android.view.View.VISIBLE
+        else android.view.View.GONE
+    }
+
+    // ---- Bubble / permissions ----------------------------------------------
+
+    private fun showBubble() {
+        if (!Settings.canDrawOverlays(this)) {
+            Toast.makeText(this, R.string.toast_need_overlay, Toast.LENGTH_LONG).show()
+            openOverlaySettings()
+            return
+        }
+        val svc = Intent(this, OverlayService::class.java)
+            .putExtra(OverlayService.EXTRA_FROM_CALL, false)
+        ContextCompat.startForegroundService(this, svc)
+    }
+
+    private fun openOverlaySettings() {
+        try {
+            startActivity(
+                Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:$packageName")
+                )
+            )
+        } catch (_: Exception) {
+            startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION))
+        }
+    }
+
+    private fun maybeRequestNotifications() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = ContextCompat.checkSelfPermission(
+                this, Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!granted) {
+                requestNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
+    private fun updatePermissionUi() {
+        val overlayOk = Settings.canDrawOverlays(this)
+        binding.btnGrantOverlay.text = getString(R.string.grant_overlay) + "  " +
+            getString(if (overlayOk) R.string.permission_granted else R.string.permission_missing)
+
+        val phoneOk = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.READ_PHONE_STATE
+        ) == PackageManager.PERMISSION_GRANTED
+        binding.btnGrantPhone.text = getString(R.string.grant_phone) + "  " +
+            getString(if (phoneOk) R.string.permission_granted else R.string.permission_missing)
+    }
+}

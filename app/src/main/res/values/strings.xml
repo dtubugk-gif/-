@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">סאונדבורד לשיחות</string>
+
+    <!-- Main screen -->
+    <string name="title_clips">הקליפים שלי</string>
+    <string name="add_clip">הוסף קליפ</string>
+    <string name="show_bubble">הצג בועה צפה</string>
+    <string name="stop_playback">עצור השמעה</string>
+    <string name="auto_bubble">הצג בועה אוטומטית כשיש שיחה</string>
+    <string name="grant_overlay">הרשאת "הצגה מעל אפליקציות אחרות"</string>
+    <string name="grant_phone">הרשאת טלפון (זיהוי שיחה)</string>
+    <string name="no_clips">עדיין אין קליפים. הקש "הוסף קליפ" כדי לבחור הקלטה או שיר מהטלפון.</string>
+    <string name="permission_granted">✓ ניתנה</string>
+    <string name="permission_missing">✗ חסרה — הקש למתן</string>
+
+    <!-- List item -->
+    <string name="play">נגן</string>
+    <string name="delete">מחק</string>
+
+    <!-- Overlay -->
+    <string name="overlay_title">סאונדבורד</string>
+    <string name="overlay_close">סגור</string>
+    <string name="overlay_hint">בשיחה: הקש "רמקול" ואז בחר קליפ</string>
+    <string name="notif_channel_name">בועת סאונדבורד</string>
+    <string name="notif_title">סאונדבורד פעיל</string>
+    <string name="notif_text">הקש על הבועה כדי להשמיע קליפ בשיחה</string>
+
+    <!-- Info / honesty -->
+    <string name="info_text">חשוב לדעת: ב-Android אי אפשר להזריק אודיו ישירות לתוך שיחה. האפליקציה משמיעה את הקליפ דרך הרמקול, כך שהמיקרופון קולט אותו והצד השני שומע. לכן צריך שהשיחה תהיה על רמקול, והאיכות תלויה במכשיר (ביטול-הד עלול להחליש את הקול). מומלץ להשתמש בהסכמת הצד השני.</string>
+
+    <!-- Toasts -->
+    <string name="toast_need_overlay">צריך הרשאת "הצגה מעל אפליקציות אחרות"</string>
+    <string name="toast_clip_added">הקליפ נוסף</string>
+    <string name="toast_pick_failed">לא ניתן היה להוסיף את הקובץ</string>
+    <string name="default_clip_label">קליפ אודיו</string>
+</resources>
