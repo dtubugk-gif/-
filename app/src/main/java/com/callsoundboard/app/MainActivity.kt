@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import android.provider.Settings
 import android.widget.Toast
@@ -31,6 +32,11 @@ class MainActivity : AppCompatActivity() {
     private val pickAudio =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri != null) onAudioPicked(uri)
+        }
+
+    private val pickDownloadsTree =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            if (uri != null) onDownloadsTreePicked(uri)
         }
 
     private val requestPhone =
@@ -62,6 +68,21 @@ class MainActivity : AppCompatActivity() {
             pickAudio.launch(arrayOf("audio/*"))
         }
 
+        binding.btnLoadDownloads.setOnClickListener {
+            val saved = AppSettings.getDownloadsTreeUri(this)
+            if (saved != null) {
+                scanDownloadsTree(saved, silent = false)
+            } else {
+                Toast.makeText(this, R.string.hint_pick_downloads, Toast.LENGTH_LONG).show()
+                pickDownloadsTree.launch(null)
+            }
+        }
+
+        binding.btnChangeDownloads.setOnClickListener {
+            Toast.makeText(this, R.string.hint_pick_downloads, Toast.LENGTH_LONG).show()
+            pickDownloadsTree.launch(null)
+        }
+
         binding.btnShowBubble.setOnClickListener { showBubble() }
 
         binding.btnStop.setOnClickListener { SoundPlayer.stop() }
@@ -81,6 +102,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Auto-refresh from the granted Downloads folder so newly downloaded
+        // files show up without re-picking.
+        AppSettings.getDownloadsTreeUri(this)?.let { scanDownloadsTree(it, silent = true) }
         refreshList()
         updatePermissionUi()
     }
@@ -126,6 +150,76 @@ class MainActivity : AppCompatActivity() {
         adapter.submit(clips)
         binding.tvEmpty.visibility = if (clips.isEmpty()) android.view.View.VISIBLE
         else android.view.View.GONE
+    }
+
+    // ---- Bulk import from the Downloads folder ------------------------------
+
+    private fun onDownloadsTreePicked(treeUri: Uri) {
+        try {
+            contentResolver.takePersistableUriPermission(
+                treeUri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        } catch (_: Exception) {
+        }
+        AppSettings.setDownloadsTreeUri(this, treeUri.toString())
+        scanDownloadsTree(treeUri.toString(), silent = false)
+    }
+
+    /**
+     * Enumerates the granted folder and adds every audio file not already saved.
+     * The persisted tree permission covers the child file URIs, so playback works
+     * later without any per-file grant.
+     */
+    private fun scanDownloadsTree(treeUriString: String, silent: Boolean) {
+        val treeUri = Uri.parse(treeUriString)
+        val found = mutableListOf<SoundClip>()
+        try {
+            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(
+                treeUri, DocumentsContract.getTreeDocumentId(treeUri)
+            )
+            contentResolver.query(
+                childrenUri,
+                arrayOf(
+                    DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                    DocumentsContract.Document.COLUMN_MIME_TYPE
+                ),
+                null, null, null
+            )?.use { c ->
+                val idIdx = c.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+                val nameIdx = c.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+                val mimeIdx = c.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_MIME_TYPE)
+                while (c.moveToNext()) {
+                    val docId = c.getString(idIdx) ?: continue
+                    val name = c.getString(nameIdx) ?: continue
+                    val mime = if (!c.isNull(mimeIdx)) c.getString(mimeIdx) else null
+                    if (mime == DocumentsContract.Document.MIME_TYPE_DIR) continue
+                    if (!isAudio(mime, name)) continue
+                    val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                    found.add(SoundClip(UUID.randomUUID().toString(), name, fileUri.toString()))
+                }
+            }
+        } catch (_: Exception) {
+            if (!silent) {
+                Toast.makeText(this, R.string.toast_downloads_scan_failed, Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+
+        val added = repository.addAllNew(found)
+        refreshList()
+        if (!silent) {
+            val msg = if (added > 0) getString(R.string.toast_downloads_added, added)
+            else getString(R.string.toast_downloads_none)
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun isAudio(mime: String?, name: String): Boolean {
+        if (mime != null && mime.startsWith("audio/")) return true
+        val lower = name.lowercase()
+        return AUDIO_EXTENSIONS.any { lower.endsWith(it) }
     }
 
     // ---- Bubble / permissions ----------------------------------------------
@@ -175,5 +269,12 @@ class MainActivity : AppCompatActivity() {
         ) == PackageManager.PERMISSION_GRANTED
         binding.btnGrantPhone.text = getString(R.string.grant_phone) + "  " +
             getString(if (phoneOk) R.string.permission_granted else R.string.permission_missing)
+    }
+
+    companion object {
+        private val AUDIO_EXTENSIONS = listOf(
+            ".mp3", ".m4a", ".aac", ".wav", ".ogg", ".oga", ".opus",
+            ".flac", ".3gp", ".amr", ".mid", ".midi", ".wma", ".mka"
+        )
     }
 }

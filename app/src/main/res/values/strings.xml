@@ -4,7 +4,9 @@
 
     <!-- Main screen -->
     <string name="title_clips">הקליפים שלי</string>
-    <string name="add_clip">הוסף קליפ</string>
+    <string name="add_clip">הוסף קובץ בודד</string>
+    <string name="load_downloads">טען מההורדות</string>
+    <string name="change_downloads_folder">בחר תיקיית הורדות אחרת</string>
     <string name="show_bubble">הצג בועה צפה</string>
     <string name="stop_playback">עצור השמעה</string>
     <string name="auto_bubble">הצג בועה אוטומטית כשיש שיחה</string>
@@ -34,4 +36,8 @@
     <string name="toast_clip_added">הקליפ נוסף</string>
     <string name="toast_pick_failed">לא ניתן היה להוסיף את הקובץ</string>
     <string name="default_clip_label">קליפ אודיו</string>
+    <string name="toast_downloads_added">נוספו %1$d קבצים מההורדות</string>
+    <string name="toast_downloads_none">לא נמצאו קבצי אודיו חדשים בתיקייה</string>
+    <string name="toast_downloads_scan_failed">לא ניתן היה לקרוא את התיקייה</string>
+    <string name="hint_pick_downloads">בחר את תיקיית "הורדות" (Download) ואשר גישה</string>
 </resources>

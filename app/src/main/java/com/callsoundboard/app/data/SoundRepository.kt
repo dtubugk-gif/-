@@ -53,6 +53,26 @@ class SoundRepository(context: Context) {
         save(list)
     }
 
+    /** Set of URIs already saved, for de-duplicating bulk imports. */
+    fun existingUris(): Set<String> = getAll().map { it.uri }.toHashSet()
+
+    /**
+     * Adds any clips whose URI isn't already saved. Returns how many were added.
+     */
+    fun addAllNew(clips: List<SoundClip>): Int {
+        val list = getAll()
+        val known = list.map { it.uri }.toHashSet()
+        var added = 0
+        clips.forEach { clip ->
+            if (known.add(clip.uri)) {
+                list.add(clip)
+                added++
+            }
+        }
+        if (added > 0) save(list)
+        return added
+    }
+
     fun remove(id: String) {
         save(getAll().filterNot { it.id == id })
     }

@@ -52,6 +52,20 @@
             android:text="@string/show_bubble" />
     </LinearLayout>
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnLoadDownloads"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/load_downloads" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnChangeDownloads"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_marginBottom="4dp"
+        android:text="@string/change_downloads_folder" />
+
     <com.google.android.material.materialswitch.MaterialSwitch
         android:id="@+id/switchAutoBubble"
         android:layout_width="match_parent"
