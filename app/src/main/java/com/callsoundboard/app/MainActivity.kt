@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.callsoundboard.app.audio.SoundPlayer
+import com.callsoundboard.app.audio.SpeakerRouter
 import com.callsoundboard.app.data.AppSettings
 import com.callsoundboard.app.data.ClipImporter
 import com.callsoundboard.app.data.SoundRepository
@@ -56,7 +57,10 @@ class MainActivity : AppCompatActivity() {
         repository = SoundRepository(this)
 
         adapter = SoundAdapter(
-            onPlay = { clip -> SoundPlayer.play(this, Uri.parse(clip.uri)) },
+            onPlay = { clip ->
+                SpeakerRouter.enableSpeaker(this)
+                SoundPlayer.play(this, Uri.parse(clip.uri))
+            },
             onDelete = { clip ->
                 repository.remove(clip.id)
                 refreshList()
