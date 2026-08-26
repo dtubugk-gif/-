@@ -16,6 +16,7 @@ import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.callsoundboard.app.audio.SoundPlayer
 import com.callsoundboard.app.data.AppSettings
+import com.callsoundboard.app.data.ClipImporter
 import com.callsoundboard.app.data.SoundRepository
 import com.callsoundboard.app.databinding.ActivityMainBinding
 import com.callsoundboard.app.model.SoundClip
@@ -98,6 +99,15 @@ class MainActivity : AppCompatActivity() {
         }
 
         maybeRequestNotifications()
+
+        // A file may have been shared into the app from the Share sheet.
+        handleIncomingShare(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIncomingShare(intent)
     }
 
     override fun onResume() {
@@ -221,6 +231,43 @@ class MainActivity : AppCompatActivity() {
         val lower = name.lowercase()
         return AUDIO_EXTENSIONS.any { lower.endsWith(it) }
     }
+
+    // ---- Import from the system Share sheet ---------------------------------
+
+    private fun handleIncomingShare(intent: Intent?) {
+        intent ?: return
+        val uris: List<Uri> = when (intent.action) {
+            Intent.ACTION_SEND -> extractStream(intent)?.let { listOf(it) } ?: emptyList()
+            Intent.ACTION_SEND_MULTIPLE -> extractStreams(intent)
+            else -> emptyList()
+        }
+        if (uris.isEmpty()) return
+        // Clear the action so a later recreate/resume doesn't re-import.
+        intent.action = null
+
+        val imported = uris.mapNotNull { ClipImporter.import(this, it) }
+        val added = repository.addAllNew(imported)
+        refreshList()
+        val msg = if (added > 0) getString(R.string.toast_shared_added, added)
+        else getString(R.string.toast_pick_failed)
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun extractStream(intent: Intent): Uri? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+        } else {
+            intent.getParcelableExtra(Intent.EXTRA_STREAM)
+        }
+
+    @Suppress("DEPRECATION")
+    private fun extractStreams(intent: Intent): List<Uri> =
+        (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java)
+        } else {
+            intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM)
+        }) ?: emptyList()
 
     // ---- Bubble / permissions ----------------------------------------------
 

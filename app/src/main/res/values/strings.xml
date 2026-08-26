@@ -40,4 +40,5 @@
     <string name="toast_downloads_none">לא נמצאו קבצי אודיו חדשים בתיקייה</string>
     <string name="toast_downloads_scan_failed">לא ניתן היה לקרוא את התיקייה</string>
     <string name="hint_pick_downloads">בחר את תיקיית "הורדות" (Download) ואשר גישה</string>
+    <string name="toast_shared_added">נוספו %1$d קבצים ששיתפת</string>
 </resources>
