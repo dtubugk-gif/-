@@ -2,6 +2,7 @@ package il.rikavon.feature.blocker.ui.stats
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -207,7 +208,10 @@ fun StatsScreen(
             }
             item {
                 Row(
-                    modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Spacing.sm),
+                    modifier =
+                        Modifier
+                            .padding(horizontal = ScreenPadding, vertical = Spacing.sm)
+                            .height(IntrinsicSize.Max),
                     horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
                     StatTile(

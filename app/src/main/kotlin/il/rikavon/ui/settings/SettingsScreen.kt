@@ -50,6 +50,7 @@ import il.rikavon.core.ui.components.SettingSwitchRow
 import il.rikavon.core.ui.components.SkeletonList
 import il.rikavon.core.ui.components.rememberLargeTopBarBehavior
 import il.rikavon.core.ui.components.rememberPinnedTopBarBehavior
+import il.rikavon.core.ui.components.rikavonSliderColors
 import il.rikavon.core.ui.theme.LocalExtraColors
 import il.rikavon.core.ui.theme.Sizes
 import il.rikavon.core.ui.theme.Spacing
@@ -217,6 +218,7 @@ fun SettingsScreen(
                         onValueChange = { viewModel.setDailySummary(true, it.toInt()) },
                         valueRange = SUMMARY_MIN_HOUR.toFloat()..SUMMARY_MAX_HOUR.toFloat(),
                         steps = SUMMARY_MAX_HOUR - SUMMARY_MIN_HOUR - 1,
+                        colors = rikavonSliderColors(),
                         modifier =
                             Modifier
                                 .fillMaxWidth()

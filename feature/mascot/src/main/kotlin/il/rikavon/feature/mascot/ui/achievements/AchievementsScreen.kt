@@ -124,7 +124,7 @@ fun AchievementsScreen(onBack: () -> Unit, viewModel: AchievementsViewModel = hi
             } else {
                 item {
                     SectionLabel(
-                        stringResource(R.string.achievements_title),
+                        stringResource(R.string.achievements_section),
                         modifier = Modifier.padding(top = Spacing.sm),
                     )
                 }

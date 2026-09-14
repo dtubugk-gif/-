@@ -32,6 +32,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderColors
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -249,6 +251,22 @@ fun SectionHeader(text: String, modifier: Modifier = Modifier) = SectionLabel(te
 
 // ---- Controls ----------------------------------------------------------------------------------
 
+/** Slider palette: accent track and thumb, neutral inactive track, no tick marks. */
+@Composable
+fun rikavonSliderColors(): SliderColors =
+    SliderDefaults.colors(
+        thumbColor = MaterialTheme.colorScheme.primary,
+        activeTrackColor = MaterialTheme.colorScheme.primary,
+        inactiveTrackColor = LocalExtraColors.current.track,
+        activeTickColor = Color.Transparent,
+        inactiveTickColor = Color.Transparent,
+        disabledThumbColor = LocalExtraColors.current.onSurfaceFaint,
+        disabledActiveTrackColor = LocalExtraColors.current.onSurfaceFaint,
+        disabledInactiveTrackColor = LocalExtraColors.current.track,
+        disabledActiveTickColor = Color.Transparent,
+        disabledInactiveTickColor = Color.Transparent,
+    )
+
 @Composable
 fun MinutesSlider(
     value: Int,
@@ -270,6 +288,7 @@ fun MinutesSlider(
         valueRange = min.toFloat()..max.toFloat(),
         steps = steps,
         enabled = enabled,
+        colors = rikavonSliderColors(),
         modifier =
             modifier
                 .fillMaxWidth()

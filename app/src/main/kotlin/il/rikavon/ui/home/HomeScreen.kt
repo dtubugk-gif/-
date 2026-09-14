@@ -212,51 +212,57 @@ private fun Header(state: HomeUiState, onOpenAchievements: () -> Unit, onOpenSet
         )
     val achievementsLabel = stringResource(R.string.home_achievements)
     val interaction = remember { MutableInteractionSource() }
-    Row(
+    Column(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
                 .padding(horizontal = ScreenPadding, vertical = Spacing.sm),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(dateText, style = MaterialTheme.typography.bodySmall, color = extras.onSurfaceMuted, maxLines = 1)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             Text(
-                greeting,
-                style = MaterialTheme.typography.headlineMedium,
+                dateText,
+                style = MaterialTheme.typography.bodySmall,
+                color = extras.onSurfaceMuted,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Box(
+                modifier =
+                    Modifier
+                        .bounceOn(trigger = state.streak)
+                        .pressScale(interaction)
+                        .heightIn(min = Sizes.chip)
+                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                        .clickable(
+                            interactionSource = interaction,
+                            indication = null,
+                            onClick = onOpenAchievements,
+                            role = Role.Button,
+                        ).semantics { contentDescription = achievementsLabel }
+                        .padding(horizontal = Spacing.lg),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = stringResource(R.string.home_streak_pill, state.streak),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    maxLines = 1,
+                )
+            }
+            SquareIconButton(
+                icon = Icons.Filled.Settings,
+                contentDescription = stringResource(R.string.home_settings),
+                onClick = onOpenSettings,
             )
         }
-        Box(
-            modifier =
-                Modifier
-                    .bounceOn(trigger = state.streak)
-                    .pressScale(interaction)
-                    .heightIn(min = Sizes.chip)
-                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
-                    .clickable(
-                        interactionSource = interaction,
-                        indication = null,
-                        onClick = onOpenAchievements,
-                        role = Role.Button,
-                    ).semantics { contentDescription = achievementsLabel }
-                    .padding(horizontal = Spacing.lg),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = stringResource(R.string.home_streak_pill, state.streak),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                maxLines = 1,
-            )
-        }
-        SquareIconButton(
-            icon = Icons.Filled.Settings,
-            contentDescription = stringResource(R.string.home_settings),
-            onClick = onOpenSettings,
+        Text(
+            greeting,
+            style = MaterialTheme.typography.headlineMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = Spacing.xs),
         )
     }
 }
@@ -271,7 +277,7 @@ private fun MascotStage(state: HomeUiState, language: String, viewModel: HomeVie
             Modifier
                 .fillMaxWidth()
                 .height(mascotHeight.coerceAtLeast(MASCOT_MIN_HEIGHT)),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.BottomCenter,
     ) {
         MascotView(
             skin = skin,
@@ -423,7 +429,7 @@ private fun TrackedRow(
 }
 
 private const val MASCOT_SCREEN_FRACTION = 0.38f
-private const val MASCOT_FILL = 0.88f
+private const val MASCOT_FILL = 0.8f
 private val MASCOT_MIN_HEIGHT = 220.dp
 private val SCORE_BAR_WIDTH = 180.dp
 private val SCORE_BAR_HEIGHT = 5.dp

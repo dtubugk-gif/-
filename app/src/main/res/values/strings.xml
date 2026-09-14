@@ -6,7 +6,7 @@
     <string name="home_greeting_noon">Good afternoon.</string>
     <string name="home_greeting_evening">Good evening.</string>
     <string name="home_greeting_night">Good night.</string>
-    <string name="home_date_pattern">EEEE · MMMM d</string>
+    <string name="home_date_pattern">EEE, MMM d</string>
     <string name="home_streak_pill">Streak: %1$d days</string>
     <string name="home_score_label">focus score</string>
     <string name="home_today">Today</string>

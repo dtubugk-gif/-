@@ -53,7 +53,13 @@ class MascotRegistry @Inject constructor(
 
     private fun scan(): Pair<List<MascotSkin>, List<String>> {
         val assets = context.assets
-        val folders = runCatching { assets.list(MascotManifestParser.ASSET_ROOT)?.toList() }.getOrNull().orEmpty()
+        // Some AssetManager implementations list recursively ("brain/manifest.json"); keep folder names only.
+        val folders =
+            runCatching { assets.list(MascotManifestParser.ASSET_ROOT)?.toList() }
+                .getOrNull()
+                .orEmpty()
+                .map { it.substringBefore('/') }
+                .distinct()
         val skins = mutableListOf<MascotSkin>()
         val errors = mutableListOf<String>()
         for (folder in folders.sorted()) {

@@ -40,7 +40,7 @@
     <string name="limit_full_block_hint">האפליקציה נחסמת מיד בכל פתיחה</string>
     <string name="limit_enabled">הגבול פעיל</string>
     <string name="limit_enabled_hint">כיבוי משאיר את האפליקציה ברשימה בלי אכיפה</string>
-    <string name="limit_today_used">היום: %1$s מתוך %2$s</string>
+    <string name="limit_today_used">%1$s מתוך %2$s</string>
     <string name="limit_today_opens">%1$d פתיחות היום</string>
     <string name="limit_save">שמירה</string>
     <string name="limit_remove">הסרת ההגבלה</string>

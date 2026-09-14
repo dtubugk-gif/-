@@ -86,6 +86,20 @@ android {
             enableSplit = false
         }
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            all { test ->
+                test.jvmArgs("-Xmx3g")
+                // Robolectric native graphics: real Skia rendering so screenshot tests draw actual pixels.
+                test.systemProperty("robolectric.graphicsMode", "NATIVE")
+                test.systemProperty("rikavon.screenshots.dir", rootProject.file("docs/screenshots").absolutePath)
+                // Screenshot tests are slow (Robolectric boots a device image); run them only on demand.
+                if (!project.hasProperty("screenshots")) test.exclude("**/screenshots/**")
+            }
+        }
+    }
 }
 
 dependencies {
@@ -115,4 +129,13 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(platform(libs.androidx.compose.bom))
+    debugImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.androidx.work.testing)
+    testImplementation(libs.hilt.android.testing)
+    kspTest(libs.hilt.compiler)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

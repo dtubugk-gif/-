@@ -55,6 +55,7 @@ import il.rikavon.core.ui.components.RikavonTopBar
 import il.rikavon.core.ui.components.ScreenPadding
 import il.rikavon.core.ui.components.SkeletonBlock
 import il.rikavon.core.ui.components.pressScale
+import il.rikavon.core.ui.components.rikavonSliderColors
 import il.rikavon.core.ui.components.rememberLargeTopBarBehavior
 import il.rikavon.core.ui.components.rememberPinnedTopBarBehavior
 import il.rikavon.core.ui.theme.LocalExtraColors
@@ -281,6 +282,7 @@ private fun HeroCard(
             onValueChangeFinished = { },
             valueRange = 0f..MascotStage.entries.lastIndex.toFloat(),
             steps = MascotStage.entries.size - 2,
+            colors = rikavonSliderColors(),
             modifier =
                 Modifier
                     .fillMaxWidth()
@@ -335,7 +337,7 @@ private fun SmallCard(item: GalleryItem, onClick: () -> Unit, modifier: Modifier
             )
         }
         if (!item.unlocked && requirement != null) {
-            LockBadge(text = requirement, modifier = Modifier.align(Alignment.TopStart).padding(Spacing.xs))
+            LockBadge(text = null, modifier = Modifier.align(Alignment.TopStart).padding(Spacing.sm))
         }
     }
 }

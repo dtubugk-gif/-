@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -137,6 +138,7 @@ fun StatTile(
     Column(
         modifier =
             modifier
+                .fillMaxHeight()
                 .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(Radius.lg))
                 .padding(Spacing.lg)
                 .semantics { contentDescription = "$caption: $value" },
@@ -195,7 +197,7 @@ fun SpeechBubble(
 
 /** Small lock badge on locked cards. */
 @Composable
-fun LockBadge(text: String, modifier: Modifier = Modifier) {
+fun LockBadge(text: String?, modifier: Modifier = Modifier) {
     Row(
         modifier =
             modifier
@@ -210,13 +212,15 @@ fun LockBadge(text: String, modifier: Modifier = Modifier) {
             tint = LocalExtraColors.current.onSurfaceMuted,
             modifier = Modifier.size(LOCK_ICON),
         )
-        Text(
-            text,
-            style = MaterialTheme.typography.labelSmall,
-            color = LocalExtraColors.current.onSurfaceMuted,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (text != null) {
+            Text(
+                text,
+                style = MaterialTheme.typography.labelSmall,
+                color = LocalExtraColors.current.onSurfaceMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

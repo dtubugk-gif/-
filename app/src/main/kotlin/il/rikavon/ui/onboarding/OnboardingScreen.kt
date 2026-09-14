@@ -66,10 +66,12 @@ import il.rikavon.core.ui.components.ThinBar
 import il.rikavon.core.ui.theme.LocalExtraColors
 import il.rikavon.core.ui.theme.Spacing
 import il.rikavon.feature.blocker.service.ServiceStarter
+import il.rikavon.feature.mascot.model.Localized
 import il.rikavon.feature.mascot.model.MascotSkin
 import il.rikavon.feature.mascot.model.MascotStage
 import il.rikavon.feature.mascot.registry.SelectedMascot
 import il.rikavon.feature.mascot.ui.MascotView
+import il.rikavon.feature.mascot.ui.UiLanguage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -231,6 +233,9 @@ fun OnboardingScreen(onDone: () -> Unit, viewModel: OnboardingViewModel = hiltVi
     ) { padding ->
         val progressLabel = stringResource(R.string.onboarding_progress)
         val reduced = LocalReducedMotion.current
+        val hebrewUi =
+            state.language == AppLanguage.HEBREW ||
+                (state.language == AppLanguage.SYSTEM && UiLanguage.current() == Localized.DEFAULT_LANGUAGE)
         val progress by animateFloatAsState(
             targetValue = (index + 1).toFloat() / state.steps.size,
             animationSpec = if (reduced) AnimationSpecs.Reduced else AnimationSpecs.Count,
