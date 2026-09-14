@@ -87,8 +87,20 @@ object AnimationSpecs {
     // ---- Widget --------------------------------------------------------------------------------
     const val WIDGET_CROSSFADE_MILLIS = 400
 
+    // ---- Durations (design system): micro 100–150, component 200–250, screen 300–350 ------------
+    const val MICRO_MILLIS = 120
+    const val COMPONENT_MILLIS = 220
+    val Micro: FiniteAnimationSpec<Float> = tween(MICRO_MILLIS, easing = Emphasized)
+    val Component: FiniteAnimationSpec<Float> = tween(COMPONENT_MILLIS, easing = Emphasized)
+
+    /** Every pressed surface scales to this within [MICRO_MILLIS]. */
+    const val PRESSED_SCALE = 0.97f
+
+    /** Skeleton shimmer period while a screen loads. */
+    const val SKELETON_PULSE_MILLIS = 1100
+
     // ---- Navigation / generic ------------------------------------------------------------------
-    const val SCREEN_TRANSITION_MILLIS = 350
+    const val SCREEN_TRANSITION_MILLIS = 320
     const val SHARED_ELEMENT_MILLIS = 450
     val SharedElement: FiniteAnimationSpec<Float> = tween(SHARED_ELEMENT_MILLIS, easing = Emphasized)
     const val CROSSFADE_MILLIS = 250

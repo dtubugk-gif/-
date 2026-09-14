@@ -11,4 +11,10 @@
     <string name="core_ui_app_icon">אייקון של %1$s</string>
     <string name="core_ui_empty">עדיין אין כאן כלום</string>
     <string name="core_ui_locked">נעול</string>
+    <string name="core_ui_retry">נסו שוב</string>
+    <string name="core_ui_loading">טוען…</string>
+    <string name="core_ui_error_title">משהו השתבש</string>
+    <string name="core_ui_cancel">ביטול</string>
+    <string name="core_ui_confirm">אישור</string>
+    <string name="core_ui_more">עוד</string>
 </resources>

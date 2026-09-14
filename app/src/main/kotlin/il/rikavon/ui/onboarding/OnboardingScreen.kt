@@ -15,24 +15,22 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModel
@@ -45,8 +43,13 @@ import il.rikavon.core.data.permissions.AppPermission
 import il.rikavon.core.data.permissions.PermissionChecker
 import il.rikavon.core.data.permissions.PermissionState
 import il.rikavon.core.data.repo.SettingsRepository
+import il.rikavon.core.ui.components.LinkButton
+import il.rikavon.core.ui.components.Pill
+import il.rikavon.core.ui.components.PrimaryButton
 import il.rikavon.core.ui.components.ScreenPadding
-import il.rikavon.core.ui.components.TouchTarget
+import il.rikavon.core.ui.components.ThinBar
+import il.rikavon.core.ui.theme.LocalExtraColors
+import il.rikavon.core.ui.theme.Spacing
 import il.rikavon.feature.blocker.service.ServiceStarter
 import il.rikavon.feature.mascot.model.MascotSkin
 import il.rikavon.feature.mascot.model.MascotStage
@@ -132,6 +135,10 @@ class OnboardingViewModel @Inject constructor(
     }
 }
 
+/**
+ * Onboarding: progress line, the pet (wilted until the permission is granted), one title, one paragraph,
+ * and exactly one filled action pinned at the bottom with text buttons for back / skip.
+ */
 @Composable
 fun OnboardingScreen(onDone: () -> Unit, viewModel: OnboardingViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -145,22 +152,84 @@ fun OnboardingScreen(onDone: () -> Unit, viewModel: OnboardingViewModel = hiltVi
     val step = state.step
     val granted = step.permission?.let { state.permissions?.granted(it) } ?: false
     val index = state.steps.indexOf(step).coerceAtLeast(0)
+    val needsGrant = step.permission != null && !granted
+    val extras = LocalExtraColors.current
 
-    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = ScreenPadding, vertical = Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(Spacing.sm),
+            ) {
+                when {
+                    needsGrant ->
+                        PrimaryButton(
+                            text = stringResource(R.string.onboarding_grant),
+                            onClick = {
+                                when (step) {
+                                    OnboardingStep.NOTIFICATIONS ->
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                        }
+                                    else -> context.startActivity(step.settingsIntent(context.packageName))
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    step == OnboardingStep.DONE ->
+                        PrimaryButton(
+                            text = stringResource(R.string.onboarding_finish),
+                            onClick = { viewModel.finish(onDone) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    else ->
+                        PrimaryButton(
+                            text = stringResource(R.string.onboarding_next),
+                            onClick = viewModel::next,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    LinkButton(
+                        text = stringResource(R.string.onboarding_back),
+                        onClick = viewModel::back,
+                        enabled =
+                            index > 0,
+                    )
+                    if (needsGrant) {
+                        LinkButton(text = stringResource(R.string.onboarding_skip), onClick = viewModel::next)
+                    }
+                }
+            }
+        },
+    ) { padding ->
+        val progressLabel = stringResource(R.string.onboarding_progress)
         Column(
             modifier =
                 Modifier
                     .fillMaxSize()
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = ScreenPadding, vertical = 16.dp),
+                    .padding(horizontal = ScreenPadding, vertical = Spacing.lg),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            LinearProgressIndicator(
-                progress = { (index + 1).toFloat() / state.steps.size },
+            Text(
+                text = stringResource(R.string.onboarding_step_of, index + 1, state.steps.size),
+                style = MaterialTheme.typography.labelMedium,
+                color = extras.onSurfaceMuted,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(16.dp))
+            ThinBar(
+                progress = (index + 1).toFloat() / state.steps.size,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = Spacing.sm).semantics { contentDescription = progressLabel },
+            )
+            Spacer(Modifier.height(Spacing.xl))
             state.skin?.let { skin ->
                 MascotView(
                     skin = skin,
@@ -172,83 +241,30 @@ fun OnboardingScreen(onDone: () -> Unit, viewModel: OnboardingViewModel = hiltVi
                             .aspectRatio(1f),
                 )
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Spacing.lg))
             Text(
                 text = stringResource(step.titleRes()),
                 style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(Spacing.md))
             Text(
                 text = stringResource(step.bodyRes()),
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = extras.onSurfaceMuted,
             )
-            Spacer(Modifier.height(24.dp))
-            if (step.permission != null) {
-                if (granted) {
-                    Text(
-                        text = stringResource(R.string.onboarding_granted),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                } else {
-                    Button(
-                        onClick = {
-                            when (step) {
-                                OnboardingStep.NOTIFICATIONS ->
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                        notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    }
-                                else -> context.startActivity(step.settingsIntent(context.packageName))
-                            }
-                        },
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = TouchTarget + 8.dp),
-                    ) {
-                        Text(stringResource(R.string.onboarding_grant))
-                    }
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(
-                    onClick = viewModel::back,
-                    enabled = index > 0,
-                    modifier = Modifier.heightIn(min = TouchTarget),
-                ) {
-                    Text(stringResource(R.string.onboarding_back))
-                }
-                if (step == OnboardingStep.DONE) {
-                    Button(onClick = { viewModel.finish(onDone) }, modifier = Modifier.heightIn(min = TouchTarget)) {
-                        Text(stringResource(R.string.onboarding_finish))
-                    }
-                } else {
-                    TextButton(onClick = viewModel::next, modifier = Modifier.heightIn(min = TouchTarget)) {
-                        Text(
-                            stringResource(
-                                if (step.permission != null &&
-                                    !granted
-                                ) {
-                                    R.string.onboarding_skip
-                                } else {
-                                    R.string.onboarding_next
-                                },
-                            ),
-                        )
-                    }
-                }
+            if (step.permission != null && granted) {
+                Spacer(Modifier.height(Spacing.lg))
+                Pill(text = stringResource(R.string.onboarding_granted), color = extras.success)
             }
             if (step == OnboardingStep.DONE && state.permissions?.coreGranted == false) {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(Spacing.lg))
                 Text(
                     text = stringResource(R.string.onboarding_limited_mode),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = extras.onSurfaceMuted,
                 )
             }
         }

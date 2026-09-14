@@ -1,6 +1,5 @@
 package il.rikavon.feature.blocker.ui.stats
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -8,22 +7,21 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -31,15 +29,21 @@ import il.rikavon.core.ui.components.AppIcon
 import il.rikavon.core.ui.components.Bar
 import il.rikavon.core.ui.components.BarChart
 import il.rikavon.core.ui.components.EmptyState
+import il.rikavon.core.ui.components.ErrorState
+import il.rikavon.core.ui.components.LinkButton
+import il.rikavon.core.ui.components.ListRow
+import il.rikavon.core.ui.components.PrimaryButton
+import il.rikavon.core.ui.components.RikavonLargeTopBar
 import il.rikavon.core.ui.components.RikavonTopBar
 import il.rikavon.core.ui.components.ScreenPadding
-import il.rikavon.core.ui.components.ScreenTitle
 import il.rikavon.core.ui.components.SectionLabel
 import il.rikavon.core.ui.components.SegmentPills
 import il.rikavon.core.ui.components.StatTile
 import il.rikavon.core.ui.components.SurfaceCard
-import il.rikavon.core.ui.components.TouchTarget
+import il.rikavon.core.ui.components.rememberLargeTopBarBehavior
+import il.rikavon.core.ui.components.rememberPinnedTopBarBehavior
 import il.rikavon.core.ui.theme.LocalExtraColors
+import il.rikavon.core.ui.theme.Spacing
 import il.rikavon.core.ui.util.formatClock
 import il.rikavon.core.ui.util.formatMinutes
 import il.rikavon.feature.blocker.R
@@ -47,11 +51,16 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
-/** Statistics, design 1e: range pills, self-drawing chart card, three tiles, per-app rows. */
+/**
+ * Statistics: large collapsing title, range control, chart card with the week delta, three tiles,
+ * per-app rows. Error when usage access is missing, empty (with the one primary action) until an app is tracked.
+ */
 @Composable
 fun StatsScreen(
     onBack: (() -> Unit)?,
     onOpenScore: () -> Unit,
+    onOpenApps: () -> Unit = {},
+    onOpenPermissions: (() -> Unit)? = null,
     bottomBar: @Composable () -> Unit = {},
     viewModel: StatsViewModel = hiltViewModel(),
 ) {
@@ -60,27 +69,51 @@ fun StatsScreen(
     val locale = Locale.getDefault()
     val monthFormatter = remember(locale) { DateTimeFormatter.ofPattern("d/M", locale) }
     val todayLabel = stringResource(R.string.stats_day_today)
+    val scrollBehavior = if (onBack == null) rememberLargeTopBarBehavior() else rememberPinnedTopBarBehavior()
 
     Scaffold(
-        topBar = { if (onBack != null) RikavonTopBar(title = stringResource(R.string.stats_title), onBack = onBack) },
+        topBar = {
+            if (onBack == null) {
+                RikavonLargeTopBar(title = stringResource(R.string.stats_title), scrollBehavior = scrollBehavior)
+            } else {
+                RikavonTopBar(
+                    title = stringResource(R.string.stats_title),
+                    onBack = onBack,
+                    scrollBehavior = scrollBehavior,
+                )
+            }
+        },
         bottomBar = bottomBar,
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         LazyColumn(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             contentPadding =
                 PaddingValues(
-                    top = padding.calculateTopPadding() + 8.dp,
-                    bottom = padding.calculateBottomPadding() + ScreenPadding,
+                    top = padding.calculateTopPadding(),
+                    bottom = padding.calculateBottomPadding() + Spacing.xl,
                 ),
         ) {
-            if (onBack == null) {
-                item { ScreenTitle(title = stringResource(R.string.stats_title)) }
-            }
             if (!state.hasUsagePermission) {
-                item { EmptyState(text = stringResource(R.string.stats_no_permission)) }
+                item {
+                    ErrorState(
+                        title = stringResource(R.string.stats_permission_error_title),
+                        body = stringResource(R.string.stats_permission_error_body),
+                        actionLabel = stringResource(R.string.stats_grant_permission),
+                        onAction = onOpenPermissions,
+                    )
+                }
             }
             if (!state.hasLimits) {
-                item { EmptyState(text = stringResource(R.string.stats_empty)) }
+                item {
+                    EmptyState(
+                        title = stringResource(R.string.stats_empty_title),
+                        body = stringResource(R.string.stats_empty_body),
+                        icon = Icons.Filled.Info,
+                        action = { PrimaryButton(text = stringResource(R.string.stats_add_app), onClick = onOpenApps) },
+                    )
+                }
+                return@LazyColumn
             }
             item {
                 SegmentPills(
@@ -98,17 +131,18 @@ fun StatsScreen(
                             },
                         )
                     },
-                    modifier = Modifier.padding(horizontal = ScreenPadding, vertical = 10.dp),
+                    modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Spacing.sm).fillMaxWidth(),
                 )
             }
             item {
-                SurfaceCard(modifier = Modifier.padding(horizontal = ScreenPadding, vertical = 4.dp).fillMaxWidth()) {
+                SurfaceCard(
+                    modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Spacing.sm).fillMaxWidth(),
+                ) {
                     Column {
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = stringResource(R.string.stats_daily_screen_time),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = extras.onSurfaceMuted,
+                                style = MaterialTheme.typography.titleMedium,
                                 modifier = Modifier.weight(1f),
                             )
                             state.weekDeltaPercent?.let { delta ->
@@ -133,7 +167,7 @@ fun StatsScreen(
                                 )
                             }
                         }
-                        Spacer(Modifier.height(14.dp))
+                        Spacer(Modifier.height(Spacing.lg))
                         val month = state.range == StatsRange.MONTH
                         BarChart(
                             bars =
@@ -153,7 +187,7 @@ fun StatsScreen(
                                                         .trim()
                                             },
                                         value = day.minutes.toFloat(),
-                                        valueText = formatMinutesPlain(day.minutes),
+                                        valueText = day.minutes.toString(),
                                         highlighted = last,
                                     )
                                 },
@@ -166,8 +200,8 @@ fun StatsScreen(
             }
             item {
                 Row(
-                    modifier = Modifier.padding(horizontal = ScreenPadding, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Spacing.sm),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
                     StatTile(
                         value = state.todayOpens.toString(),
@@ -196,12 +230,26 @@ fun StatsScreen(
                     )
                 }
             }
-            item { SectionLabel(stringResource(R.string.stats_per_app)) }
+            item { SectionLabel(stringResource(R.string.stats_per_app), modifier = Modifier.padding(top = Spacing.sm)) }
             items(state.todayApps, key = { it.packageName }) { app ->
-                AppStatRow(app = app, icon = { viewModel.icon(app.packageName) })
+                val drawable = remember(app.packageName) { viewModel.icon(app.packageName) }
+                ListRow(
+                    title = app.label,
+                    subtitle =
+                        stringResource(
+                            R.string.stats_app_row,
+                            formatMinutes(app.usage.minutes),
+                            app.usage.opens,
+                        ),
+                    leading = { AppIcon(drawable = drawable, label = app.label) },
+                    chevron = false,
+                )
             }
             item {
-                SectionLabel(stringResource(R.string.stats_opens_per_day), modifier = Modifier.padding(top = 10.dp))
+                SectionLabel(
+                    stringResource(R.string.stats_opens_per_day),
+                    modifier = Modifier.padding(top = Spacing.sm),
+                )
                 SurfaceCard(modifier = Modifier.padding(horizontal = ScreenPadding).fillMaxWidth()) {
                     val month = state.range == StatsRange.MONTH
                     BarChart(
@@ -234,53 +282,15 @@ fun StatsScreen(
                 }
             }
             item {
-                TextButton(
+                LinkButton(
+                    text = stringResource(R.string.stats_score_link),
                     onClick = onOpenScore,
-                    modifier =
-                        Modifier
-                            .padding(
-                                horizontal = ScreenPadding,
-                                vertical = 8.dp,
-                            ).heightIn(min = TouchTarget),
-                ) {
-                    Text(stringResource(R.string.stats_score_link))
-                }
+                    modifier = Modifier.padding(horizontal = Spacing.sm, vertical = Spacing.sm),
+                )
             }
         }
     }
 }
-
-@Composable
-private fun AppStatRow(app: AppStat, icon: () -> android.graphics.drawable.Drawable?) {
-    val drawable = remember(app.packageName) { icon() }
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = ScreenPadding, vertical = 4.dp)
-                .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(14.dp))
-                .padding(horizontal = 14.dp, vertical = 11.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        AppIcon(drawable = drawable, label = app.label, size = 30.dp)
-        Text(
-            app.label,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = stringResource(R.string.stats_app_row, formatMinutes(app.usage.minutes), app.usage.opens),
-            style = MaterialTheme.typography.bodySmall,
-            color = LocalExtraColors.current.onSurfaceMuted,
-            maxLines = 1,
-        )
-    }
-}
-
-private fun formatMinutesPlain(minutes: Int): String = minutes.toString()
 
 private val CHART_HEIGHT = 150.dp
 private val SMALL_CHART_HEIGHT = 100.dp

@@ -11,6 +11,7 @@ navigationCompose = "2.9.2"
 lifecycle = "2.9.2"
 coreKtx = "1.16.0"
 appcompat = "1.7.1"
+splashscreen = "1.0.1"
 datastore = "1.1.7"
 glance = "1.1.1"
 lottie = "6.6.7"
@@ -28,6 +29,7 @@ compileSdk = "35"
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+androidx-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "splashscreen" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }

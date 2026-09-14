@@ -2,6 +2,7 @@ package il.rikavon.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,13 +15,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -39,7 +41,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -47,13 +48,21 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import il.rikavon.R
 import il.rikavon.core.ui.components.AppIcon
 import il.rikavon.core.ui.components.DotChip
+import il.rikavon.core.ui.components.EmptyState
+import il.rikavon.core.ui.components.ErrorState
+import il.rikavon.core.ui.components.PrimaryButton
 import il.rikavon.core.ui.components.ScreenPadding
 import il.rikavon.core.ui.components.SectionLabel
+import il.rikavon.core.ui.components.SkeletonBlock
+import il.rikavon.core.ui.components.SkeletonList
 import il.rikavon.core.ui.components.SpeechBubble
 import il.rikavon.core.ui.components.SquareIconButton
 import il.rikavon.core.ui.components.ThinBar
-import il.rikavon.core.ui.components.TouchTarget
+import il.rikavon.core.ui.components.pressScale
 import il.rikavon.core.ui.theme.LocalExtraColors
+import il.rikavon.core.ui.theme.Radius
+import il.rikavon.core.ui.theme.Sizes
+import il.rikavon.core.ui.theme.Spacing
 import il.rikavon.core.ui.theme.scoreColor
 import il.rikavon.core.ui.util.formatMinutes
 import il.rikavon.feature.mascot.ui.MASCOT_SHARED_KEY
@@ -62,7 +71,11 @@ import il.rikavon.feature.mascot.ui.UiLanguage
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-/** Home, design 1a "the pet's room" with the streak pill and next-limit line from 1b. */
+/**
+ * Home, the pet's room: date + greeting header with the streak pill and settings, the living mascot with its
+ * line, the focus score, then today's tracked apps. Skeleton while the pet loads, an error card when
+ * permissions are missing, an empty state (with the one primary action) until the first app is tracked.
+ */
 @Composable
 fun HomeScreen(
     onOpenApps: () -> Unit,
@@ -83,18 +96,33 @@ fun HomeScreen(
         LazyColumn(
             contentPadding =
                 PaddingValues(
-                    top = padding.calculateTopPadding() + 4.dp,
-                    bottom = padding.calculateBottomPadding() + 12.dp,
+                    top = padding.calculateTopPadding(),
+                    bottom = padding.calculateBottomPadding() + Spacing.lg,
                 ),
         ) {
             item { Header(state = state, onOpenAchievements = onOpenAchievements, onOpenSettings = onOpenSettings) }
-            item {
-                MascotStage(state = state, language = language, viewModel = viewModel)
+            if (state.skin == null) {
+                item {
+                    SkeletonBlock(
+                        height = MASCOT_MIN_HEIGHT,
+                        modifier = Modifier.padding(horizontal = ScreenPadding),
+                    )
+                }
+                item { SkeletonList(rows = 2) }
+                return@LazyColumn
             }
+            item { MascotStage(state = state, language = language, viewModel = viewModel) }
             item { ScoreBlock(state = state) }
             val perms = state.permissions
             if (perms != null && !perms.coreGranted) {
-                item { LimitedModeBanner(onClick = onOpenOnboarding) }
+                item {
+                    ErrorState(
+                        title = stringResource(R.string.home_permission_error_title),
+                        body = stringResource(R.string.home_permission_error_body),
+                        actionLabel = stringResource(R.string.home_fix_permissions),
+                        onAction = onOpenOnboarding,
+                    )
+                }
             }
             if (!state.trackingEnabled) {
                 item {
@@ -102,47 +130,50 @@ fun HomeScreen(
                         text = stringResource(R.string.home_tracking_paused),
                         style = MaterialTheme.typography.bodyMedium,
                         color = extras.danger,
-                        modifier = Modifier.padding(horizontal = ScreenPadding, vertical = 8.dp),
+                        modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Spacing.sm),
                     )
                 }
             }
-            item { SectionLabel(stringResource(R.string.home_today), modifier = Modifier.padding(top = 10.dp)) }
+            item { SectionLabel(stringResource(R.string.home_today), modifier = Modifier.padding(top = Spacing.sm)) }
             if (state.tracked.isEmpty()) {
                 item {
-                    Text(
-                        text = stringResource(R.string.home_no_limits),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = extras.onSurfaceMuted,
-                        modifier = Modifier.padding(horizontal = ScreenPadding, vertical = 4.dp),
+                    EmptyState(
+                        title = stringResource(R.string.home_empty_title),
+                        body = stringResource(R.string.home_empty_body),
+                        icon = Icons.Filled.Add,
+                        action = { PrimaryButton(text = stringResource(R.string.home_add_app), onClick = onOpenApps) },
                     )
                 }
-            }
-            items(state.tracked, key = { it.limit.packageName }) { row ->
-                TrackedRow(row = row, icon = {
-                    viewModel.icon(row.limit.packageName)
-                }, onClick = { onOpenLimit(row.limit.packageName) })
-            }
-            item {
-                Row(
-                    modifier = Modifier.padding(horizontal = ScreenPadding, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    DotChip(
-                        text = stringResource(R.string.home_add_app),
-                        dot = MaterialTheme.colorScheme.primary,
-                        onClick = onOpenApps,
+            } else {
+                items(state.tracked, key = { it.limit.packageName }) { row ->
+                    TrackedRow(
+                        row = row,
+                        icon = { viewModel.icon(row.limit.packageName) },
+                        onClick = { onOpenLimit(row.limit.packageName) },
                     )
-                    DotChip(
-                        text =
-                            stringResource(R.string.home_schedules_row) + " · " +
-                                if (state.activeSchedules > 0) {
-                                    stringResource(R.string.home_schedules_active, state.activeSchedules)
-                                } else {
-                                    stringResource(R.string.home_schedules_none)
-                                },
-                        dot = if (state.activeSchedules > 0) extras.success else extras.onSurfaceFaint,
-                        onClick = onOpenSchedules,
-                    )
+                }
+                item {
+                    Row(
+                        modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Spacing.sm),
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+                    ) {
+                        DotChip(
+                            text = stringResource(R.string.home_add_app),
+                            dot = MaterialTheme.colorScheme.primary,
+                            onClick = onOpenApps,
+                        )
+                        DotChip(
+                            text =
+                                stringResource(R.string.home_schedules_row) + " · " +
+                                    if (state.activeSchedules > 0) {
+                                        stringResource(R.string.home_schedules_active, state.activeSchedules)
+                                    } else {
+                                        stringResource(R.string.home_schedules_none)
+                                    },
+                            dot = if (state.activeSchedules > 0) extras.success else extras.onSurfaceFaint,
+                            onClick = onOpenSchedules,
+                        )
+                    }
                 }
             }
         }
@@ -165,35 +196,48 @@ private fun Header(state: HomeUiState, onOpenAchievements: () -> Unit, onOpenSet
                 Greeting.NIGHT -> R.string.home_greeting_night
             },
         )
+    val achievementsLabel = stringResource(R.string.home_achievements)
+    val interaction = remember { MutableInteractionSource() }
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = ScreenPadding, vertical = 6.dp),
+                .statusBarsPadding()
+                .padding(horizontal = ScreenPadding, vertical = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(dateText, style = MaterialTheme.typography.bodySmall, color = extras.onSurfaceFaint, maxLines = 1)
+            Text(dateText, style = MaterialTheme.typography.bodySmall, color = extras.onSurfaceMuted, maxLines = 1)
             Text(
                 greeting,
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.headlineMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Text(
-            text = stringResource(R.string.home_streak_pill, state.streak),
-            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp),
-            color = MaterialTheme.colorScheme.primary,
-            maxLines = 1,
+        Box(
             modifier =
                 Modifier
+                    .pressScale(interaction)
+                    .heightIn(min = Sizes.chip)
                     .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
-                    .clickable(onClick = onOpenAchievements, role = Role.Button)
-                    .heightIn(min = 32.dp)
-                    .padding(horizontal = 12.dp, vertical = 7.dp),
-        )
+                    .clickable(
+                        interactionSource = interaction,
+                        indication = null,
+                        onClick = onOpenAchievements,
+                        role = Role.Button,
+                    ).semantics { contentDescription = achievementsLabel }
+                    .padding(horizontal = Spacing.lg),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = stringResource(R.string.home_streak_pill, state.streak),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                maxLines = 1,
+            )
+        }
         SquareIconButton(
             icon = Icons.Filled.Settings,
             contentDescription = stringResource(R.string.home_settings),
@@ -233,7 +277,7 @@ private fun MascotStage(state: HomeUiState, language: String, viewModel: HomeVie
                 modifier =
                     Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = 6.dp, start = ScreenPadding, end = ScreenPadding),
+                        .padding(top = Spacing.xs, start = ScreenPadding, end = ScreenPadding),
             )
         }
     }
@@ -252,20 +296,20 @@ private fun ScoreBlock(state: HomeUiState) {
                 .semantics(mergeDescendants = true) { contentDescription = description },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             Text(state.score.toString(), style = MaterialTheme.typography.displayMedium, color = color)
             Text(
                 text = stringResource(R.string.home_score_label),
                 style = MaterialTheme.typography.bodyMedium,
                 color = extras.onSurfaceMuted,
-                modifier = Modifier.padding(bottom = 10.dp),
+                modifier = Modifier.padding(bottom = Spacing.md),
             )
         }
         ThinBar(
             progress = state.score / MAX_SCORE,
             color = color,
-            height = 5.dp,
-            modifier = Modifier.width(SCORE_BAR_WIDTH).padding(top = 10.dp),
+            height = SCORE_BAR_HEIGHT,
+            modifier = Modifier.width(SCORE_BAR_WIDTH).padding(top = Spacing.sm),
         )
         val next = state.nextLimit
         if (next != null) {
@@ -273,41 +317,17 @@ private fun ScoreBlock(state: HomeUiState) {
                 text =
                     when (next) {
                         is NextLimit.Upcoming ->
-                            stringResource(
-                                R.string.home_next_limit,
-                                next.label,
-                                formatMinutes(next.minutesLeft),
-                            )
+                            stringResource(R.string.home_next_limit, next.label, formatMinutes(next.minutesLeft))
                         is NextLimit.Reached -> stringResource(R.string.home_next_limit_reached, next.label)
                     },
                 style = MaterialTheme.typography.bodySmall,
-                color = if (next is NextLimit.Reached) extras.overLimit else extras.onSurfaceFaint,
+                color = if (next is NextLimit.Reached) extras.overLimit else extras.onSurfaceMuted,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier.padding(top = Spacing.sm),
             )
         }
-    }
-}
-
-@Composable
-private fun LimitedModeBanner(onClick: () -> Unit) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = ScreenPadding, vertical = 6.dp)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh, MaterialTheme.shapes.medium)
-                .clickable(onClick = onClick, role = Role.Button)
-                .padding(14.dp),
-    ) {
-        Text(stringResource(R.string.home_limited_title), style = MaterialTheme.typography.titleSmall)
-        Text(
-            text = stringResource(R.string.home_limited_body),
-            style = MaterialTheme.typography.bodySmall,
-            color = LocalExtraColors.current.onSurfaceMuted,
-        )
     }
 }
 
@@ -330,24 +350,26 @@ private fun TrackedRow(row: TrackedAppRow, icon: () -> android.graphics.drawable
             ratio >= NEAR_LIMIT -> extras.overLimit
             else -> MaterialTheme.colorScheme.primary
         }
+    val interaction = remember { MutableInteractionSource() }
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = ScreenPadding, vertical = 5.dp)
-                .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(16.dp))
-                .clickable(onClick = onClick, role = Role.Button)
-                .heightIn(min = TouchTarget + 14.dp)
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .padding(horizontal = ScreenPadding, vertical = Spacing.xs)
+                .pressScale(interaction)
+                .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(Radius.lg))
+                .clickable(interactionSource = interaction, indication = null, onClick = onClick, role = Role.Button)
+                .heightIn(min = Sizes.rowTwoLine)
+                .padding(horizontal = Spacing.lg, vertical = Spacing.md),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
     ) {
-        AppIcon(drawable = drawable, label = row.label, size = 38.dp)
+        AppIcon(drawable = drawable, label = row.label)
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     row.label,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -359,15 +381,16 @@ private fun TrackedRow(row: TrackedAppRow, icon: () -> android.graphics.drawable
                     maxLines = 1,
                 )
             }
-            Spacer(Modifier.height(7.dp))
+            Spacer(Modifier.height(Spacing.sm))
             ThinBar(progress = ratio, color = barColor)
         }
     }
 }
 
-private const val MASCOT_SCREEN_FRACTION = 0.4f
+private const val MASCOT_SCREEN_FRACTION = 0.38f
 private const val MASCOT_FILL = 0.88f
 private val MASCOT_MIN_HEIGHT = 220.dp
 private val SCORE_BAR_WIDTH = 180.dp
+private val SCORE_BAR_HEIGHT = 5.dp
 private const val MAX_SCORE = 100f
 private const val NEAR_LIMIT = 0.66f

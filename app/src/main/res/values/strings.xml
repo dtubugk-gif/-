@@ -22,11 +22,8 @@
     <string name="nav_stats">סטטיסטיקות</string>
     <string name="nav_settings">הגדרות</string>
     <string name="home_settings">הגדרות</string>
-    <string name="home_no_limits">עוד לא הגדרת גבולות. המחמד מחכה שתחליט מה מסיח אותך.</string>
     <string name="home_usage_of_limit">%1$s / %2$s</string>
     <string name="home_full_block">חסום</string>
-    <string name="home_limited_title">מצב מוגבל</string>
-    <string name="home_limited_body">חסרות הרשאות למעקב או לחסימה. האפליקציה עובדת, אבל בלי אכיפה. לחצו כדי להשלים.</string>
     <string name="home_tracking_paused">המעקב מושהה. אפשר להפעיל מחדש בהגדרות.</string>
 
     <string name="onboarding_welcome_title">ברוכים הבאים לרקבון</string>
@@ -156,4 +153,19 @@
     <string name="summary_channel_name">סיכום יומי</string>
     <string name="summary_channel_description">התראה אחת בערב בקול של המחמד</string>
     <string name="summary_notification_title">%1$s מסכם את היום</string>
+    <string name="home_empty_title">עדיין אין אפליקציות במעקב</string>
+    <string name="home_empty_body">בחרו אפליקציה אחת שמושכת אתכם יותר מדי, וקבעו לה גבול יומי.</string>
+    <string name="home_permission_error_title">המעקב לא פעיל</string>
+    <string name="home_permission_error_body">חסרות הרשאות. בלי הן המחמד לא יכול לדעת כמה השתמשתם.</string>
+    <string name="home_fix_permissions">לתקן הרשאות</string>
+    <string name="home_achievements">הישגים</string>
+    <string name="settings_reduce_motion_sheet">הפחתת תנועה</string>
+    <string name="settings_reduce_motion_system_hint">לפי הגדרת המערכת</string>
+    <string name="settings_reduce_motion_on_hint">רק מעברי שקיפות, בלי חלקיקים ומורפים</string>
+    <string name="settings_reduce_motion_off_hint">כל האנימציות</string>
+    <string name="settings_language_sheet">שפה</string>
+    <string name="onboarding_step_of">שלב %1$d מתוך %2$d</string>
+    <string name="onboarding_progress">התקדמות ההגדרה</string>
+    <string name="battery_section_vendor">היצרן שלכם</string>
+    <string name="premium_badge">פרימיום</string>
 </resources>

@@ -63,4 +63,9 @@
     <string name="achievements_streak_days">%1$d ימים</string>
     <string name="achievements_unlocked">הושג</string>
     <string name="achievements_locked">עדיין לא</string>
+    <string name="gallery_empty_title">אין מחמדים</string>
+    <string name="gallery_empty_body">תיקיית המחמדים ריקה או שכל המניפסטים נפסלו.</string>
+    <string name="gallery_section_all">כל המחמדים</string>
+    <string name="achievements_empty_title">אין עדיין הישגים</string>
+    <string name="achievements_empty_body">ההישגים נפתחים ככל שהגבולות נשמרים.</string>
 </resources>

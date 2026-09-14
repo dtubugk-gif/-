@@ -2,30 +2,38 @@ package il.rikavon.core.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -33,49 +41,68 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import il.rikavon.core.ui.R
 import il.rikavon.core.ui.theme.ColorMath
 import il.rikavon.core.ui.theme.LocalExtraColors
+import il.rikavon.core.ui.theme.Radius
+import il.rikavon.core.ui.theme.Sizes
+import il.rikavon.core.ui.theme.Spacing
 
-/** Big screen title with an optional muted subtitle (design: 30sp/800 + 13sp at 50%). */
+// ---- Text --------------------------------------------------------------------------------------
+
+/** Section label: 14/500 at 60 %, screen margins. */
+@Composable
+fun SectionLabel(text: String, modifier: Modifier = Modifier) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        color = LocalExtraColors.current.onSurfaceMuted,
+        modifier = modifier.padding(horizontal = ScreenPadding, vertical = Spacing.sm),
+    )
+}
+
+/** Large in-content title (used where a screen has no app bar, like the home header). */
 @Composable
 fun ScreenTitle(title: String, subtitle: String? = null, modifier: Modifier = Modifier) {
     Column(modifier = modifier.padding(horizontal = ScreenPadding)) {
-        Text(title, style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onBackground)
+        Text(title, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onBackground)
         if (subtitle != null) {
             Text(
                 subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = LocalExtraColors.current.onSurfaceFaint,
-                modifier = Modifier.padding(top = 2.dp),
+                color = LocalExtraColors.current.onSurfaceMuted,
+                modifier = Modifier.padding(top = Spacing.xs),
             )
         }
     }
 }
 
-/** Muted uppercase-ish section label (design: 13sp/700 at 50% with letter spacing). */
-@Composable
-fun SectionLabel(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall,
-        color = LocalExtraColors.current.onSurfaceFaint,
-        modifier = modifier.padding(horizontal = ScreenPadding, vertical = 8.dp),
-    )
-}
+// ---- Surfaces ----------------------------------------------------------------------------------
 
-/** A rounded surface card (design: #1d1a15, radius 16–24). */
+/** Card: radius 16, padding 16, surface tint instead of shadow. */
 @Composable
 fun SurfaceCard(
     modifier: Modifier = Modifier,
-    radius: Dp = 20.dp,
+    radius: Dp = Radius.lg,
     color: Color = MaterialTheme.colorScheme.surfaceContainer,
-    padding: Dp = 18.dp,
+    padding: Dp = Spacing.lg,
+    onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
+    val interaction = remember { MutableInteractionSource() }
+    val clickModifier =
+        if (onClick != null) {
+            Modifier
+                .pressScale(
+                    interaction,
+                ).clickable(interactionSource = interaction, indication = null, onClick = onClick, role = Role.Button)
+        } else {
+            Modifier
+        }
     Box(
         modifier =
             modifier
+                .then(clickModifier)
                 .background(color, RoundedCornerShape(radius))
                 .padding(padding),
     ) {
@@ -83,84 +110,22 @@ fun SurfaceCard(
     }
 }
 
-/** Filled pill button (design: accent background, dark text, min 48–52dp). */
+/** A group of rows in one rounded surface (settings style). Rows separate with spacing, no dividers. */
 @Composable
-fun PillButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    color: Color = MaterialTheme.colorScheme.primary,
-    contentColor: Color = ColorMath.onColor(color),
-    minHeight: Dp = 52.dp,
-    leading: (@Composable () -> Unit)? = null,
-) {
-    Row(
+fun GroupCard(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Column(
         modifier =
             modifier
-                .heightIn(min = minHeight)
-                .background(color, CircleShape)
-                .clickable(onClick = onClick, role = Role.Button)
-                .padding(horizontal = 26.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(7.dp),
+                .fillMaxWidth()
+                .padding(horizontal = ScreenPadding)
+                .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(Radius.lg))
+                .padding(vertical = Spacing.xs),
     ) {
-        leading?.invoke()
-        Text(text, style = MaterialTheme.typography.labelLarge, color = contentColor)
+        content()
     }
 }
 
-/** Segmented pill selector (design: "7 ימים / 30 יום"). */
-@Composable
-fun <T> SegmentPills(
-    options: List<T>,
-    selected: T,
-    onSelect: (T) -> Unit,
-    label: @Composable (T) -> String,
-    modifier: Modifier = Modifier,
-) {
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        options.forEach { option ->
-            val active = option == selected
-            val scheme = MaterialTheme.colorScheme
-            val background = if (active) scheme.primary else scheme.surfaceContainerHigh
-            Box(
-                modifier =
-                    Modifier
-                        .heightIn(min = 44.dp)
-                        .background(background, CircleShape)
-                        .selectable(selected = active, role = Role.Tab) { onSelect(option) }
-                        .padding(horizontal = 20.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = label(option),
-                    style = if (active) MaterialTheme.typography.labelMedium else MaterialTheme.typography.bodyMedium,
-                    color = if (active) scheme.onPrimary else LocalExtraColors.current.onSurfaceMuted,
-                )
-            }
-        }
-    }
-}
-
-/** Compact chip with a coloured dot (design: "טיקטוק · 48/60"). */
-@Composable
-fun DotChip(text: String, dot: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier =
-            modifier
-                .heightIn(min = TouchTarget)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
-                .clickable(onClick = onClick, role = Role.Button)
-                .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Box(modifier = Modifier.size(9.dp).background(dot, CircleShape))
-        Text(text, style = MaterialTheme.typography.bodySmall, maxLines = 1)
-    }
-}
-
-/** Big number + caption tile (design: "63 / פתיחות היום"). */
+/** Big number + caption tile. */
 @Composable
 fun StatTile(
     value: String,
@@ -171,24 +136,24 @@ fun StatTile(
     Column(
         modifier =
             modifier
-                .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(18.dp))
-                .padding(14.dp)
+                .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(Radius.lg))
+                .padding(Spacing.lg)
                 .semantics { contentDescription = "$caption: $value" },
     ) {
-        Text(value, style = MaterialTheme.typography.headlineMedium, color = valueColor, maxLines = 1)
+        Text(value, style = MaterialTheme.typography.headlineSmall, color = valueColor, maxLines = 1)
         Text(
             caption,
             style = MaterialTheme.typography.bodySmall,
             color = LocalExtraColors.current.onSurfaceMuted,
-            modifier = Modifier.padding(top = 2.dp),
+            modifier = Modifier.padding(top = Spacing.xs),
             maxLines = 2,
         )
     }
 }
 
-/** Thin rounded progress bar (design: 4–5dp, track #26211b). */
+/** Thin rounded progress bar. */
 @Composable
-fun ThinBar(progress: Float, color: Color, modifier: Modifier = Modifier, height: Dp = 4.dp) {
+fun ThinBar(progress: Float, color: Color, modifier: Modifier = Modifier, height: Dp = Spacing.xs) {
     Box(
         modifier =
             modifier
@@ -206,7 +171,7 @@ fun ThinBar(progress: Float, color: Color, modifier: Modifier = Modifier, height
     }
 }
 
-/** Speech bubble for the mascot's line (design: surface pill, 13.5sp). */
+/** Speech bubble for the mascot's line. */
 @Composable
 fun SpeechBubble(
     text: String,
@@ -222,111 +187,121 @@ fun SpeechBubble(
         overflow = TextOverflow.Ellipsis,
         modifier =
             modifier
-                .background(color, RoundedCornerShape(14.dp))
-                .padding(horizontal = 14.dp, vertical = 8.dp),
+                .background(color, RoundedCornerShape(Radius.lg))
+                .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
     )
 }
 
-/** Square icon button (design: 48dp, radius 14, surface). */
-@Composable
-fun SquareIconButton(
-    icon: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier =
-            modifier
-                .size(TouchTarget)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(14.dp))
-                .clickable(onClick = onClick, role = Role.Button),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            icon,
-            contentDescription = contentDescription,
-            tint = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.size(20.dp),
-        )
-    }
-}
-
-data class BottomTab(val icon: ImageVector, val label: String)
-
-/** Icon-only bottom bar with an active dot (design 1a). */
-@Composable
-fun RikavonBottomBar(tabs: List<BottomTab>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.background)
-                .navigationBarsPadding()
-                .padding(horizontal = 8.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceAround,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        tabs.forEachIndexed { index, tab ->
-            val active = index == selected
-            Column(
-                modifier =
-                    Modifier
-                        .size(width = 64.dp, height = TouchTarget)
-                        .selectable(selected = active, role = Role.Tab) { onSelect(index) }
-                        .semantics { contentDescription = tab.label },
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Icon(
-                    imageVector = tab.icon,
-                    contentDescription = null,
-                    tint = if (active) MaterialTheme.colorScheme.primary else LocalExtraColors.current.onSurfaceFaint,
-                    modifier = Modifier.size(22.dp),
-                )
-                Spacer(Modifier.height(4.dp))
-                Box(
-                    modifier =
-                        Modifier
-                            .size(4.dp)
-                            .background(
-                                if (active) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                CircleShape,
-                            ),
-                )
-            }
-        }
-    }
-}
-
-/** Row helper: pushes trailing content to the end. */
-@Composable
-fun RowScope.Grow() = Spacer(Modifier.weight(1f))
-
-/** Small lock badge (design: 10sp on #262b33). */
+/** Small lock badge on locked cards. */
 @Composable
 fun LockBadge(text: String, modifier: Modifier = Modifier) {
     Row(
         modifier =
             modifier
-                .background(MaterialTheme.colorScheme.surfaceContainerHighest, RoundedCornerShape(8.dp))
-                .padding(horizontal = 7.dp, vertical = 3.dp),
+                .background(MaterialTheme.colorScheme.surfaceContainerHighest, RoundedCornerShape(Radius.sm))
+                .padding(horizontal = Spacing.sm, vertical = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.xs),
     ) {
-        Box(
-            modifier =
-                Modifier
-                    .width(
-                        7.dp,
-                    ).height(9.dp)
-                    .background(MaterialTheme.colorScheme.onSurface, RoundedCornerShape(1.5.dp)),
+        Icon(
+            Icons.Filled.Lock,
+            contentDescription = stringResource(R.string.core_ui_locked),
+            tint = LocalExtraColors.current.onSurfaceMuted,
+            modifier = Modifier.size(LOCK_ICON),
         )
         Text(
             text,
-            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp),
+            style = MaterialTheme.typography.labelSmall,
             color = LocalExtraColors.current.onSurfaceMuted,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
+
+// ---- Selection ---------------------------------------------------------------------------------
+
+/** Segmented single-choice control (Material 3), 40dp pills. */
+@Composable
+fun <T> SegmentPills(
+    options: List<T>,
+    selected: T,
+    onSelect: (T) -> Unit,
+    label: @Composable (T) -> String,
+    modifier: Modifier = Modifier,
+) {
+    SingleChoiceSegmentedButtonRow(modifier = modifier.heightIn(min = Sizes.chip)) {
+        options.forEachIndexed { index, option ->
+            SegmentedButton(
+                selected = option == selected,
+                onClick = { onSelect(option) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                colors =
+                    SegmentedButtonDefaults.colors(
+                        activeContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                        activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        inactiveContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        inactiveContentColor = LocalExtraColors.current.onSurfaceMuted,
+                    ),
+                icon = {},
+                label = { Text(label(option), style = MaterialTheme.typography.labelMedium, maxLines = 1) },
+            )
+        }
+    }
+}
+
+/** Compact chip with a coloured dot, 40dp. */
+@Composable
+fun DotChip(text: String, dot: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val interaction = remember { MutableInteractionSource() }
+    Row(
+        modifier =
+            modifier
+                .heightIn(min = Sizes.chip)
+                .pressScale(interaction)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
+                .clickable(interactionSource = interaction, indication = null, onClick = onClick, role = Role.Button)
+                .padding(horizontal = Spacing.lg),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+    ) {
+        Box(modifier = Modifier.size(DOT).background(dot, CircleShape))
+        Text(text, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+    }
+}
+
+// ---- Navigation --------------------------------------------------------------------------------
+
+data class BottomTab(val icon: ImageVector, val label: String)
+
+/** Material 3 navigation bar: icon + 12sp label, pill indicator on the active item, 80dp + insets. */
+@Composable
+fun RikavonBottomBar(tabs: List<BottomTab>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+    NavigationBar(
+        modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        tonalElevation = 0.dp,
+    ) {
+        tabs.forEachIndexed { index, tab ->
+            NavigationBarItem(
+                selected = index == selected,
+                onClick = { onSelect(index) },
+                icon = { Icon(tab.icon, contentDescription = null, modifier = Modifier.size(Sizes.icon)) },
+                label = { Text(tab.label, style = MaterialTheme.typography.labelSmall, maxLines = 1) },
+                alwaysShowLabel = true,
+                colors =
+                    NavigationBarItemDefaults.colors(
+                        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                        selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unselectedIconColor = LocalExtraColors.current.onSurfaceMuted,
+                        unselectedTextColor = LocalExtraColors.current.onSurfaceMuted,
+                    ),
+            )
+        }
+    }
+}
+
+private val DOT = 8.dp
+private val LOCK_ICON = 12.dp

@@ -180,6 +180,7 @@ private fun RikavonNavHost(startDestination: String, reduced: Boolean) {
                     AppPickerScreen(
                         onBack = { navController.popBackStack() },
                         onOpenLimit = { navController.navigate(Routes.limit(it)) },
+                        onOpenPermissions = { navController.navigate(Routes.ONBOARDING) },
                     )
                 }
                 composable(
@@ -204,6 +205,8 @@ private fun RikavonNavHost(startDestination: String, reduced: Boolean) {
                     StatsScreen(
                         onBack = null,
                         onOpenScore = { navController.navigate(Routes.SCORE) },
+                        onOpenApps = { navController.navigate(Routes.APPS) },
+                        onOpenPermissions = { navController.navigate(Routes.ONBOARDING) },
                         bottomBar = bottomBar,
                     )
                 }

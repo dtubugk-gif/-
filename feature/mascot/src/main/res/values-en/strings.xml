@@ -63,4 +63,9 @@
     <string name="achievements_streak_days">%1$d days</string>
     <string name="achievements_unlocked">Unlocked</string>
     <string name="achievements_locked">Not yet</string>
+    <string name="gallery_empty_title">No pets</string>
+    <string name="gallery_empty_body">The mascots folder is empty or every manifest was rejected.</string>
+    <string name="gallery_section_all">All pets</string>
+    <string name="achievements_empty_title">No achievements yet</string>
+    <string name="achievements_empty_body">Achievements unlock as limits are kept.</string>
 </resources>

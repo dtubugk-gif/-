@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,10 +35,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import il.rikavon.core.data.model.BlockReason
 import il.rikavon.core.ui.anim.AnimationSpecs
-import il.rikavon.core.ui.components.PillButton
+import il.rikavon.core.ui.components.PrimaryButton
 import il.rikavon.core.ui.components.ScreenPadding
+import il.rikavon.core.ui.components.SurfaceCard
 import il.rikavon.core.ui.theme.LocalExtraColors
 import il.rikavon.core.ui.theme.RikavonTheme
+import il.rikavon.core.ui.theme.Spacing
 import il.rikavon.core.ui.theme.rotScheme
 import il.rikavon.feature.blocker.R
 import il.rikavon.feature.blocker.engine.BlockDecision
@@ -101,7 +102,7 @@ fun BlockOverlayContent(
                         .fillMaxSize()
                         .safeDrawingPadding()
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = ScreenPadding, vertical = 24.dp),
+                        .padding(horizontal = ScreenPadding, vertical = Spacing.xl),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -110,7 +111,7 @@ fun BlockOverlayContent(
                     style = MaterialTheme.typography.displayLarge,
                     color = MaterialTheme.colorScheme.primary,
                 )
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(Spacing.lg))
                 MascotView(
                     skin = skin,
                     stage = MascotStage.ROTTEN,
@@ -129,7 +130,7 @@ fun BlockOverlayContent(
                             .fillMaxWidth(MASCOT_WIDTH_FRACTION)
                             .aspectRatio(1f),
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Spacing.sm))
                 AnimatedVisibility(
                     visible = textVisible,
                     enter =
@@ -156,17 +157,17 @@ fun BlockOverlayContent(
                             color = MaterialTheme.colorScheme.onBackground,
                             modifier = Modifier.widthIn(max = TEXT_MAX_WIDTH),
                         )
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(Spacing.md))
                         Text(
                             text = flavor,
                             style = MaterialTheme.typography.bodyMedium,
                             color = extras.onSurfaceMuted,
                             textAlign = TextAlign.Center,
                         )
-                        Spacer(Modifier.height(28.dp))
+                        Spacer(Modifier.height(Spacing.xl))
                         RetryTimer(decision = decision)
-                        Spacer(Modifier.height(14.dp))
-                        PillButton(
+                        Spacer(Modifier.height(Spacing.lg))
+                        PrimaryButton(
                             text = stringResource(R.string.block_close),
                             onClick = onClose,
                             modifier = Modifier.widthIn(min = CLOSE_MIN_WIDTH),
@@ -192,24 +193,19 @@ private fun RetryTimer(decision: BlockDecision) {
     val minutes = (remaining % MILLIS_PER_HOUR) / MILLIS_PER_MINUTE
     val seconds = (remaining % MILLIS_PER_MINUTE) / MILLIS_PER_SECOND
     val clock = if (hours > 0) "%d:%02d:%02d".format(hours, minutes, seconds) else "%02d:%02d".format(minutes, seconds)
-    Row(
-        modifier =
-            Modifier
-                .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(16.dp))
-                .padding(horizontal = 22.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.block_try_again_label),
-            style = MaterialTheme.typography.bodyMedium,
-            color = LocalExtraColors.current.onSurfaceMuted,
-        )
-        Text(
-            text = clock,
-            style = MaterialTheme.typography.headlineSmall.copy(fontFeatureSettings = "tnum"),
-            color = MaterialTheme.colorScheme.primary,
-        )
+    SurfaceCard(padding = Spacing.lg) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            Text(
+                text = stringResource(R.string.block_try_again_label),
+                style = MaterialTheme.typography.bodyMedium,
+                color = LocalExtraColors.current.onSurfaceMuted,
+            )
+            Text(
+                text = clock,
+                style = MaterialTheme.typography.headlineSmall.copy(fontFeatureSettings = "tnum"),
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
     }
 }
 

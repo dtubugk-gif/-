@@ -22,11 +22,8 @@
     <string name="nav_stats">Statistics</string>
     <string name="nav_settings">Settings</string>
     <string name="home_settings">Settings</string>
-    <string name="home_no_limits">No limits yet. The pet is waiting for you to decide what distracts you.</string>
     <string name="home_usage_of_limit">%1$s / %2$s</string>
     <string name="home_full_block">Blocked</string>
-    <string name="home_limited_title">Limited mode</string>
-    <string name="home_limited_body">Tracking or blocking permissions are missing. The app works, but nothing is enforced. Tap to complete.</string>
     <string name="home_tracking_paused">Tracking is paused. Re-enable it in settings.</string>
 
     <string name="onboarding_welcome_title">Welcome to Rikavon</string>
@@ -156,4 +153,19 @@
     <string name="summary_channel_name">Daily summary</string>
     <string name="summary_channel_description">One evening notification in the pet\'s voice</string>
     <string name="summary_notification_title">%1$s sums up the day</string>
+    <string name="home_empty_title">No tracked apps yet</string>
+    <string name="home_empty_body">Pick one app that pulls you in too much and give it a daily limit.</string>
+    <string name="home_permission_error_title">Tracking is off</string>
+    <string name="home_permission_error_body">Permissions are missing. Without them the pet cannot know how much you used.</string>
+    <string name="home_fix_permissions">Fix permissions</string>
+    <string name="home_achievements">Achievements</string>
+    <string name="settings_reduce_motion_sheet">Reduce motion</string>
+    <string name="settings_reduce_motion_system_hint">Follow the system setting</string>
+    <string name="settings_reduce_motion_on_hint">Fades only, no particles or morphs</string>
+    <string name="settings_reduce_motion_off_hint">All animations</string>
+    <string name="settings_language_sheet">Language</string>
+    <string name="onboarding_step_of">Step %1$d of %2$d</string>
+    <string name="onboarding_progress">Setup progress</string>
+    <string name="battery_section_vendor">Your manufacturer</string>
+    <string name="premium_badge">Premium</string>
 </resources>

@@ -18,117 +18,40 @@ val Rubik =
         Font(R.font.rubik_black, FontWeight.Black),
     )
 
-/** Large, confident type. Everything is in sp so 200% font scaling works. */
+private fun style(size: Int, line: Int, weight: FontWeight): TextStyle =
+    TextStyle(
+        fontFamily = Rubik,
+        fontWeight = weight,
+        fontSize = size.sp,
+        lineHeight = line.sp,
+        // Hebrew is never letter-spaced.
+        letterSpacing = 0.sp,
+    )
+
+/**
+ * One family, hierarchy through size and weight only. Body is 16sp (Hebrew never below 16), secondary 14,
+ * caption 12, everything in sp so 200 % font scaling works. Line height 1.5 for body, 1.2 for headings.
+ *
+ * Roles: displayLarge = the block screen headline, displayMedium = the home score, displaySmall = big
+ * editor values, headlineMedium = expanded screen title, titleLarge = collapsed screen title / card title,
+ * titleMedium = list row title, bodyMedium = body, bodySmall = secondary, labelLarge = buttons,
+ * labelSmall = captions and bottom-bar labels.
+ */
 val RikavonTypography =
     Typography(
-        displayLarge =
-            TextStyle(
-                fontFamily = Rubik,
-                fontWeight = FontWeight.Black,
-                fontSize = 88.sp,
-                lineHeight = 88.sp,
-                letterSpacing = (-2).sp,
-            ),
-        displayMedium =
-            TextStyle(
-                fontFamily = Rubik,
-                fontWeight = FontWeight.Black,
-                fontSize = 64.sp,
-                lineHeight = 64.sp,
-                letterSpacing = (-1.5).sp,
-            ),
-        displaySmall =
-            TextStyle(
-                fontFamily = Rubik,
-                fontWeight = FontWeight.Black,
-                fontSize = 44.sp,
-                lineHeight = 44.sp,
-                letterSpacing = (-1).sp,
-            ),
-        headlineLarge =
-            TextStyle(
-                fontFamily = Rubik,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 30.sp,
-                lineHeight = 36.sp,
-                letterSpacing = (-0.5).sp,
-            ),
-        headlineMedium =
-            TextStyle(
-                fontFamily = Rubik,
-                fontWeight = FontWeight.Black,
-                fontSize = 26.sp,
-                lineHeight = 30.sp,
-            ),
-        headlineSmall =
-            TextStyle(
-                fontFamily = Rubik,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 22.sp,
-                lineHeight = 28.sp,
-            ),
-        titleLarge =
-            TextStyle(
-                fontFamily = Rubik,
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                lineHeight = 28.sp,
-            ),
-        titleMedium =
-            TextStyle(
-                fontFamily = Rubik,
-                fontWeight = FontWeight.Medium,
-                fontSize = 17.sp,
-                lineHeight = 24.sp,
-            ),
-        titleSmall =
-            TextStyle(
-                fontFamily = Rubik,
-                fontWeight = FontWeight.Medium,
-                fontSize = 15.sp,
-                lineHeight = 20.sp,
-            ),
-        bodyLarge =
-            TextStyle(
-                fontFamily = Rubik,
-                fontWeight = FontWeight.Normal,
-                fontSize = 17.sp,
-                lineHeight = 26.sp,
-            ),
-        bodyMedium =
-            TextStyle(
-                fontFamily = Rubik,
-                fontWeight = FontWeight.Normal,
-                fontSize = 15.sp,
-                lineHeight = 22.sp,
-            ),
-        bodySmall =
-            TextStyle(
-                fontFamily = Rubik,
-                fontWeight = FontWeight.Normal,
-                fontSize = 13.sp,
-                lineHeight = 18.sp,
-            ),
-        labelLarge =
-            TextStyle(
-                fontFamily = Rubik,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 17.sp,
-                lineHeight = 20.sp,
-            ),
-        labelMedium =
-            TextStyle(
-                fontFamily = Rubik,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-                lineHeight = 18.sp,
-            ),
-        labelSmall =
-            TextStyle(
-                fontFamily = Rubik,
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
-                lineHeight = 16.sp,
-                letterSpacing = 0.4.sp,
-            ),
+        displayLarge = style(size = 72, line = 76, weight = FontWeight.Black),
+        displayMedium = style(size = 56, line = 60, weight = FontWeight.Black),
+        displaySmall = style(size = 40, line = 44, weight = FontWeight.ExtraBold),
+        headlineLarge = style(size = 34, line = 40, weight = FontWeight.Bold),
+        headlineMedium = style(size = 32, line = 38, weight = FontWeight.Bold),
+        headlineSmall = style(size = 26, line = 32, weight = FontWeight.Bold),
+        titleLarge = style(size = 22, line = 28, weight = FontWeight.Bold),
+        titleMedium = style(size = 18, line = 24, weight = FontWeight.Medium),
+        titleSmall = style(size = 16, line = 22, weight = FontWeight.Medium),
+        bodyLarge = style(size = 17, line = 26, weight = FontWeight.Normal),
+        bodyMedium = style(size = 16, line = 24, weight = FontWeight.Normal),
+        bodySmall = style(size = 14, line = 20, weight = FontWeight.Normal),
+        labelLarge = style(size = 16, line = 20, weight = FontWeight.Medium),
+        labelMedium = style(size = 14, line = 18, weight = FontWeight.Medium),
+        labelSmall = style(size = 12, line = 16, weight = FontWeight.Medium),
     )

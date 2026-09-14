@@ -14,7 +14,6 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import il.rikavon.core.ui.anim.LocalReducedMotion
 
 /** The accent colour of the currently selected mascot, available everywhere. */
@@ -45,14 +44,14 @@ val LocalExtraColors =
         )
     }
 
-/** Design radii: 14 for small controls, 16 for rows, 20/24 for cards, 28 for hero panels, pills elsewhere. */
+/** Radii from [Radius]: 8 small controls, 12 medium, 16 cards and rows, 20 hero cards, 28 bottom sheets. */
 val RikavonShapes =
     Shapes(
-        extraSmall = RoundedCornerShape(11.dp),
-        small = RoundedCornerShape(14.dp),
-        medium = RoundedCornerShape(16.dp),
-        large = RoundedCornerShape(24.dp),
-        extraLarge = RoundedCornerShape(28.dp),
+        extraSmall = RoundedCornerShape(Radius.sm),
+        small = RoundedCornerShape(Radius.md),
+        medium = RoundedCornerShape(Radius.lg),
+        large = RoundedCornerShape(Radius.xl),
+        extraLarge = RoundedCornerShape(Radius.sheet),
     )
 
 private const val ACCENT_LIGHTNESS = 0.6f

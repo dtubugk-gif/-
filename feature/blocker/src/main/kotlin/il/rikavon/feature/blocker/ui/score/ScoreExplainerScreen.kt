@@ -1,7 +1,7 @@
 package il.rikavon.feature.blocker.ui.score
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -13,7 +13,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -26,7 +28,13 @@ import il.rikavon.core.data.domain.FocusScoreCalculator
 import il.rikavon.core.data.repo.LimitsRepository
 import il.rikavon.core.ui.components.RikavonTopBar
 import il.rikavon.core.ui.components.ScreenPadding
-import il.rikavon.core.ui.components.SectionHeader
+import il.rikavon.core.ui.components.SectionLabel
+import il.rikavon.core.ui.components.SubtleDivider
+import il.rikavon.core.ui.components.SurfaceCard
+import il.rikavon.core.ui.components.rememberPinnedTopBarBehavior
+import il.rikavon.core.ui.theme.LocalExtraColors
+import il.rikavon.core.ui.theme.Spacing
+import il.rikavon.core.ui.theme.scoreColor
 import il.rikavon.core.ui.util.formatMinutes
 import il.rikavon.feature.blocker.R
 import il.rikavon.feature.blocker.engine.FocusScoreProvider
@@ -51,79 +59,37 @@ class ScoreExplainerViewModel @Inject constructor(provider: FocusScoreProvider, 
         }
     }
 
+/** Score explainer: today's breakdown in one card, then one card per component of the formula. */
 @Composable
 fun ScoreExplainerScreen(onBack: () -> Unit, viewModel: ScoreExplainerViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val scrollBehavior = rememberPinnedTopBarBehavior()
     Scaffold(
-        topBar = { RikavonTopBar(title = stringResource(R.string.score_title), onBack = onBack) },
+        topBar = {
+            RikavonTopBar(
+                title = stringResource(R.string.score_title),
+                onBack = onBack,
+                scrollBehavior = scrollBehavior,
+            )
+        },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Column(
             modifier =
                 Modifier
                     .padding(padding)
+                    .nestedScroll(scrollBehavior.nestedScrollConnection)
                     .verticalScroll(rememberScrollState())
-                    .padding(bottom = ScreenPadding),
+                    .padding(bottom = Spacing.xl),
         ) {
             Text(
                 text = stringResource(R.string.score_intro),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(horizontal = ScreenPadding, vertical = 8.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = LocalExtraColors.current.onSurfaceMuted,
+                modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Spacing.sm),
             )
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(ScreenPadding)
-                        .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.large)
-                        .padding(18.dp),
-            ) {
-                Text(stringResource(R.string.score_today_title), style = MaterialTheme.typography.titleMedium)
-                Spacer(Modifier.height(8.dp))
-                if (!state.hasLimits) {
-                    Text(stringResource(R.string.score_no_limits), style = MaterialTheme.typography.bodyMedium)
-                } else {
-                    val s = state.score
-                    Text(
-                        stringResource(
-                            R.string.score_today_line,
-                            stringResource(R.string.score_today_minutes),
-                            s.minutesPart,
-                            FocusScoreCalculator.MINUTES_WEIGHT,
-                        ),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        stringResource(
-                            R.string.score_today_line,
-                            stringResource(R.string.score_today_opens),
-                            s.opensPart,
-                            FocusScoreCalculator.OPENS_WEIGHT,
-                        ),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        stringResource(
-                            R.string.score_today_line,
-                            stringResource(R.string.score_today_streak),
-                            s.streakPart,
-                            FocusScoreCalculator.STREAK_WEIGHT,
-                        ),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                    Text(
-                        stringResource(R.string.score_streak_minutes, formatMinutes(s.longestCleanStreakMinutes)),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        stringResource(R.string.score_today_total, s.total),
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
+            SectionLabel(stringResource(R.string.score_section_today))
+            TodayCard(state)
             Part(R.string.score_part_minutes, R.string.score_part_minutes_body)
             Part(R.string.score_part_opens, R.string.score_part_opens_body)
             Part(R.string.score_part_streak, R.string.score_part_streak_body)
@@ -133,8 +99,60 @@ fun ScoreExplainerScreen(onBack: () -> Unit, viewModel: ScoreExplainerViewModel 
 }
 
 @Composable
+private fun TodayCard(state: ScoreUiState) {
+    SurfaceCard(modifier = Modifier.fillMaxWidth().padding(horizontal = ScreenPadding)) {
+        if (!state.hasLimits) {
+            Text(
+                stringResource(R.string.score_no_limits),
+                style = MaterialTheme.typography.bodyMedium,
+                color = LocalExtraColors.current.onSurfaceMuted,
+            )
+            return@SurfaceCard
+        }
+        val s = state.score
+        Column {
+            PartLine(stringResource(R.string.score_today_minutes), s.minutesPart, FocusScoreCalculator.MINUTES_WEIGHT)
+            PartLine(stringResource(R.string.score_today_opens), s.opensPart, FocusScoreCalculator.OPENS_WEIGHT)
+            PartLine(stringResource(R.string.score_today_streak), s.streakPart, FocusScoreCalculator.STREAK_WEIGHT)
+            Text(
+                stringResource(R.string.score_streak_minutes, formatMinutes(s.longestCleanStreakMinutes)),
+                style = MaterialTheme.typography.bodySmall,
+                color = LocalExtraColors.current.onSurfaceMuted,
+            )
+            Spacer(Modifier.height(Spacing.md))
+            SubtleDivider(inset = 0.dp)
+            Spacer(Modifier.height(Spacing.md))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    stringResource(R.string.score_total_label),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    s.total.toString(),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = scoreColor(s.total),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PartLine(label: String, value: Int, weight: Int) {
+    Row(modifier = Modifier.padding(vertical = Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Text(
+            stringResource(R.string.score_part_value, value, weight),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+@Composable
 private fun Part(title: Int, body: Int) {
-    SectionHeader(stringResource(title))
+    SectionLabel(stringResource(title), modifier = Modifier.padding(top = Spacing.sm))
     Text(
         text = stringResource(body),
         style = MaterialTheme.typography.bodyMedium,

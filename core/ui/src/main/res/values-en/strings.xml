@@ -11,4 +11,10 @@
     <string name="core_ui_app_icon">Icon of %1$s</string>
     <string name="core_ui_empty">Nothing here yet</string>
     <string name="core_ui_locked">Locked</string>
+    <string name="core_ui_retry">Try again</string>
+    <string name="core_ui_loading">Loading…</string>
+    <string name="core_ui_error_title">Something went wrong</string>
+    <string name="core_ui_cancel">Cancel</string>
+    <string name="core_ui_confirm">Confirm</string>
+    <string name="core_ui_more">More</string>
 </resources>

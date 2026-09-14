@@ -3,25 +3,21 @@ package il.rikavon.feature.blocker.ui.schedules
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -31,20 +27,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import il.rikavon.core.data.model.Schedule
 import il.rikavon.core.data.model.ScheduleType
 import il.rikavon.core.ui.components.AppIcon
+import il.rikavon.core.ui.components.BottomActionBar
+import il.rikavon.core.ui.components.ConfirmDialog
+import il.rikavon.core.ui.components.LinkButton
 import il.rikavon.core.ui.components.RikavonTopBar
 import il.rikavon.core.ui.components.ScreenPadding
-import il.rikavon.core.ui.components.SectionHeader
-import il.rikavon.core.ui.components.TouchTarget
+import il.rikavon.core.ui.components.SectionLabel
+import il.rikavon.core.ui.components.SurfaceCard
+import il.rikavon.core.ui.components.rememberPinnedTopBarBehavior
+import il.rikavon.core.ui.theme.LocalExtraColors
+import il.rikavon.core.ui.theme.Sizes
+import il.rikavon.core.ui.theme.Spacing
 import il.rikavon.core.ui.util.formatClock
 import il.rikavon.feature.blocker.R
 import java.time.format.TextStyle
@@ -52,10 +55,13 @@ import java.util.Locale
 
 private enum class TimeTarget { START, END }
 
+/** Schedule editor: name, type, days, hours, app checklist; save pinned at the bottom, delete behind a confirmation. */
 @Composable
 fun ScheduleEditorScreen(onBack: () -> Unit, viewModel: ScheduleEditorViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var timeTarget by remember { mutableStateOf<TimeTarget?>(null) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    val scrollBehavior = rememberPinnedTopBarBehavior()
     val defaultName =
         stringResource(
             when (state.type) {
@@ -65,12 +71,38 @@ fun ScheduleEditorScreen(onBack: () -> Unit, viewModel: ScheduleEditorViewModel 
                 ScheduleType.CUSTOM -> R.string.schedule_name_default_custom
             },
         )
+    val editing = state.id != Schedule.NEW_ID
 
     Scaffold(
-        topBar = { RikavonTopBar(title = stringResource(R.string.schedule_editor_title), onBack = onBack) },
+        topBar = {
+            RikavonTopBar(
+                title = stringResource(R.string.schedule_editor_title),
+                onBack = onBack,
+                scrollBehavior = scrollBehavior,
+            )
+        },
+        bottomBar = {
+            BottomActionBar(
+                primaryText = stringResource(R.string.schedule_save),
+                onPrimary = { viewModel.save(defaultName, onBack) },
+                primaryEnabled = state.days.isNotEmpty(),
+                secondaryText = if (editing) stringResource(R.string.schedule_delete) else null,
+                onSecondary = if (editing) ({ confirmDelete = true }) else null,
+                secondaryDestructive = true,
+                modifier = Modifier.padding(bottom = Spacing.sm),
+            )
+        },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
-        LazyColumn(modifier = Modifier.padding(padding)) {
+        LazyColumn(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            contentPadding =
+                PaddingValues(
+                    top = padding.calculateTopPadding(),
+                    bottom =
+                        padding.calculateBottomPadding() + Spacing.lg,
+                ),
+        ) {
             item {
                 OutlinedTextField(
                     value = state.name,
@@ -78,33 +110,41 @@ fun ScheduleEditorScreen(onBack: () -> Unit, viewModel: ScheduleEditorViewModel 
                     label = { Text(stringResource(R.string.schedule_name)) },
                     placeholder = { Text(defaultName) },
                     singleLine = true,
+                    shape = MaterialTheme.shapes.medium,
+                    textStyle = MaterialTheme.typography.bodyMedium,
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = ScreenPadding, vertical = 8.dp),
+                            .padding(horizontal = ScreenPadding, vertical = Spacing.sm)
+                            .heightIn(min = Sizes.input),
                 )
             }
             item {
-                SectionHeader(stringResource(R.string.schedule_type))
+                SectionLabel(stringResource(R.string.schedule_type))
                 FlowRow(
                     modifier = Modifier.padding(horizontal = ScreenPadding),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     ScheduleType.entries.forEach { type ->
                         FilterChip(
                             selected = state.type == type,
                             onClick = { viewModel.setType(type) },
-                            label = { Text(stringResource(scheduleTypeLabel(type))) },
-                            modifier = Modifier.heightIn(min = TouchTarget),
+                            label = {
+                                Text(
+                                    stringResource(scheduleTypeLabel(type)),
+                                    style = MaterialTheme.typography.labelMedium,
+                                )
+                            },
+                            modifier = Modifier.heightIn(min = Sizes.chip),
                         )
                     }
                 }
             }
             item {
-                SectionHeader(stringResource(R.string.schedule_days))
+                SectionLabel(stringResource(R.string.schedule_days), modifier = Modifier.padding(top = Spacing.sm))
                 FlowRow(
                     modifier = Modifier.padding(horizontal = ScreenPadding),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
                 ) {
                     orderedDays().forEach { day ->
                         val label = day.getDisplayName(TextStyle.SHORT, Locale.getDefault())
@@ -117,22 +157,23 @@ fun ScheduleEditorScreen(onBack: () -> Unit, viewModel: ScheduleEditorViewModel 
                         FilterChip(
                             selected = selected,
                             onClick = { viewModel.toggleDay(day) },
-                            label = { Text(label) },
+                            label = { Text(label, style = MaterialTheme.typography.labelMedium) },
                             modifier =
                                 Modifier
-                                    .heightIn(min = TouchTarget)
+                                    .heightIn(min = Sizes.chip)
                                     .semantics { contentDescription = description },
                         )
                     }
                 }
             }
             item {
+                SectionLabel(
+                    stringResource(R.string.schedule_section_time),
+                    modifier = Modifier.padding(top = Spacing.sm),
+                )
                 Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = ScreenPadding, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = ScreenPadding),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
                     TimeField(
                         label = stringResource(R.string.schedule_start),
@@ -152,16 +193,16 @@ fun ScheduleEditorScreen(onBack: () -> Unit, viewModel: ScheduleEditorViewModel 
                         text = stringResource(R.string.schedule_crosses_midnight),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = ScreenPadding),
+                        modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Spacing.sm),
                     )
                 }
             }
             item {
-                SectionHeader(stringResource(R.string.schedule_apps))
+                SectionLabel(stringResource(R.string.schedule_apps), modifier = Modifier.padding(top = Spacing.sm))
                 Text(
                     text = stringResource(R.string.schedule_apps_hint),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = LocalExtraColors.current.onSurfaceMuted,
                     modifier = Modifier.padding(horizontal = ScreenPadding),
                 )
             }
@@ -172,52 +213,24 @@ fun ScheduleEditorScreen(onBack: () -> Unit, viewModel: ScheduleEditorViewModel 
                     modifier =
                         Modifier
                             .fillMaxWidth()
-                            .heightIn(min = TouchTarget + 8.dp)
+                            .heightIn(min = Sizes.row)
                             .toggleable(
                                 value = selected,
                                 role = Role.Checkbox,
                             ) { viewModel.togglePackage(app.packageName) }
-                            .padding(horizontal = ScreenPadding, vertical = 6.dp),
+                            .padding(horizontal = ScreenPadding, vertical = Spacing.sm),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
                 ) {
-                    AppIcon(drawable = drawable, label = app.label, size = 36.dp)
+                    AppIcon(drawable = drawable, label = app.label)
                     Text(
                         app.label,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.weight(1f),
                         maxLines = 1,
                     )
                     Checkbox(checked = selected, onCheckedChange = null)
                 }
-            }
-            item {
-                Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = { viewModel.save(defaultName, onBack) },
-                    enabled = state.days.isNotEmpty(),
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = ScreenPadding)
-                            .heightIn(min = TouchTarget + 8.dp),
-                ) {
-                    Text(stringResource(R.string.schedule_save))
-                }
-                if (state.id != Schedule.NEW_ID) {
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedButton(
-                        onClick = { viewModel.delete(onBack) },
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = ScreenPadding)
-                                .heightIn(min = TouchTarget),
-                    ) {
-                        Text(stringResource(R.string.schedule_delete))
-                    }
-                }
-                Spacer(Modifier.height(ScreenPadding))
             }
         }
     }
@@ -233,14 +246,30 @@ fun ScheduleEditorScreen(onBack: () -> Unit, viewModel: ScheduleEditorViewModel 
             },
         )
     }
+    if (confirmDelete) {
+        ConfirmDialog(
+            title = stringResource(R.string.schedule_delete_confirm_title),
+            body = stringResource(R.string.schedule_delete_confirm_body, state.name.ifBlank { defaultName }),
+            confirmText = stringResource(R.string.schedule_delete_confirm),
+            onConfirm = {
+                confirmDelete = false
+                viewModel.delete(onBack)
+            },
+            onDismiss = { confirmDelete = false },
+        )
+    }
 }
 
 @Composable
 private fun TimeField(label: String, minute: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    OutlinedButton(onClick = onClick, modifier = modifier.heightIn(min = TouchTarget + 8.dp)) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, style = MaterialTheme.typography.labelMedium)
-            Text(formatClock(minute), style = MaterialTheme.typography.titleLarge)
+    SurfaceCard(onClick = onClick, modifier = modifier.heightIn(min = Sizes.rowTwoLine)) {
+        Column {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = LocalExtraColors.current.onSurfaceMuted)
+            Text(
+                formatClock(minute),
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
         }
     }
 }
@@ -255,14 +284,17 @@ private fun TimeDialog(initialMinute: Int, onDismiss: () -> Unit, onConfirm: (In
         )
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.schedule_pick_time)) },
+        title = { Text(stringResource(R.string.schedule_pick_time), style = MaterialTheme.typography.titleLarge) },
         text = { TimePicker(state = pickerState) },
         confirmButton = {
-            TextButton(onClick = { onConfirm(pickerState.hour * MINUTES_PER_HOUR + pickerState.minute) }) {
-                Text(stringResource(R.string.schedule_time_ok))
-            }
+            LinkButton(
+                text = stringResource(R.string.schedule_time_ok),
+                onClick = { onConfirm(pickerState.hour * MINUTES_PER_HOUR + pickerState.minute) },
+            )
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.schedule_time_cancel)) } },
+        dismissButton = { LinkButton(text = stringResource(R.string.schedule_time_cancel), onClick = onDismiss) },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.extraLarge,
     )
 }
 

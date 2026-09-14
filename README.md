@@ -40,23 +40,36 @@ MVVM + repositories, Hilt for DI, coroutines + Flow everywhere, no `GlobalScope`
 
 ### Design system
 
-The UI follows the design canvas (screens 1a–1f + the rot-cycle sheet). Every token lives in `:core:ui`:
+Material 3 structure with the design canvas's warm palette, Rubik and mascot art. One token system in
+`:core:ui`; screens never hard-code a value that has a token.
 
 | Token | Where | Value |
 |---|---|---|
-| Typeface | `theme/Type.kt`, `res/font/rubik_*.ttf` (OFL, `docs/fonts/OFL-Rubik.txt`) | Rubik 400/500/700/800/900; 88sp "די.", 64sp score, 30sp titles, 15sp body, 13sp labels |
-| Palette | `theme/Color.kt` (`RikavonColors`) | ink `#131110`, surfaces `#161310 / #1d1a15 / #221e19`, track `#26211b`, text `#f4efe6` at 100/60/50 % |
-| Semantic | `theme/Theme.kt` (`LocalExtraColors`) | success `#7dc9a6`, danger `#c9564e`, over-limit `#e08b4f`, default accent `#e0b64f` |
-| Per-mascot theme | `schemeFromAccent(accent, surfaceTint)` | accent = manifest `themeColor`; backgrounds are tinted toward `surfaceTint` (or the accent) at 7–17 % lightness |
-| Block screen | `rotScheme()` | always rot-green `#a3b833` on `#0e120a` / `#1a2113`, whatever the pet |
-| Score colour | `scoreColor(score)` | ≥ 90 green, < 30 red, otherwise the accent (also used by the widget) |
-| Components | `components/Design.kt` | `ScreenTitle`, `SectionLabel`, `SurfaceCard`, `PillButton`, `SegmentPills`, `DotChip`, `StatTile`, `ThinBar`, `SpeechBubble`, `SquareIconButton`, `RikavonBottomBar`, `LockBadge` |
+| Spacing | `theme/Tokens.kt` (`Spacing`) | 8dp grid: 4 / 8 / 12 / 16 / 24 / 32 / 48; screen margin 16; gap between targets 8 |
+| Radius | `Radius`, `RikavonShapes` | 8 controls, 12 medium, 16 cards and rows, 20 hero cards, 28 bottom sheets, pills for buttons |
+| Sizes | `Sizes` | touch 48, button 52, input 56, row 56 / 72, chip 40, icon 24, app icon 40 |
+| Type | `theme/Type.kt`, `res/font/rubik_*.ttf` (OFL) | one family; 72 block headline, 56 score, 32 screen title, 22 collapsed title, 18 row title, **16 body** (Hebrew never below 16), 14 secondary, 12 caption; zero letter-spacing; body line-height 1.5 |
+| Colour roles | `theme/Color.kt`, `theme/Theme.kt` | background `#131110`, surfaces `#161310 / #1d1a15 / #221e19`, text `#f4efe6` at 100 / 60 / 50 %, success `#7dc9a6`, danger `#c9564e`, over-limit `#e08b4f`; dark-only, verified ≥ 4.5:1 for body text |
+| Per-mascot theme | `schemeFromAccent(accent, surfaceTint)` | accent = manifest `themeColor`; one primary colour, neutrals tinted toward `surfaceTint` at 7–17 % lightness |
+| Block screen | `rotScheme()` | always rot-green `#a3b833` on `#0e120a`, whatever the pet |
+| Motion | `anim/AnimationSpecs.kt` | micro 120 ms, component 220 ms, screen 320 ms, M3 emphasized easing, pressed scale 0.97, reduced-motion = fades only |
 
-Screens: home = the pet's room (1a with 1b's streak pill and next-limit line), block = 1c, gallery = 1d,
-statistics = 1e, widget = 1f (compact 180×80 dp row, full 250×140 dp card). Home / gallery / statistics /
-settings sit behind the four-tab bottom bar (`RikavonRoot.kt`, state saved per tab); everything else is pushed
-on top with a back arrow. Two canvas decisions are deliberate: the focus score is shown as a number on the home
-screen (the canvas asks for it), and the mascot art is the canvas SVG art converted to Lottie (see below).
+Components (`components/Common.kt`, `components/Design.kt`): `RikavonLargeTopBar` (32sp collapsing to 22sp with
+`exitUntilCollapsed`), `RikavonTopBar` (back arrow mirrors in RTL), `RikavonBottomBar` (Material 3
+`NavigationBar`, icon + 12sp label, pill indicator), `PrimaryButton` / `TonalButton` / `SecondaryButton` /
+`LinkButton` (52 / 48dp, pill, 97 % press scale, 38 % disabled), `BottomActionBar` (editor actions pinned at the
+bottom), `ListRow` (56–72dp, chevron mirrors), `GroupCard` + `SettingSwitchRow` / `SettingNavRow`, `SurfaceCard`,
+`StatTile`, `ThinBar`, `SegmentPills` (M3 segmented buttons), `DotChip`, `ChoiceSheet` (`ModalBottomSheet`, 32×4
+handle, 28dp radius) for single choices, `ConfirmDialog` for destructive actions only, `EmptyState` (icon + one
+sentence + one action), `ErrorState` (what happened + what to do + action), `SkeletonBlock` / `SkeletonList`.
+
+Every screen has its four states: normal, empty (an onboarding in disguise, with the one primary action),
+loading (skeleton, never a blank surface) and error (permission missing → fix action). One filled action per
+screen; destructive actions are outlined in the error colour and confirmed. Home / gallery / statistics /
+settings sit behind the bottom bar (state saved per tab); everything else is pushed with a back arrow.
+Edge-to-edge with transparent bars, platform splash (`core-splashscreen`, icon only), `LayoutDirection` from
+`supportsRtl`, only `start` / `end` paddings, `Icons.AutoMirrored` for directional glyphs, haptics through
+`LocalHapticFeedback`, and every icon button carries a `contentDescription`.
 
 ### Data flow
 

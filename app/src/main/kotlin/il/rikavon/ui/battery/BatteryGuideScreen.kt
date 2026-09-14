@@ -10,26 +10,28 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import il.rikavon.R
+import il.rikavon.core.ui.components.PrimaryButton
 import il.rikavon.core.ui.components.RikavonTopBar
 import il.rikavon.core.ui.components.ScreenPadding
-import il.rikavon.core.ui.components.SectionHeader
-import il.rikavon.core.ui.components.TouchTarget
+import il.rikavon.core.ui.components.SecondaryButton
+import il.rikavon.core.ui.components.SectionLabel
+import il.rikavon.core.ui.components.SurfaceCard
+import il.rikavon.core.ui.components.rememberPinnedTopBarBehavior
+import il.rikavon.core.ui.theme.LocalExtraColors
+import il.rikavon.core.ui.theme.Spacing
 import java.util.Locale
 
 /** Vendors that ship their own battery managers which kill foreground services. */
@@ -107,70 +109,83 @@ enum class Vendor(val titleRes: Int, val bodyRes: Int, val components: List<Comp
     }
 }
 
+/** Battery guide: one card per step, the system exemption is the filled action, the vendor screen is secondary. */
 @Composable
 fun BatteryGuideScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val vendor = remember { Vendor.detect() }
+    val scrollBehavior = rememberPinnedTopBarBehavior()
     Scaffold(
-        topBar = { RikavonTopBar(title = stringResource(R.string.battery_title), onBack = onBack) },
+        topBar = {
+            RikavonTopBar(
+                title = stringResource(R.string.battery_title),
+                onBack = onBack,
+                scrollBehavior = scrollBehavior,
+            )
+        },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Column(
             modifier =
                 Modifier
                     .padding(padding)
+                    .nestedScroll(scrollBehavior.nestedScrollConnection)
                     .verticalScroll(rememberScrollState())
-                    .padding(bottom = ScreenPadding),
+                    .padding(bottom = Spacing.xl),
         ) {
             Text(
                 text = stringResource(R.string.battery_intro),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(horizontal = ScreenPadding, vertical = 8.dp),
-            )
-            SectionHeader(stringResource(R.string.battery_step_system))
-            Text(
-                text = stringResource(R.string.battery_step_system_body),
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(horizontal = ScreenPadding),
+                color = LocalExtraColors.current.onSurfaceMuted,
+                modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Spacing.sm),
             )
-            Spacer(Modifier.height(10.dp))
-            Button(
-                onClick = { context.openIgnoreBatteryOptimizations() },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = ScreenPadding)
-                        .heightIn(min = TouchTarget + 8.dp),
-            ) {
-                Text(stringResource(R.string.battery_open_system))
-            }
-            SectionHeader(stringResource(vendor.titleRes))
-            Text(
-                text = stringResource(vendor.bodyRes),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(horizontal = ScreenPadding),
+            SectionLabel(stringResource(R.string.battery_step_system))
+            StepCard(
+                body = stringResource(R.string.battery_step_system_body),
+                action = {
+                    PrimaryButton(
+                        text = stringResource(R.string.battery_open_system),
+                        onClick = { context.openIgnoreBatteryOptimizations() },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                },
             )
-            Spacer(Modifier.height(10.dp))
-            OutlinedButton(
-                onClick = { context.openVendorSettings(vendor) },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = ScreenPadding)
-                        .heightIn(min = TouchTarget + 8.dp),
-            ) {
-                Text(
-                    stringResource(
-                        if (vendor ==
-                            Vendor.OTHER
-                        ) {
-                            R.string.battery_open_app_info
-                        } else {
-                            R.string.battery_open_vendor
-                        },
-                    ),
-                )
+            SectionLabel(stringResource(R.string.battery_section_vendor), modifier = Modifier.padding(top = Spacing.md))
+            StepCard(
+                title = stringResource(vendor.titleRes),
+                body = stringResource(vendor.bodyRes),
+                action = {
+                    SecondaryButton(
+                        text =
+                            stringResource(
+                                if (vendor ==
+                                    Vendor.OTHER
+                                ) {
+                                    R.string.battery_open_app_info
+                                } else {
+                                    R.string.battery_open_vendor
+                                },
+                            ),
+                        onClick = { context.openVendorSettings(vendor) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun StepCard(body: String, action: @Composable () -> Unit, title: String? = null) {
+    SurfaceCard(modifier = Modifier.fillMaxWidth().padding(horizontal = ScreenPadding)) {
+        Column {
+            if (title != null) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(Spacing.xs))
             }
+            Text(body, style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.height(Spacing.lg))
+            action()
         }
     }
 }

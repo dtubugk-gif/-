@@ -2,9 +2,7 @@ package il.rikavon.ui.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -13,24 +11,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -40,16 +37,31 @@ import il.rikavon.core.data.domain.Tier
 import il.rikavon.core.data.model.AppLanguage
 import il.rikavon.core.data.model.ReduceMotionMode
 import il.rikavon.core.data.repo.BackupRepository
+import il.rikavon.core.ui.components.ChoiceOption
+import il.rikavon.core.ui.components.ChoiceSheet
+import il.rikavon.core.ui.components.GroupCard
+import il.rikavon.core.ui.components.LinkButton
+import il.rikavon.core.ui.components.RikavonLargeTopBar
 import il.rikavon.core.ui.components.RikavonTopBar
 import il.rikavon.core.ui.components.ScreenPadding
-import il.rikavon.core.ui.components.ScreenTitle
-import il.rikavon.core.ui.components.SectionHeader
+import il.rikavon.core.ui.components.SectionLabel
 import il.rikavon.core.ui.components.SettingNavRow
 import il.rikavon.core.ui.components.SettingSwitchRow
-import il.rikavon.core.ui.components.TouchTarget
+import il.rikavon.core.ui.components.SkeletonList
+import il.rikavon.core.ui.components.rememberLargeTopBarBehavior
+import il.rikavon.core.ui.components.rememberPinnedTopBarBehavior
+import il.rikavon.core.ui.theme.LocalExtraColors
+import il.rikavon.core.ui.theme.Sizes
+import il.rikavon.core.ui.theme.Spacing
 import il.rikavon.feature.mascot.ui.UiLanguage
 import java.time.LocalDate
 
+private enum class Sheet { REDUCE_MOTION, LANGUAGE }
+
+/**
+ * Settings: large collapsing title, one rounded group per section, single-choice settings open a bottom
+ * sheet instead of inline chips. Skeleton until the preferences flow emits.
+ */
 @Composable
 fun SettingsScreen(
     onBack: (() -> Unit)?,
@@ -63,10 +75,11 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val prefs = state.settings ?: return
     val language = UiLanguage.current()
     val snackbar = remember { SnackbarHostState() }
+    var sheet by remember { mutableStateOf<Sheet?>(null) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refreshPermissions() }
+    val scrollBehavior = if (onBack == null) rememberLargeTopBarBehavior() else rememberPinnedTopBarBehavior()
 
     val exportLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(BackupRepository.MIME_TYPE)) { uri ->
@@ -94,237 +107,270 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            if (onBack !=
-                null
-            ) {
-                RikavonTopBar(title = stringResource(R.string.settings_title), onBack = onBack)
+            if (onBack == null) {
+                RikavonLargeTopBar(title = stringResource(R.string.settings_title), scrollBehavior = scrollBehavior)
+            } else {
+                RikavonTopBar(
+                    title = stringResource(R.string.settings_title),
+                    onBack = onBack,
+                    scrollBehavior = scrollBehavior,
+                )
             }
         },
         bottomBar = bottomBar,
         snackbarHost = { SnackbarHost(snackbar) },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
+        val prefs = state.settings
+        if (prefs == null) {
+            SkeletonList(modifier = Modifier.padding(padding))
+            return@Scaffold
+        }
         Column(
             modifier =
                 Modifier
                     .padding(padding)
+                    .nestedScroll(scrollBehavior.nestedScrollConnection)
                     .verticalScroll(rememberScrollState())
-                    .padding(bottom = ScreenPadding),
+                    .padding(bottom = Spacing.xl),
         ) {
-            if (onBack ==
-                null
-            ) {
-                ScreenTitle(
-                    title = stringResource(R.string.settings_title),
-                    modifier = Modifier.padding(vertical = 8.dp),
+            SectionLabel(stringResource(R.string.settings_section_pet))
+            GroupCard {
+                SettingNavRow(
+                    title = stringResource(R.string.settings_pet),
+                    subtitle = state.skin?.name?.resolve(language),
+                    onClick = onOpenGallery,
                 )
-            }
-            SectionHeader(stringResource(R.string.settings_section_pet))
-            SettingNavRow(
-                title = stringResource(R.string.settings_pet),
-                subtitle = state.skin?.name?.resolve(language),
-                onClick = onOpenGallery,
-            )
-            SettingSwitchRow(
-                title = stringResource(R.string.settings_sounds),
-                subtitle = stringResource(R.string.settings_sounds_hint),
-                checked = prefs.soundsEnabled,
-                onCheckedChange = viewModel::setSounds,
-            )
-
-            HorizontalDivider()
-            SectionHeader(stringResource(R.string.settings_section_tracking))
-            SettingSwitchRow(
-                title = stringResource(R.string.settings_tracking),
-                subtitle = stringResource(R.string.settings_tracking_hint),
-                checked = prefs.trackingEnabled,
-                onCheckedChange = viewModel::setTracking,
-            )
-            SettingSwitchRow(
-                title = stringResource(R.string.settings_strict),
-                subtitle = stringResource(R.string.settings_strict_hint),
-                checked = prefs.strictMode,
-                onCheckedChange = viewModel::setStrictMode,
-            )
-            val perms = state.permissions
-            SettingNavRow(
-                title = stringResource(R.string.settings_permissions),
-                subtitle =
-                    stringResource(
-                        if (perms?.coreGranted ==
-                            true
-                        ) {
-                            R.string.settings_permissions_ok
-                        } else {
-                            R.string.settings_permissions_missing
-                        },
-                    ),
-                onClick = onOpenOnboarding,
-            )
-            SettingNavRow(
-                title = stringResource(R.string.settings_battery),
-                subtitle = stringResource(R.string.settings_battery_hint),
-                onClick = onOpenBattery,
-            )
-            SettingNavRow(
-                title = stringResource(R.string.settings_score),
-                subtitle = stringResource(R.string.settings_score_hint),
-                onClick = onOpenScore,
-            )
-
-            HorizontalDivider()
-            SectionHeader(stringResource(R.string.settings_section_notifications))
-            SettingSwitchRow(
-                title = stringResource(R.string.settings_summary),
-                subtitle = stringResource(R.string.settings_summary_hint),
-                checked = prefs.dailySummaryEnabled,
-                onCheckedChange = { viewModel.setDailySummary(it, prefs.dailySummaryHour) },
-            )
-            if (prefs.dailySummaryEnabled) {
-                val hourLabel = stringResource(R.string.settings_summary_hour, prefs.dailySummaryHour)
-                Text(
-                    text = hourLabel,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(horizontal = ScreenPadding),
-                )
-                Slider(
-                    value = prefs.dailySummaryHour.toFloat(),
-                    onValueChange = { viewModel.setDailySummary(true, it.toInt()) },
-                    valueRange = SUMMARY_MIN_HOUR.toFloat()..SUMMARY_MAX_HOUR.toFloat(),
-                    steps = SUMMARY_MAX_HOUR - SUMMARY_MIN_HOUR - 1,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = ScreenPadding)
-                            .heightIn(min = TouchTarget)
-                            .semantics { contentDescription = hourLabel },
+                SettingSwitchRow(
+                    title = stringResource(R.string.settings_sounds),
+                    subtitle = stringResource(R.string.settings_sounds_hint),
+                    checked = prefs.soundsEnabled,
+                    onCheckedChange = viewModel::setSounds,
                 )
             }
 
-            HorizontalDivider()
-            SectionHeader(stringResource(R.string.settings_section_appearance))
-            SettingSwitchRow(
-                title = stringResource(R.string.settings_dynamic_color),
-                subtitle = stringResource(R.string.settings_dynamic_color_hint),
-                checked = prefs.dynamicColor,
-                onCheckedChange = viewModel::setDynamicColor,
+            SectionLabel(
+                stringResource(R.string.settings_section_tracking),
+                modifier = Modifier.padding(top = Spacing.md),
             )
-            Text(
-                text = stringResource(R.string.settings_reduce_motion),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = ScreenPadding, vertical = 8.dp),
+            GroupCard {
+                SettingSwitchRow(
+                    title = stringResource(R.string.settings_tracking),
+                    subtitle = stringResource(R.string.settings_tracking_hint),
+                    checked = prefs.trackingEnabled,
+                    onCheckedChange = viewModel::setTracking,
+                )
+                SettingSwitchRow(
+                    title = stringResource(R.string.settings_strict),
+                    subtitle = stringResource(R.string.settings_strict_hint),
+                    checked = prefs.strictMode,
+                    onCheckedChange = viewModel::setStrictMode,
+                )
+                val perms = state.permissions
+                SettingNavRow(
+                    title = stringResource(R.string.settings_permissions),
+                    subtitle =
+                        stringResource(
+                            if (perms?.coreGranted ==
+                                true
+                            ) {
+                                R.string.settings_permissions_ok
+                            } else {
+                                R.string.settings_permissions_missing
+                            },
+                        ),
+                    onClick = onOpenOnboarding,
+                )
+                SettingNavRow(
+                    title = stringResource(R.string.settings_battery),
+                    subtitle = stringResource(R.string.settings_battery_hint),
+                    onClick = onOpenBattery,
+                )
+                SettingNavRow(
+                    title = stringResource(R.string.settings_score),
+                    subtitle = stringResource(R.string.settings_score_hint),
+                    onClick = onOpenScore,
+                )
+            }
+
+            SectionLabel(
+                stringResource(R.string.settings_section_notifications),
+                modifier = Modifier.padding(top = Spacing.md),
             )
-            FlowRow(
-                modifier = Modifier.padding(horizontal = ScreenPadding),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                ReduceMotionMode.entries.forEach { mode ->
-                    FilterChip(
-                        selected = prefs.reduceMotion == mode,
-                        onClick = { viewModel.setReduceMotion(mode) },
-                        label = {
-                            Text(
-                                stringResource(
-                                    when (mode) {
-                                        ReduceMotionMode.SYSTEM -> R.string.settings_reduce_motion_system
-                                        ReduceMotionMode.ON -> R.string.settings_reduce_motion_on
-                                        ReduceMotionMode.OFF -> R.string.settings_reduce_motion_off
-                                    },
-                                ),
-                            )
-                        },
-                        modifier = Modifier.heightIn(min = TouchTarget),
+            GroupCard {
+                SettingSwitchRow(
+                    title = stringResource(R.string.settings_summary),
+                    subtitle = stringResource(R.string.settings_summary_hint),
+                    checked = prefs.dailySummaryEnabled,
+                    onCheckedChange = { viewModel.setDailySummary(it, prefs.dailySummaryHour) },
+                )
+                if (prefs.dailySummaryEnabled) {
+                    val hourLabel = stringResource(R.string.settings_summary_hour, prefs.dailySummaryHour)
+                    Text(
+                        text = hourLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = LocalExtraColors.current.onSurfaceMuted,
+                        modifier = Modifier.padding(horizontal = ScreenPadding),
                     )
-                }
-            }
-            Text(
-                text = stringResource(R.string.settings_language),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = ScreenPadding, vertical = 8.dp),
-            )
-            FlowRow(
-                modifier = Modifier.padding(horizontal = ScreenPadding),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                AppLanguage.entries.forEach { lang ->
-                    FilterChip(
-                        selected = prefs.language == lang,
-                        onClick = { viewModel.setLanguage(lang) },
-                        label = {
-                            Text(
-                                stringResource(
-                                    when (lang) {
-                                        AppLanguage.SYSTEM -> R.string.settings_language_system
-                                        AppLanguage.HEBREW -> R.string.settings_language_he
-                                        AppLanguage.ENGLISH -> R.string.settings_language_en
-                                    },
-                                ),
-                            )
-                        },
-                        modifier = Modifier.heightIn(min = TouchTarget),
+                    Slider(
+                        value = prefs.dailySummaryHour.toFloat(),
+                        onValueChange = { viewModel.setDailySummary(true, it.toInt()) },
+                        valueRange = SUMMARY_MIN_HOUR.toFloat()..SUMMARY_MAX_HOUR.toFloat(),
+                        steps = SUMMARY_MAX_HOUR - SUMMARY_MIN_HOUR - 1,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = ScreenPadding)
+                                .heightIn(min = Sizes.touch)
+                                .semantics { contentDescription = hourLabel },
                     )
                 }
             }
 
-            HorizontalDivider(modifier = Modifier.padding(top = 12.dp))
-            SectionHeader(stringResource(R.string.settings_section_data))
-            SettingNavRow(
-                title = stringResource(R.string.settings_backup_export),
-                subtitle = stringResource(R.string.settings_backup_export_hint),
-                onClick = { exportLauncher.launch("${BackupRepository.FILE_NAME_PREFIX}${LocalDate.now()}.json") },
+            SectionLabel(
+                stringResource(R.string.settings_section_appearance),
+                modifier = Modifier.padding(top = Spacing.md),
             )
-            SettingNavRow(
-                title = stringResource(R.string.settings_backup_import),
-                subtitle = stringResource(R.string.settings_backup_import_hint),
-                onClick = { importLauncher.launch(arrayOf(BackupRepository.MIME_TYPE, MIME_ANY)) },
-            )
-            SettingNavRow(
-                title = stringResource(R.string.settings_privacy),
-                subtitle = stringResource(R.string.settings_privacy_hint),
-                onClick = onOpenPrivacy,
-            )
+            GroupCard {
+                SettingSwitchRow(
+                    title = stringResource(R.string.settings_dynamic_color),
+                    subtitle = stringResource(R.string.settings_dynamic_color_hint),
+                    checked = prefs.dynamicColor,
+                    onCheckedChange = viewModel::setDynamicColor,
+                )
+                SettingNavRow(
+                    title = stringResource(R.string.settings_reduce_motion),
+                    subtitle = stringResource(prefs.reduceMotion.label()),
+                    onClick = { sheet = Sheet.REDUCE_MOTION },
+                )
+                SettingNavRow(
+                    title = stringResource(R.string.settings_language),
+                    subtitle = stringResource(prefs.language.label()),
+                    onClick = { sheet = Sheet.LANGUAGE },
+                )
+            }
 
-            HorizontalDivider()
-            SectionHeader(stringResource(R.string.settings_section_premium))
-            SettingNavRow(
-                title = stringResource(R.string.settings_premium),
-                subtitle =
-                    stringResource(
-                        if (state.tier ==
-                            Tier.PREMIUM
-                        ) {
-                            R.string.settings_premium_active
-                        } else {
-                            R.string.settings_premium_free
-                        },
-                    ),
-                onClick = onOpenPremium,
-            )
+            SectionLabel(stringResource(R.string.settings_section_data), modifier = Modifier.padding(top = Spacing.md))
+            GroupCard {
+                SettingNavRow(
+                    title = stringResource(R.string.settings_backup_export),
+                    subtitle = stringResource(R.string.settings_backup_export_hint),
+                    onClick = { exportLauncher.launch("${BackupRepository.FILE_NAME_PREFIX}${LocalDate.now()}.json") },
+                )
+                SettingNavRow(
+                    title = stringResource(R.string.settings_backup_import),
+                    subtitle = stringResource(R.string.settings_backup_import_hint),
+                    onClick = { importLauncher.launch(arrayOf(BackupRepository.MIME_TYPE, MIME_ANY)) },
+                )
+                SettingNavRow(
+                    title = stringResource(R.string.settings_privacy),
+                    subtitle = stringResource(R.string.settings_privacy_hint),
+                    onClick = onOpenPrivacy,
+                )
+            }
 
-            Spacer(Modifier.height(16.dp))
+            SectionLabel(
+                stringResource(R.string.settings_section_premium),
+                modifier = Modifier.padding(top = Spacing.md),
+            )
+            GroupCard {
+                SettingNavRow(
+                    title = stringResource(R.string.settings_premium),
+                    subtitle =
+                        stringResource(
+                            if (state.tier ==
+                                Tier.PREMIUM
+                            ) {
+                                R.string.settings_premium_active
+                            } else {
+                                R.string.settings_premium_free
+                            },
+                        ),
+                    onClick = onOpenPremium,
+                )
+            }
+
+            Spacer(Modifier.height(Spacing.lg))
             Text(
                 text = stringResource(R.string.settings_version, state.versionName),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = LocalExtraColors.current.onSurfaceFaint,
                 modifier = Modifier.padding(horizontal = ScreenPadding),
             )
+        }
+
+        when (sheet) {
+            Sheet.REDUCE_MOTION ->
+                ChoiceSheet(
+                    title = stringResource(R.string.settings_reduce_motion_sheet),
+                    options =
+                        ReduceMotionMode.entries.map {
+                            ChoiceOption(it, stringResource(it.label()), stringResource(it.hint()))
+                        },
+                    selected = prefs.reduceMotion,
+                    onSelect = viewModel::setReduceMotion,
+                    onDismiss = { sheet = null },
+                )
+            Sheet.LANGUAGE ->
+                ChoiceSheet(
+                    title = stringResource(R.string.settings_language_sheet),
+                    options = AppLanguage.entries.map { ChoiceOption(it, stringResource(it.label())) },
+                    selected = prefs.language,
+                    onSelect = viewModel::setLanguage,
+                    onDismiss = { sheet = null },
+                )
+            null -> Unit
         }
     }
 
     state.strictCountdown?.let { seconds ->
         AlertDialog(
             onDismissRequest = viewModel::cancelCountdown,
-            title = { Text(stringResource(R.string.settings_strict_dialog_title)) },
-            text = { Text(stringResource(R.string.settings_strict_dialog_body, seconds)) },
+            title = {
+                Text(
+                    stringResource(R.string.settings_strict_dialog_title),
+                    style = MaterialTheme.typography.titleLarge,
+                )
+            },
+            text = {
+                Text(
+                    stringResource(R.string.settings_strict_dialog_body, seconds),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = viewModel::cancelCountdown) {
-                    Text(stringResource(R.string.settings_strict_dialog_cancel))
-                }
+                LinkButton(
+                    text = stringResource(R.string.settings_strict_dialog_cancel),
+                    onClick = viewModel::cancelCountdown,
+                )
             },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = MaterialTheme.shapes.extraLarge,
         )
     }
 }
+
+private fun ReduceMotionMode.label(): Int =
+    when (this) {
+        ReduceMotionMode.SYSTEM -> R.string.settings_reduce_motion_system
+        ReduceMotionMode.ON -> R.string.settings_reduce_motion_on
+        ReduceMotionMode.OFF -> R.string.settings_reduce_motion_off
+    }
+
+private fun ReduceMotionMode.hint(): Int =
+    when (this) {
+        ReduceMotionMode.SYSTEM -> R.string.settings_reduce_motion_system_hint
+        ReduceMotionMode.ON -> R.string.settings_reduce_motion_on_hint
+        ReduceMotionMode.OFF -> R.string.settings_reduce_motion_off_hint
+    }
+
+private fun AppLanguage.label(): Int =
+    when (this) {
+        AppLanguage.SYSTEM -> R.string.settings_language_system
+        AppLanguage.HEBREW -> R.string.settings_language_he
+        AppLanguage.ENGLISH -> R.string.settings_language_en
+    }
 
 private const val SUMMARY_MIN_HOUR = 17
 private const val SUMMARY_MAX_HOUR = 23

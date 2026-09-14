@@ -244,7 +244,7 @@ private fun FullDetails(context: Context, data: WidgetData) {
     }
     Text(
         text = context.getString(R.string.widget_streak, data.streak),
-        style = TextStyle(color = ColorProvider(RikavonColors.OnInkFaint), fontSize = 11.sp),
+        style = TextStyle(color = ColorProvider(RikavonColors.OnInkFaint), fontSize = 12.sp),
         modifier = GlanceModifier.padding(top = 5.dp),
     )
 }

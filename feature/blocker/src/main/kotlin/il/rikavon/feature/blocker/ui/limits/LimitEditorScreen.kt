@@ -6,25 +6,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -39,11 +36,21 @@ import il.rikavon.core.data.repo.UsageRepository
 import il.rikavon.core.data.usage.InstalledAppsSource
 import il.rikavon.core.ui.anim.AnimationSpecs
 import il.rikavon.core.ui.components.AppIcon
+import il.rikavon.core.ui.components.BottomActionBar
+import il.rikavon.core.ui.components.ConfirmDialog
+import il.rikavon.core.ui.components.GroupCard
+import il.rikavon.core.ui.components.LinkButton
 import il.rikavon.core.ui.components.MinutesSlider
 import il.rikavon.core.ui.components.RikavonTopBar
 import il.rikavon.core.ui.components.ScreenPadding
+import il.rikavon.core.ui.components.SectionLabel
 import il.rikavon.core.ui.components.SettingSwitchRow
-import il.rikavon.core.ui.components.TouchTarget
+import il.rikavon.core.ui.components.SkeletonList
+import il.rikavon.core.ui.components.SurfaceCard
+import il.rikavon.core.ui.components.ThinBar
+import il.rikavon.core.ui.components.rememberPinnedTopBarBehavior
+import il.rikavon.core.ui.theme.LocalExtraColors
+import il.rikavon.core.ui.theme.Spacing
 import il.rikavon.core.ui.util.formatMinutes
 import il.rikavon.feature.blocker.R
 import kotlinx.coroutines.delay
@@ -174,72 +181,53 @@ class LimitEditorViewModel @Inject constructor(
     }
 }
 
+/** Limit editor: app hero with today's usage, the limit value and slider, options, save pinned at the bottom. */
 @Composable
 fun LimitEditorScreen(onBack: () -> Unit, viewModel: LimitEditorViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val icon = remember(state.packageName) { viewModel.icon() }
+    val scrollBehavior = rememberPinnedTopBarBehavior()
+    var confirmRemove by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { RikavonTopBar(title = stringResource(R.string.limit_title), onBack = onBack) },
+        topBar = {
+            RikavonTopBar(
+                title = stringResource(R.string.limit_title),
+                onBack = onBack,
+                scrollBehavior = scrollBehavior,
+            )
+        },
+        bottomBar = {
+            if (state.loaded) {
+                BottomActionBar(
+                    primaryText = stringResource(R.string.limit_save),
+                    onPrimary = { viewModel.save(onBack) },
+                    secondaryText = if (state.exists) stringResource(R.string.limit_remove) else null,
+                    onSecondary = if (state.exists) ({ confirmRemove = true }) else null,
+                    secondaryDestructive = true,
+                    modifier = Modifier.padding(bottom = Spacing.sm),
+                )
+            }
+        },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
+        if (!state.loaded) {
+            SkeletonList(modifier = Modifier.padding(padding))
+            return@Scaffold
+        }
         Column(
             modifier =
                 Modifier
                     .padding(padding)
+                    .nestedScroll(scrollBehavior.nestedScrollConnection)
                     .verticalScroll(rememberScrollState())
-                    .padding(bottom = ScreenPadding),
+                    .padding(bottom = Spacing.lg),
         ) {
-            Row(
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = ScreenPadding, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                AppIcon(drawable = icon, label = state.label, size = 56.dp)
-                Column {
-                    Text(state.label, style = MaterialTheme.typography.headlineSmall)
-                    Text(
-                        text = stringResource(R.string.limit_today_opens, state.usage.opens),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
-            val limitText =
-                if (state.fullBlock) {
-                    stringResource(
-                        R.string.limit_full_block,
-                    )
-                } else {
-                    formatMinutes(state.minutes)
-                }
+            AppHero(state = state, icon = icon)
+            SectionLabel(stringResource(R.string.limit_section_limit), modifier = Modifier.padding(top = Spacing.sm))
             Text(
-                text = stringResource(R.string.limit_today_used, formatMinutes(state.usage.minutes), limitText),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(horizontal = ScreenPadding),
-            )
-            LinearProgressIndicator(
-                progress = { (state.usage.minutes.toFloat() / state.minutes.coerceAtLeast(1)).coerceIn(0f, 1f) },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = ScreenPadding, vertical = 8.dp)
-                        .height(10.dp),
-            )
-
-            Spacer(Modifier.height(20.dp))
-            Text(
-                text = stringResource(R.string.limit_minutes_label),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = ScreenPadding),
-            )
-            Text(
-                text = formatMinutes(state.minutes),
-                style = MaterialTheme.typography.displayMedium,
+                text = if (state.fullBlock) stringResource(R.string.limit_full_block) else formatMinutes(state.minutes),
+                style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(horizontal = ScreenPadding),
             )
@@ -252,58 +240,104 @@ fun LimitEditorScreen(onBack: () -> Unit, viewModel: LimitEditorViewModel = hilt
                 enabled = !state.fullBlock,
                 modifier = Modifier.padding(horizontal = ScreenPadding),
             )
-
-            SettingSwitchRow(
-                title = stringResource(R.string.limit_full_block),
-                subtitle = stringResource(R.string.limit_full_block_hint),
-                checked = state.fullBlock,
-                onCheckedChange = viewModel::setFullBlock,
-            )
-            SettingSwitchRow(
-                title = stringResource(R.string.limit_enabled),
-                subtitle = stringResource(R.string.limit_enabled_hint),
-                checked = state.enabled,
-                onCheckedChange = viewModel::setEnabled,
-            )
-
-            Spacer(Modifier.height(24.dp))
-            Button(
-                onClick = { viewModel.save(onBack) },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = ScreenPadding)
-                        .heightIn(min = TouchTarget + 8.dp),
-            ) {
-                Text(stringResource(R.string.limit_save))
-            }
-            if (state.exists) {
-                Spacer(Modifier.height(10.dp))
-                OutlinedButton(
-                    onClick = { viewModel.remove(onBack) },
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = ScreenPadding)
-                            .heightIn(min = TouchTarget),
-                ) {
-                    Text(stringResource(R.string.limit_remove))
-                }
+            SectionLabel(stringResource(R.string.limit_section_options), modifier = Modifier.padding(top = Spacing.sm))
+            GroupCard {
+                SettingSwitchRow(
+                    title = stringResource(R.string.limit_full_block),
+                    subtitle = stringResource(R.string.limit_full_block_hint),
+                    checked = state.fullBlock,
+                    onCheckedChange = viewModel::setFullBlock,
+                )
+                SettingSwitchRow(
+                    title = stringResource(R.string.limit_enabled),
+                    subtitle = stringResource(R.string.limit_enabled_hint),
+                    checked = state.enabled,
+                    onCheckedChange = viewModel::setEnabled,
+                )
             }
         }
     }
 
+    if (confirmRemove) {
+        ConfirmDialog(
+            title = stringResource(R.string.limit_remove_confirm_title),
+            body = stringResource(R.string.limit_remove_confirm_body, state.label),
+            confirmText = stringResource(R.string.limit_remove_confirm),
+            onConfirm = {
+                confirmRemove = false
+                viewModel.remove(onBack)
+            },
+            onDismiss = { confirmRemove = false },
+        )
+    }
     state.strictCountdown?.let { seconds ->
         AlertDialog(
             onDismissRequest = viewModel::cancelCountdown,
-            title = { Text(stringResource(R.string.limit_strict_title)) },
-            text = { Text(stringResource(R.string.limit_strict_body, seconds)) },
+            title = { Text(stringResource(R.string.limit_strict_title), style = MaterialTheme.typography.titleLarge) },
+            text = {
+                Text(
+                    stringResource(R.string.limit_strict_body, seconds),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = viewModel::cancelCountdown) { Text(stringResource(R.string.limit_strict_cancel)) }
+                LinkButton(text = stringResource(R.string.limit_strict_cancel), onClick = viewModel::cancelCountdown)
             },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            shape = MaterialTheme.shapes.extraLarge,
         )
     }
 }
 
+@Composable
+private fun AppHero(state: LimitEditorUiState, icon: android.graphics.drawable.Drawable?) {
+    val extras = LocalExtraColors.current
+    val limitText = if (state.fullBlock) stringResource(R.string.limit_full_block) else formatMinutes(state.minutes)
+    val ratio = (state.usage.minutes.toFloat() / state.minutes.coerceAtLeast(1)).coerceIn(0f, 1f)
+    val barColor =
+        when {
+            ratio >= 1f -> extras.danger
+            ratio >= NEAR_LIMIT -> extras.overLimit
+            else -> MaterialTheme.colorScheme.primary
+        }
+    SurfaceCard(modifier = Modifier.fillMaxWidth().padding(horizontal = ScreenPadding, vertical = Spacing.sm)) {
+        Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Spacing.lg),
+            ) {
+                AppIcon(drawable = icon, label = state.label, size = HERO_ICON)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(state.label, style = MaterialTheme.typography.titleLarge, maxLines = 2)
+                    Text(
+                        text = stringResource(R.string.limit_today_opens, state.usage.opens),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = extras.onSurfaceMuted,
+                    )
+                }
+            }
+            Spacer(Modifier.height(Spacing.lg))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = stringResource(R.string.limit_usage_today),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = extras.onSurfaceMuted,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = stringResource(R.string.limit_today_used, formatMinutes(state.usage.minutes), limitText),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (ratio >= NEAR_LIMIT) barColor else MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            Spacer(Modifier.height(Spacing.sm))
+            ThinBar(progress = ratio, color = barColor, height = BAR_HEIGHT)
+        }
+    }
+}
+
 private const val SLIDER_STEP = 5
+private const val NEAR_LIMIT = 0.66f
+private val HERO_ICON = Spacing.xxxl + Spacing.sm
+private val BAR_HEIGHT = Spacing.sm - Spacing.xs / 2

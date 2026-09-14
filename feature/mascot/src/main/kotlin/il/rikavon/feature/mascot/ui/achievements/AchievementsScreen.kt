@@ -3,7 +3,6 @@ package il.rikavon.feature.mascot.ui.achievements
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,18 +14,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -35,9 +34,16 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import il.rikavon.core.data.model.Achievement
 import il.rikavon.core.data.repo.AchievementRepository
 import il.rikavon.core.data.repo.SettingsRepository
+import il.rikavon.core.ui.components.EmptyState
+import il.rikavon.core.ui.components.ListRow
 import il.rikavon.core.ui.components.RikavonTopBar
 import il.rikavon.core.ui.components.ScreenPadding
-import il.rikavon.core.ui.components.TouchTarget
+import il.rikavon.core.ui.components.SectionLabel
+import il.rikavon.core.ui.components.StatTile
+import il.rikavon.core.ui.components.rememberPinnedTopBarBehavior
+import il.rikavon.core.ui.theme.LocalExtraColors
+import il.rikavon.core.ui.theme.Sizes
+import il.rikavon.core.ui.theme.Spacing
 import il.rikavon.feature.mascot.R
 import il.rikavon.feature.mascot.ui.MascotStrings
 import kotlinx.coroutines.flow.SharingStarted
@@ -65,60 +71,67 @@ class AchievementsViewModel @Inject constructor(achievements: AchievementReposit
         }
     }
 
+/** Achievements: two streak tiles, then one row per achievement with a filled or locked badge. */
 @Composable
 fun AchievementsScreen(onBack: () -> Unit, viewModel: AchievementsViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val scrollBehavior = rememberPinnedTopBarBehavior()
     Scaffold(
-        topBar = { RikavonTopBar(title = stringResource(R.string.achievements_title), onBack = onBack) },
+        topBar = {
+            RikavonTopBar(
+                title = stringResource(R.string.achievements_title),
+                onBack = onBack,
+                scrollBehavior = scrollBehavior,
+            )
+        },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         LazyColumn(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             contentPadding =
                 PaddingValues(
                     top = padding.calculateTopPadding(),
-                    bottom = padding.calculateBottomPadding() + ScreenPadding,
+                    bottom = padding.calculateBottomPadding() + Spacing.xl,
                 ),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             item {
                 Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = ScreenPadding, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = ScreenPadding, vertical = Spacing.sm),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.md),
                 ) {
-                    StreakTile(
-                        label = stringResource(R.string.achievements_streak_current),
-                        value = state.currentStreak,
+                    StatTile(
+                        value = stringResource(R.string.achievements_streak_days, state.currentStreak),
+                        caption = stringResource(R.string.achievements_streak_current),
+                        valueColor = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f),
                     )
-                    StreakTile(
-                        label = stringResource(R.string.achievements_streak_best),
-                        value = state.bestStreak,
+                    StatTile(
+                        value = stringResource(R.string.achievements_streak_days, state.bestStreak),
+                        caption = stringResource(R.string.achievements_streak_best),
                         modifier = Modifier.weight(1f),
                     )
                 }
             }
-            items(state.achievements, key = { it.id.key }) { achievement ->
-                AchievementRow(achievement)
+            if (state.achievements.isEmpty()) {
+                item {
+                    EmptyState(
+                        title = stringResource(R.string.achievements_empty_title),
+                        body = stringResource(R.string.achievements_empty_body),
+                        icon = Icons.Filled.Star,
+                    )
+                }
+            } else {
+                item {
+                    SectionLabel(
+                        stringResource(R.string.achievements_title),
+                        modifier = Modifier.padding(top = Spacing.sm),
+                    )
+                }
+                items(state.achievements, key = { it.id.key }) { achievement ->
+                    AchievementRow(achievement)
+                }
             }
         }
-    }
-}
-
-@Composable
-private fun StreakTile(label: String, value: Int, modifier: Modifier = Modifier) {
-    val description = stringResource(R.string.achievements_streak_days, value)
-    Column(
-        modifier =
-            modifier
-                .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.large)
-                .padding(16.dp)
-                .semantics { contentDescription = "$label: $description" },
-    ) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(description, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -127,43 +140,32 @@ private fun AchievementRow(achievement: Achievement) {
     val title = stringResource(MascotStrings.achievementTitle(achievement.id))
     val description = stringResource(MascotStrings.achievementDescription(achievement.id))
     val stateLabel =
-        stringResource(
-            if (achievement.unlocked) R.string.achievements_unlocked else R.string.achievements_locked,
-        )
-    Row(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = ScreenPadding)
-                .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.medium)
-                .padding(14.dp)
-                .semantics { contentDescription = "$title. $description. $stateLabel" },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        val scheme = MaterialTheme.colorScheme
-        val badgeColor = if (achievement.unlocked) scheme.primary else scheme.surfaceContainerHighest
-        val iconTint = if (achievement.unlocked) scheme.onPrimary else scheme.onSurfaceVariant
-        Box(
-            modifier =
-                Modifier
-                    .size(TouchTarget)
-                    .background(badgeColor, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = if (achievement.unlocked) Icons.Filled.Check else Icons.Filled.Lock,
-                contentDescription = null,
-                tint = iconTint,
-            )
-        }
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Text(
-                description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
+        stringResource(if (achievement.unlocked) R.string.achievements_unlocked else R.string.achievements_locked)
+    val scheme = MaterialTheme.colorScheme
+    val muted = LocalExtraColors.current.onSurfaceMuted
+    ListRow(
+        title = title,
+        subtitle = description,
+        chevron = false,
+        modifier = Modifier.semantics { contentDescription = "$title. $description. $stateLabel" },
+        leading = {
+            Box(
+                modifier =
+                    Modifier
+                        .size(Sizes.touch)
+                        .background(
+                            if (achievement.unlocked) scheme.primaryContainer else scheme.surfaceContainerHigh,
+                            CircleShape,
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = if (achievement.unlocked) Icons.Filled.Check else Icons.Filled.Lock,
+                    contentDescription = null,
+                    tint = if (achievement.unlocked) scheme.onPrimaryContainer else muted,
+                    modifier = Modifier.size(Sizes.icon),
+                )
+            }
+        },
+    )
 }

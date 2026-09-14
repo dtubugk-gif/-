@@ -2,6 +2,7 @@ package il.rikavon.feature.mascot.ui.gallery
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -34,24 +36,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import il.rikavon.core.ui.components.EmptyState
 import il.rikavon.core.ui.components.LockBadge
-import il.rikavon.core.ui.components.PillButton
+import il.rikavon.core.ui.components.PrimaryButton
+import il.rikavon.core.ui.components.RikavonLargeTopBar
 import il.rikavon.core.ui.components.RikavonTopBar
 import il.rikavon.core.ui.components.ScreenPadding
-import il.rikavon.core.ui.components.ScreenTitle
-import il.rikavon.core.ui.components.TouchTarget
+import il.rikavon.core.ui.components.SkeletonBlock
+import il.rikavon.core.ui.components.pressScale
+import il.rikavon.core.ui.components.rememberLargeTopBarBehavior
+import il.rikavon.core.ui.components.rememberPinnedTopBarBehavior
 import il.rikavon.core.ui.theme.LocalExtraColors
+import il.rikavon.core.ui.theme.Radius
+import il.rikavon.core.ui.theme.Sizes
+import il.rikavon.core.ui.theme.Spacing
 import il.rikavon.feature.mascot.R
 import il.rikavon.feature.mascot.model.MascotStage
 import il.rikavon.feature.mascot.ui.MASCOT_SHARED_KEY
@@ -59,7 +66,10 @@ import il.rikavon.feature.mascot.ui.MascotStrings
 import il.rikavon.feature.mascot.ui.MascotView
 import il.rikavon.feature.mascot.ui.UiLanguage
 
-/** Gallery, design 1d: hero card for the selected pet, a 3-column grid, locked cards with a badge. */
+/**
+ * Gallery: large collapsing title, hero card for the selected pet (with the rot preview slider), then a
+ * 3-column grid; locked cards carry a badge. Skeleton while the registry loads, empty state if no folder parsed.
+ */
 @Composable
 fun MascotGalleryScreen(
     onBack: (() -> Unit)? = null,
@@ -77,13 +87,21 @@ fun MascotGalleryScreen(
             viewModel.clearNotice()
         }
     }
+    val scrollBehavior = if (onBack == null) rememberLargeTopBarBehavior() else rememberPinnedTopBarBehavior()
 
     Scaffold(
         topBar = {
-            if (onBack !=
-                null
-            ) {
-                RikavonTopBar(title = stringResource(R.string.gallery_title_design), onBack = onBack)
+            if (onBack == null) {
+                RikavonLargeTopBar(
+                    title = stringResource(R.string.gallery_title_design),
+                    scrollBehavior = scrollBehavior,
+                )
+            } else {
+                RikavonTopBar(
+                    title = stringResource(R.string.gallery_title_design),
+                    onBack = onBack,
+                    scrollBehavior = scrollBehavior,
+                )
             }
         },
         bottomBar = bottomBar,
@@ -91,29 +109,38 @@ fun MascotGalleryScreen(
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         if (state.loaded && state.items.isEmpty()) {
-            EmptyState(text = stringResource(R.string.gallery_empty), modifier = Modifier.padding(padding))
+            EmptyState(
+                title = stringResource(R.string.gallery_empty_title),
+                body = stringResource(R.string.gallery_empty_body),
+                icon = Icons.Filled.Face,
+                modifier = Modifier.padding(padding),
+            )
             return@Scaffold
         }
         LazyVerticalGrid(
             columns = GridCells.Fixed(GRID_COLUMNS),
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             contentPadding =
                 PaddingValues(
                     start = ScreenPadding,
                     end = ScreenPadding,
-                    top = padding.calculateTopPadding() + 8.dp,
-                    bottom = padding.calculateBottomPadding() + ScreenPadding,
+                    top = padding.calculateTopPadding(),
+                    bottom = padding.calculateBottomPadding() + Spacing.xl,
                 ),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(Spacing.md),
         ) {
-            if (onBack == null) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    ScreenTitle(
-                        title = stringResource(R.string.gallery_title_design),
-                        subtitle = stringResource(R.string.gallery_subtitle),
-                        modifier = Modifier.padding(horizontal = 0.dp),
-                    )
-                }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Text(
+                    text = stringResource(R.string.gallery_subtitle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = LocalExtraColors.current.onSurfaceMuted,
+                )
+            }
+            if (!state.loaded) {
+                item(span = { GridItemSpan(maxLineSpan) }) { SkeletonBlock(height = HERO_SKELETON, radius = Radius.xl) }
+                items(SKELETON_CARDS) { SkeletonBlock(height = CARD_SKELETON) }
+                return@LazyVerticalGrid
             }
             state.selected?.let { hero ->
                 item(span = { GridItemSpan(maxLineSpan) }) {
@@ -127,6 +154,14 @@ fun MascotGalleryScreen(
                     )
                 }
             }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Text(
+                    text = stringResource(R.string.gallery_section_all),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = LocalExtraColors.current.onSurfaceMuted,
+                    modifier = Modifier.padding(top = Spacing.sm),
+                )
+            }
             items(state.items, key = { it.skin.id }) { item ->
                 SmallCard(item = item, onClick = { viewModel.choose(item) })
             }
@@ -136,13 +171,13 @@ fun MascotGalleryScreen(
                         text = stringResource(R.string.gallery_premium_hint),
                         style = MaterialTheme.typography.bodySmall,
                         color = LocalExtraColors.current.onSurfaceFaint,
-                        modifier = Modifier.padding(top = 6.dp),
+                        modifier = Modifier.padding(top = Spacing.sm),
                     )
                 }
             }
             if (state.validationErrors.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    Column(modifier = Modifier.padding(top = 12.dp)) {
+                    Column(modifier = Modifier.padding(top = Spacing.md)) {
                         Text(
                             text = stringResource(R.string.gallery_errors_title),
                             style = MaterialTheme.typography.titleSmall,
@@ -179,8 +214,8 @@ private fun HeroCard(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(24.dp))
-                .padding(20.dp),
+                .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(Radius.xl))
+                .padding(Spacing.lg),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         MascotView(
@@ -190,12 +225,9 @@ private fun HeroCard(
             textForTap = quote,
             onLongPress = onReaction,
             sharedKey = if (item.selected) MASCOT_SHARED_KEY else null,
-            modifier =
-                Modifier
-                    .size(HERO_MASCOT)
-                    .aspectRatio(1f),
+            modifier = Modifier.size(HERO_MASCOT).aspectRatio(1f),
         )
-        Text(name, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 6.dp))
+        Text(name, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = Spacing.sm))
         Text(
             text = "“$line”",
             style = MaterialTheme.typography.bodySmall,
@@ -203,24 +235,19 @@ private fun HeroCard(
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 3.dp),
+            modifier = Modifier.padding(top = Spacing.xs),
         )
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Spacing.lg))
         if (item.unlocked) {
-            PillButton(
+            PrimaryButton(
                 text = stringResource(if (item.selected) R.string.gallery_selected_now else R.string.gallery_select),
                 onClick = onSelect,
-                minHeight = TouchTarget,
-                leading = {
+                leading =
                     if (item.selected) {
-                        Icon(
-                            Icons.Filled.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                        )
-                    }
-                },
+                        { Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(CHECK_ICON)) }
+                    } else {
+                        null
+                    },
             )
         } else {
             val requirement =
@@ -237,7 +264,7 @@ private fun HeroCard(
                 textAlign = TextAlign.Center,
             )
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(Spacing.sm))
         Text(
             text = stringResource(R.string.gallery_preview_hint),
             style = MaterialTheme.typography.bodySmall,
@@ -253,7 +280,7 @@ private fun HeroCard(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .heightIn(min = TouchTarget)
+                    .heightIn(min = Sizes.touch)
                     .semantics { contentDescription = sliderLabel },
         )
     }
@@ -268,14 +295,21 @@ private fun SmallCard(item: GalleryItem, onClick: () -> Unit) {
         if (item.unlocked) name else stringResource(R.string.gallery_locked_description, name, requirement.orEmpty())
     val scheme = MaterialTheme.colorScheme
     val background = if (item.unlocked) scheme.surfaceContainer else scheme.surfaceContainerLow
+    val interaction = remember { MutableInteractionSource() }
     Box(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(background, RoundedCornerShape(18.dp))
-                .clickable(onClick = onClick, role = Role.Button)
+                .pressScale(interaction)
+                .background(background, RoundedCornerShape(Radius.lg))
+                .clickable(interactionSource = interaction, indication = null, onClick = onClick, role = Role.Button)
                 .semantics { contentDescription = description }
-                .padding(top = if (item.unlocked) 12.dp else 26.dp, bottom = 12.dp, start = 6.dp, end = 6.dp),
+                .padding(
+                    top = if (item.unlocked) Spacing.md else Spacing.xl,
+                    bottom = Spacing.md,
+                    start = Spacing.sm,
+                    end = Spacing.sm,
+                ),
     ) {
         Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             MascotView(
@@ -287,22 +321,26 @@ private fun SmallCard(item: GalleryItem, onClick: () -> Unit) {
                         .size(SMALL_MASCOT)
                         .alpha(if (item.unlocked) 1f else LOCKED_ALPHA),
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(Spacing.sm))
             Text(
                 text = name,
-                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp),
+                style = MaterialTheme.typography.labelMedium,
                 color = if (item.unlocked) scheme.onSurface else LocalExtraColors.current.onSurfaceFaint,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
         if (!item.unlocked && requirement != null) {
-            LockBadge(text = requirement, modifier = Modifier.align(Alignment.TopStart).padding(6.dp))
+            LockBadge(text = requirement, modifier = Modifier.align(Alignment.TopStart).padding(Spacing.xs))
         }
     }
 }
 
 private const val GRID_COLUMNS = 3
-private val HERO_MASCOT = 150.dp
-private val SMALL_MASCOT = 52.dp
+private const val SKELETON_CARDS = 6
+private val HERO_MASCOT = Sizes.touch * 3
+private val SMALL_MASCOT = Sizes.touch + Spacing.sm
+private val HERO_SKELETON = Sizes.touch * 6
+private val CARD_SKELETON = Sizes.touch * 2 + Spacing.lg
+private val CHECK_ICON = Spacing.lg
 private const val LOCKED_ALPHA = 0.3f
