@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -34,6 +34,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import il.rikavon.core.data.model.Achievement
 import il.rikavon.core.data.repo.AchievementRepository
 import il.rikavon.core.data.repo.SettingsRepository
+import il.rikavon.core.ui.anim.enterFromBelow
 import il.rikavon.core.ui.components.EmptyState
 import il.rikavon.core.ui.components.ListRow
 import il.rikavon.core.ui.components.RikavonTopBar
@@ -127,8 +128,8 @@ fun AchievementsScreen(onBack: () -> Unit, viewModel: AchievementsViewModel = hi
                         modifier = Modifier.padding(top = Spacing.sm),
                     )
                 }
-                items(state.achievements, key = { it.id.key }) { achievement ->
-                    AchievementRow(achievement)
+                itemsIndexed(state.achievements, key = { _, item -> item.id.key }) { index, achievement ->
+                    AchievementRow(achievement, modifier = Modifier.enterFromBelow(index))
                 }
             }
         }
@@ -136,7 +137,7 @@ fun AchievementsScreen(onBack: () -> Unit, viewModel: AchievementsViewModel = hi
 }
 
 @Composable
-private fun AchievementRow(achievement: Achievement) {
+private fun AchievementRow(achievement: Achievement, modifier: Modifier = Modifier) {
     val title = stringResource(MascotStrings.achievementTitle(achievement.id))
     val description = stringResource(MascotStrings.achievementDescription(achievement.id))
     val stateLabel =
@@ -147,7 +148,7 @@ private fun AchievementRow(achievement: Achievement) {
         title = title,
         subtitle = description,
         chevron = false,
-        modifier = Modifier.semantics { contentDescription = "$title. $description. $stateLabel" },
+        modifier = modifier.semantics { contentDescription = "$title. $description. $stateLabel" },
         leading = {
             Box(
                 modifier =

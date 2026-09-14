@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -45,6 +45,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import il.rikavon.core.ui.anim.FadeThrough
+import il.rikavon.core.ui.anim.enterFromBelow
 import il.rikavon.core.ui.components.EmptyState
 import il.rikavon.core.ui.components.LockBadge
 import il.rikavon.core.ui.components.PrimaryButton
@@ -144,14 +146,16 @@ fun MascotGalleryScreen(
             }
             state.selected?.let { hero ->
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    HeroCard(
-                        item = hero,
-                        stage = state.heroStage,
-                        quote = { viewModel.quote(hero.skin, state.heroStage, language) },
-                        onSelect = { viewModel.choose(hero) },
-                        onReaction = { viewModel.playReaction(hero.skin) },
-                        onPreview = viewModel::preview,
-                    )
+                    FadeThrough(targetState = hero.skin.id, label = "hero") {
+                        HeroCard(
+                            item = hero,
+                            stage = state.heroStage,
+                            quote = { viewModel.quote(hero.skin, state.heroStage, language) },
+                            onSelect = { viewModel.choose(hero) },
+                            onReaction = { viewModel.playReaction(hero.skin) },
+                            onPreview = viewModel::preview,
+                        )
+                    }
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -162,8 +166,8 @@ fun MascotGalleryScreen(
                     modifier = Modifier.padding(top = Spacing.sm),
                 )
             }
-            items(state.items, key = { it.skin.id }) { item ->
-                SmallCard(item = item, onClick = { viewModel.choose(item) })
+            itemsIndexed(state.items, key = { _, item -> item.skin.id }) { index, item ->
+                SmallCard(item = item, onClick = { viewModel.choose(item) }, modifier = Modifier.enterFromBelow(index))
             }
             if (state.tier.allMascotsUnlocked.not()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
@@ -287,7 +291,7 @@ private fun HeroCard(
 }
 
 @Composable
-private fun SmallCard(item: GalleryItem, onClick: () -> Unit) {
+private fun SmallCard(item: GalleryItem, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val language = UiLanguage.current()
     val name = item.skin.name.resolve(language) ?: item.skin.id
     val requirement = item.requiredAchievement?.let { stringResource(MascotStrings.achievementTitle(it)) }
@@ -298,7 +302,7 @@ private fun SmallCard(item: GalleryItem, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     Box(
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .pressScale(interaction)
                 .background(background, RoundedCornerShape(Radius.lg))

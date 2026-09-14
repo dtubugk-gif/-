@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.MaterialTheme
@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import il.rikavon.core.ui.anim.enterFromBelow
 import il.rikavon.core.ui.components.AppIcon
 import il.rikavon.core.ui.components.Bar
 import il.rikavon.core.ui.components.BarChart
@@ -136,7 +137,13 @@ fun StatsScreen(
             }
             item {
                 SurfaceCard(
-                    modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Spacing.sm).fillMaxWidth(),
+                    modifier =
+                        Modifier
+                            .padding(
+                                horizontal = ScreenPadding,
+                                vertical = Spacing.sm,
+                            ).fillMaxWidth()
+                            .enterFromBelow(0, key = state.range),
                 ) {
                     Column {
                         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -206,7 +213,7 @@ fun StatsScreen(
                     StatTile(
                         value = state.todayOpens.toString(),
                         caption = stringResource(R.string.stats_tile_opens),
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).enterFromBelow(0, key = state.range),
                     )
                     StatTile(
                         value =
@@ -220,18 +227,18 @@ fun StatsScreen(
                                 R.string.stats_tile_peak,
                                 state.peakHour?.let { formatClock(it * MINUTES_PER_HOUR) } ?: "–",
                             ),
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).enterFromBelow(1, key = state.range),
                     )
                     StatTile(
                         value = state.streak.toString(),
                         caption = stringResource(R.string.stats_tile_streak),
                         valueColor = extras.success,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).enterFromBelow(2, key = state.range),
                     )
                 }
             }
             item { SectionLabel(stringResource(R.string.stats_per_app), modifier = Modifier.padding(top = Spacing.sm)) }
-            items(state.todayApps, key = { it.packageName }) { app ->
+            itemsIndexed(state.todayApps, key = { _, item -> item.packageName }) { index, app ->
                 val drawable = remember(app.packageName) { viewModel.icon(app.packageName) }
                 ListRow(
                     title = app.label,
@@ -243,6 +250,7 @@ fun StatsScreen(
                         ),
                     leading = { AppIcon(drawable = drawable, label = app.label) },
                     chevron = false,
+                    modifier = Modifier.enterFromBelow(index),
                 )
             }
             item {

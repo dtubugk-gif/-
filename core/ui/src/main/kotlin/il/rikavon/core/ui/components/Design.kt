@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import il.rikavon.core.ui.R
+import il.rikavon.core.ui.anim.bounceOn
 import il.rikavon.core.ui.theme.ColorMath
 import il.rikavon.core.ui.theme.LocalExtraColors
 import il.rikavon.core.ui.theme.Radius
@@ -287,7 +288,13 @@ fun RikavonBottomBar(tabs: List<BottomTab>, selected: Int, onSelect: (Int) -> Un
             NavigationBarItem(
                 selected = index == selected,
                 onClick = { onSelect(index) },
-                icon = { Icon(tab.icon, contentDescription = null, modifier = Modifier.size(Sizes.icon)) },
+                icon = {
+                    Icon(
+                        tab.icon,
+                        contentDescription = null,
+                        modifier = Modifier.bounceOn(trigger = index == selected).size(Sizes.icon),
+                    )
+                },
                 label = { Text(tab.label, style = MaterialTheme.typography.labelSmall, maxLines = 1) },
                 alwaysShowLabel = true,
                 colors =

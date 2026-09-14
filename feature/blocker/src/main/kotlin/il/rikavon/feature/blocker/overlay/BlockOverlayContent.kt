@@ -1,6 +1,8 @@
 package il.rikavon.feature.blocker.overlay
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
@@ -30,11 +32,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import il.rikavon.core.data.model.BlockReason
 import il.rikavon.core.ui.anim.AnimationSpecs
+import il.rikavon.core.ui.anim.LocalReducedMotion
+import il.rikavon.core.ui.anim.tickTransform
 import il.rikavon.core.ui.components.PrimaryButton
 import il.rikavon.core.ui.components.ScreenPadding
 import il.rikavon.core.ui.components.SurfaceCard
@@ -106,10 +111,23 @@ fun BlockOverlayContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
+                val punch = remember { Animatable(if (reducedMotion) 1f else 0f) }
+                LaunchedEffect(Unit) {
+                    punch.animateTo(1f, if (reducedMotion) AnimationSpecs.Reduced else AnimationSpecs.HeadlinePunch)
+                }
                 Text(
                     text = stringResource(R.string.block_headline),
                     style = MaterialTheme.typography.displayLarge,
                     color = MaterialTheme.colorScheme.primary,
+                    modifier =
+                        Modifier.graphicsLayer {
+                            val p = punch.value
+                            val scale =
+                                AnimationSpecs.HEADLINE_FROM_SCALE + (1f - AnimationSpecs.HEADLINE_FROM_SCALE) * p
+                            scaleX = scale
+                            scaleY = scale
+                            alpha = p.coerceIn(0f, 1f)
+                        },
                 )
                 Spacer(Modifier.height(Spacing.lg))
                 MascotView(
@@ -200,11 +218,17 @@ private fun RetryTimer(decision: BlockDecision) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = LocalExtraColors.current.onSurfaceMuted,
             )
-            Text(
-                text = clock,
-                style = MaterialTheme.typography.headlineSmall.copy(fontFeatureSettings = "tnum"),
-                color = MaterialTheme.colorScheme.primary,
-            )
+            AnimatedContent(
+                targetState = clock,
+                transitionSpec = tickTransform(LocalReducedMotion.current),
+                label = "clock",
+            ) { value ->
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.headlineSmall.copy(fontFeatureSettings = "tnum"),
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
     }
 }

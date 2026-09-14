@@ -7,6 +7,9 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,7 +26,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -39,14 +46,22 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import il.rikavon.R
+import il.rikavon.core.data.model.AppLanguage
 import il.rikavon.core.data.permissions.AppPermission
 import il.rikavon.core.data.permissions.PermissionChecker
 import il.rikavon.core.data.permissions.PermissionState
 import il.rikavon.core.data.repo.SettingsRepository
+import il.rikavon.core.ui.anim.AnimationSpecs
+import il.rikavon.core.ui.anim.LocalReducedMotion
+import il.rikavon.core.ui.anim.floatLoop
+import il.rikavon.core.ui.anim.pageTransform
+import il.rikavon.core.ui.anim.popEnter
+import il.rikavon.core.ui.anim.popExit
 import il.rikavon.core.ui.components.LinkButton
 import il.rikavon.core.ui.components.Pill
 import il.rikavon.core.ui.components.PrimaryButton
 import il.rikavon.core.ui.components.ScreenPadding
+import il.rikavon.core.ui.components.SegmentPills
 import il.rikavon.core.ui.components.ThinBar
 import il.rikavon.core.ui.theme.LocalExtraColors
 import il.rikavon.core.ui.theme.Spacing
@@ -79,6 +94,7 @@ data class OnboardingUiState(
     val permissions: PermissionState? = null,
     val skin: MascotSkin? = null,
     val steps: List<OnboardingStep> = OnboardingStep.entries,
+    val language: AppLanguage = AppLanguage.ENGLISH,
 )
 
 @HiltViewModel
@@ -93,8 +109,8 @@ class OnboardingViewModel @Inject constructor(
     private val steps = OnboardingStep.entries.filter { it.appliesToThisDevice() }
 
     val state: StateFlow<OnboardingUiState> =
-        combine(step, permissionState, selectedMascot.skin) { s, p, skin ->
-            OnboardingUiState(s, p, skin, steps)
+        combine(step, permissionState, selectedMascot.skin, settings.settings) { s, p, skin, prefs ->
+            OnboardingUiState(s, p, skin, steps, prefs.language)
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
@@ -103,6 +119,11 @@ class OnboardingViewModel @Inject constructor(
 
     fun refreshPermissions() {
         permissionState.value = permissions.state()
+    }
+
+    /** Language choice on the welcome page; the activity recreates with the new locale. */
+    fun setLanguage(language: AppLanguage) {
+        viewModelScope.launch { settings.setLanguage(language) }
     }
 
     fun next() {
@@ -209,6 +230,15 @@ fun OnboardingScreen(onDone: () -> Unit, viewModel: OnboardingViewModel = hiltVi
         },
     ) { padding ->
         val progressLabel = stringResource(R.string.onboarding_progress)
+        val reduced = LocalReducedMotion.current
+        val progress by animateFloatAsState(
+            targetValue = (index + 1).toFloat() / state.steps.size,
+            animationSpec = if (reduced) AnimationSpecs.Reduced else AnimationSpecs.Count,
+            label = "onboardingProgress",
+        )
+        var lastIndex by remember { mutableIntStateOf(index) }
+        val forward = index >= lastIndex
+        SideEffect { lastIndex = index }
         Column(
             modifier =
                 Modifier
@@ -225,7 +255,7 @@ fun OnboardingScreen(onDone: () -> Unit, viewModel: OnboardingViewModel = hiltVi
                 modifier = Modifier.fillMaxWidth(),
             )
             ThinBar(
-                progress = (index + 1).toFloat() / state.steps.size,
+                progress = progress,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(top = Spacing.sm).semantics { contentDescription = progressLabel },
             )
@@ -237,26 +267,75 @@ fun OnboardingScreen(onDone: () -> Unit, viewModel: OnboardingViewModel = hiltVi
                     interactive = true,
                     modifier =
                         Modifier
+                            .floatLoop()
                             .fillMaxWidth(MASCOT_WIDTH_FRACTION)
                             .aspectRatio(1f),
                 )
             }
             Spacer(Modifier.height(Spacing.lg))
-            Text(
-                text = stringResource(step.titleRes()),
-                style = MaterialTheme.typography.headlineMedium,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(Spacing.md))
-            Text(
-                text = stringResource(step.bodyRes()),
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                color = extras.onSurfaceMuted,
-            )
-            if (step.permission != null && granted) {
-                Spacer(Modifier.height(Spacing.lg))
-                Pill(text = stringResource(R.string.onboarding_granted), color = extras.success)
+            AnimatedContent(
+                targetState = step,
+                transitionSpec = pageTransform(forward = forward, reduced = reduced),
+                label = "onboardingStep",
+                modifier = Modifier.fillMaxWidth(),
+            ) { current ->
+                Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = stringResource(current.titleRes()),
+                        style = MaterialTheme.typography.headlineMedium,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(Spacing.md))
+                    Text(
+                        text = stringResource(current.bodyRes()),
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        color = extras.onSurfaceMuted,
+                    )
+                    if (current == OnboardingStep.WELCOME) {
+                        Spacer(Modifier.height(Spacing.xl))
+                        Text(
+                            text = stringResource(R.string.onboarding_language_label),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = extras.onSurfaceMuted,
+                        )
+                        Spacer(Modifier.height(Spacing.sm))
+                        SegmentPills(
+                            options = listOf(AppLanguage.ENGLISH, AppLanguage.HEBREW),
+                            selected =
+                                if (state.language ==
+                                    AppLanguage.HEBREW
+                                ) {
+                                    AppLanguage.HEBREW
+                                } else {
+                                    AppLanguage.ENGLISH
+                                },
+                            onSelect = viewModel::setLanguage,
+                            label = {
+                                stringResource(
+                                    if (it ==
+                                        AppLanguage.HEBREW
+                                    ) {
+                                        R.string.language_hebrew
+                                    } else {
+                                        R.string.language_english
+                                    },
+                                )
+                            },
+                        )
+                    }
+                }
+            }
+            AnimatedVisibility(
+                visible = step.permission != null && granted,
+                enter = popEnter(reduced),
+                exit = popExit(reduced),
+            ) {
+                Pill(
+                    text = stringResource(R.string.onboarding_granted),
+                    color = extras.success,
+                    modifier = Modifier.padding(top = Spacing.lg),
+                )
             }
             if (step == OnboardingStep.DONE && state.permissions?.coreGranted == false) {
                 Spacer(Modifier.height(Spacing.lg))

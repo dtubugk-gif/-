@@ -1,11 +1,13 @@
 package il.rikavon.app
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -15,6 +17,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -132,7 +135,7 @@ fun RikavonRoot(viewModel: RootViewModel = hiltViewModel()) {
 @Composable
 private fun RikavonNavHost(startDestination: String, reduced: Boolean) {
     val navController = rememberNavController()
-    val duration = if (reduced) AnimationSpecs.REDUCED_MILLIS else AnimationSpecs.SCREEN_TRANSITION_MILLIS
+    val duration = AnimationSpecs.SCREEN_TRANSITION_MILLIS
     val bottomBar: @Composable () -> Unit = { TopLevelBar(navController) }
     SharedTransitionLayout {
         CompositionLocalProvider(LocalSharedTransitionScope provides this) {
@@ -140,19 +143,45 @@ private fun RikavonNavHost(startDestination: String, reduced: Boolean) {
                 navController = navController,
                 startDestination = startDestination,
                 enterTransition = {
-                    if (reduced) {
-                        fadeIn(tween(duration))
-                    } else {
-                        fadeIn(tween(duration)) + slideInHorizontally(tween(duration)) { it / SLIDE_FRACTION }
+                    when {
+                        reduced -> fadeIn(AnimationSpecs.Reduced)
+                        isTabSwitch() -> tabEnter()
+                        else ->
+                            fadeIn(tween(duration)) +
+                                slideIntoContainer(
+                                    SlideDirection.Start,
+                                    tween(duration, easing = AnimationSpecs.Emphasized),
+                                ) {
+                                    it / SLIDE_FRACTION
+                                }
                     }
                 },
-                exitTransition = { fadeOut(tween(duration)) },
-                popEnterTransition = { fadeIn(tween(duration)) },
+                exitTransition = {
+                    when {
+                        reduced -> fadeOut(AnimationSpecs.Reduced)
+                        isTabSwitch() -> tabExit()
+                        else -> fadeOut(tween(AnimationSpecs.COMPONENT_MILLIS))
+                    }
+                },
+                popEnterTransition = {
+                    when {
+                        reduced -> fadeIn(AnimationSpecs.Reduced)
+                        isTabSwitch() -> tabEnter()
+                        else -> fadeIn(tween(duration))
+                    }
+                },
                 popExitTransition = {
-                    if (reduced) {
-                        fadeOut(tween(duration))
-                    } else {
-                        fadeOut(tween(duration)) + slideOutHorizontally(tween(duration)) { it / SLIDE_FRACTION }
+                    when {
+                        reduced -> fadeOut(AnimationSpecs.Reduced)
+                        isTabSwitch() -> tabExit()
+                        else ->
+                            fadeOut(tween(AnimationSpecs.COMPONENT_MILLIS)) +
+                                slideOutOfContainer(
+                                    SlideDirection.End,
+                                    tween(duration, easing = AnimationSpecs.Emphasized),
+                                ) {
+                                    it / SLIDE_FRACTION
+                                }
                     }
                 },
             ) {
@@ -266,3 +295,18 @@ private fun NavHostController.navigateTopLevel(route: String) {
 }
 
 private const val SLIDE_FRACTION = 6
+
+/** Both ends of the transition are bottom-bar destinations: fade-through instead of a slide. */
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.isTabSwitch(): Boolean =
+    initialState.destination.route in Routes.TOP_LEVEL && targetState.destination.route in Routes.TOP_LEVEL
+
+private fun tabEnter() =
+    fadeIn(tween(AnimationSpecs.TAB_SWITCH_MILLIS, easing = AnimationSpecs.Emphasized)) +
+        scaleIn(
+            tween(AnimationSpecs.TAB_SWITCH_MILLIS, easing = AnimationSpecs.Emphasized),
+            initialScale = AnimationSpecs.TAB_SWITCH_SCALE,
+        )
+
+private fun tabExit() =
+    fadeOut(tween(AnimationSpecs.MICRO_MILLIS)) +
+        scaleOut(tween(AnimationSpecs.MICRO_MILLIS), targetScale = AnimationSpecs.TAB_SWITCH_SCALE)

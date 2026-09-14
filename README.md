@@ -1,7 +1,8 @@
 # רקבון · Rikavon
 
-חוסם אפליקציות, מעקב זמן מסך, וחיית מחמד דיגיטלית שנרקבת בזמן אמת.
-Native Android, Kotlin + Jetpack Compose, minSdk 26, targetSdk 35. אפס רשת, אפס analytics.
+App blocker, screen-time tracking, and a digital pet that rots in real time.
+Native Android, Kotlin + Jetpack Compose, minSdk 26, targetSdk 35. Zero network, zero analytics.
+UI in English by default; Hebrew (full RTL) is one tap away on the welcome screen or in Settings.
 
 The user sets daily limits for distracting apps. A pet on the home screen visibly decays as the day's usage
 grows and recovers when the limits are kept. The decay *is* the feedback: no numbers, no graphs, no scolding.
@@ -52,7 +53,7 @@ Material 3 structure with the design canvas's warm palette, Rubik and mascot art
 | Colour roles | `theme/Color.kt`, `theme/Theme.kt` | background `#131110`, surfaces `#161310 / #1d1a15 / #221e19`, text `#f4efe6` at 100 / 60 / 50 %, success `#7dc9a6`, danger `#c9564e`, over-limit `#e08b4f`; dark-only, verified ≥ 4.5:1 for body text |
 | Per-mascot theme | `schemeFromAccent(accent, surfaceTint)` | accent = manifest `themeColor`; one primary colour, neutrals tinted toward `surfaceTint` at 7–17 % lightness |
 | Block screen | `rotScheme()` | always rot-green `#a3b833` on `#0e120a`, whatever the pet |
-| Motion | `anim/AnimationSpecs.kt` | micro 120 ms, component 220 ms, screen 320 ms, M3 emphasized easing, pressed scale 0.97, reduced-motion = fades only |
+| Motion | `anim/AnimationSpecs.kt`, `anim/Motion.kt` | micro 120 ms, component 220 ms, screen 320 ms, M3 emphasized easing, pressed scale 0.97; helpers `enterFromBelow` (staggered rows, 35 ms × index, capped), `popIn`, `floatLoop`, `bounceOn`, `AnimatedNumber`, `FadeThrough`, `pageTransform`, `tickTransform`; reduced-motion = fades only |
 
 Components (`components/Common.kt`, `components/Design.kt`): `RikavonLargeTopBar` (32sp collapsing to 22sp with
 `exitUntilCollapsed`), `RikavonTopBar` (back arrow mirrors in RTL), `RikavonBottomBar` (Material 3
@@ -67,6 +68,18 @@ Every screen has its four states: normal, empty (an onboarding in disguise, with
 loading (skeleton, never a blank surface) and error (permission missing → fix action). One filled action per
 screen; destructive actions are outlined in the error colour and confirmed. Home / gallery / statistics /
 settings sit behind the bottom bar (state saved per tab); everything else is pushed with a back arrow.
+Choreography (all transform + opacity, every timing in `AnimationSpecs`): bottom-bar tabs fade-through
+(fade + scale 0.96 → 1, 240 ms), pushed screens slide in from the end and back out with `slideIntoContainer`
+so the direction mirrors in RTL, list rows rise in with a capped stagger, the home score counts to its value
+while its colour and bar follow, the mascot floats and its speech bubble fades through, the block screen's
+headline lands with a spring punch and its retry clock ticks by sliding, onboarding pages slide by direction
+with an animated progress bar, empty-state icons pop in, the navigation icon bounces on selection, skeletons
+carry a shimmer sweep. Reduced motion (system or in-app) turns all of it into short fades.
+
+Languages: English resources are the default (`res/values`), Hebrew lives in `res/values-iw`; the welcome
+page offers English / עברית and Settings has the full choice (System / Hebrew / English) through
+AppCompat per-app locales, so layout direction flips with the language.
+
 Edge-to-edge with transparent bars, platform splash (`core-splashscreen`, icon only), `LayoutDirection` from
 `supportsRtl`, only `start` / `end` paddings, `Icons.AutoMirrored` for directional glyphs, haptics through
 `LocalHapticFeedback`, and every icon button carries a `contentDescription`.

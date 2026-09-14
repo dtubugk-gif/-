@@ -1,7 +1,7 @@
 package il.rikavon.core.ui.components
 
 import android.graphics.drawable.Drawable
-import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -42,6 +42,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -57,6 +60,7 @@ import androidx.core.graphics.drawable.toBitmap
 import il.rikavon.core.ui.R
 import il.rikavon.core.ui.anim.AnimationSpecs
 import il.rikavon.core.ui.anim.LocalReducedMotion
+import il.rikavon.core.ui.anim.popIn
 import il.rikavon.core.ui.theme.ColorMath
 import il.rikavon.core.ui.theme.LocalExtraColors
 import il.rikavon.core.ui.theme.Radius
@@ -326,6 +330,7 @@ fun EmptyState(
             Box(
                 modifier =
                     Modifier
+                        .popIn()
                         .size(EMPTY_ICON_BOX)
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape),
                 contentAlignment = Alignment.Center,
@@ -408,25 +413,28 @@ fun ErrorState(
     }
 }
 
-/** A pulsing placeholder block; a screen shows a few of these instead of a blank surface while loading. */
+/**
+ * A placeholder block with a shimmer sweep (a light band travelling across it) while a screen loads; a
+ * static block under reduced motion.
+ */
 @Composable
 fun SkeletonBlock(modifier: Modifier = Modifier, height: Dp = Sizes.row, radius: Dp = Radius.lg) {
     val reduced = LocalReducedMotion.current
-    val alpha =
+    val base = MaterialTheme.colorScheme.surfaceContainerHigh
+    val highlight = MaterialTheme.colorScheme.surfaceContainerHighest
+    val sweep =
         if (reduced) {
-            SKELETON_ALPHA_MAX
+            0.5f
         } else {
-            val transition = rememberInfiniteTransition(label = "skeleton")
-            transition
+            rememberInfiniteTransition(label = "skeleton")
                 .animateFloat(
-                    initialValue = SKELETON_ALPHA_MIN,
-                    targetValue = SKELETON_ALPHA_MAX,
+                    initialValue = -1f,
+                    targetValue = 2f,
                     animationSpec =
                         infiniteRepeatable(
-                            tween(AnimationSpecs.SKELETON_PULSE_MILLIS),
-                            repeatMode = RepeatMode.Reverse,
+                            tween(AnimationSpecs.SKELETON_PULSE_MILLIS, easing = LinearEasing),
                         ),
-                    label = "skeletonAlpha",
+                    label = "skeletonSweep",
                 ).value
         }
     val label = stringResource(R.string.core_ui_loading)
@@ -435,9 +443,18 @@ fun SkeletonBlock(modifier: Modifier = Modifier, height: Dp = Sizes.row, radius:
             modifier
                 .fillMaxWidth()
                 .height(height)
-                .alpha(alpha)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(radius))
-                .semantics { contentDescription = label },
+                .clip(RoundedCornerShape(radius))
+                .drawWithCache {
+                    val band = size.width * SHIMMER_BAND
+                    val x = sweep * size.width
+                    val brush =
+                        Brush.horizontalGradient(
+                            colors = listOf(base, highlight, base),
+                            startX = x - band,
+                            endX = x + band,
+                        )
+                    onDrawBehind { drawRect(brush) }
+                }.semantics { contentDescription = label },
     )
 }
 
@@ -486,8 +503,7 @@ private const val ICON_PX = 144
 private const val DISABLED_ALPHA = 0.38f
 private const val MUTED_ALPHA = 0.8f
 private const val DIVIDER_ALPHA = 0.12f
-private const val SKELETON_ALPHA_MIN = 0.35f
-private const val SKELETON_ALPHA_MAX = 0.7f
+private const val SHIMMER_BAND = 0.35f
 private const val SKELETON_ROWS = 3
 private val EMPTY_ICON_BOX = 96.dp
 private val EMPTY_ICON = 44.dp

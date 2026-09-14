@@ -114,7 +114,7 @@ data class BlockEvent(val timestamp: Long, val packageName: String, val reason: 
 
 enum class BlockReason { LIMIT_REACHED, FULL_BLOCK, SCHEDULE }
 
-/** [SYSTEM] follows the device locale (Hebrew resources are the default, English when the device is English). */
+/** English is the default UI language; [HEBREW] switches to the RTL resources; [SYSTEM] follows the device. */
 enum class AppLanguage(val tag: String) {
     SYSTEM(""),
     HEBREW("he"),
@@ -122,7 +122,15 @@ enum class AppLanguage(val tag: String) {
     ;
 
     companion object {
-        fun fromTag(tag: String?): AppLanguage = entries.firstOrNull { it.tag == tag } ?: SYSTEM
+        /** Absent (fresh install) → [ENGLISH]; an empty stored tag → [SYSTEM]. */
+        fun fromTag(tag: String?): AppLanguage =
+            if (tag ==
+                null
+            ) {
+                ENGLISH
+            } else {
+                entries.firstOrNull { it.tag == tag } ?: ENGLISH
+            }
     }
 }
 
@@ -155,7 +163,7 @@ data class Settings(
                 dailySummaryEnabled = false,
                 dailySummaryHour = DEFAULT_SUMMARY_HOUR,
                 dynamicColor = false,
-                language = AppLanguage.SYSTEM,
+                language = AppLanguage.ENGLISH,
                 onboardingDone = false,
                 lastRolloverDate = null,
                 currentStreak = 0,

@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -35,6 +35,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import il.rikavon.core.data.domain.Tier
 import il.rikavon.core.data.model.AppLimit
+import il.rikavon.core.ui.anim.enterFromBelow
 import il.rikavon.core.ui.components.AppIcon
 import il.rikavon.core.ui.components.EmptyState
 import il.rikavon.core.ui.components.ErrorState
@@ -107,12 +108,13 @@ fun AppPickerScreen(
                                 )
                             }
                         }
-                        items(state.rows, key = { it.app.packageName }) { row ->
+                        itemsIndexed(state.rows, key = { _, item -> item.app.packageName }) { index, row ->
                             AppRowItem(
                                 row = row,
                                 icon = { viewModel.icon(row.app.packageName) },
                                 onToggle = { viewModel.toggle(row.app, onOpenLimit) },
                                 onOpen = { onOpenLimit(row.app.packageName) },
+                                modifier = Modifier.enterFromBelow(index, key = state.query),
                             )
                         }
                     }
@@ -200,6 +202,7 @@ private fun AppRowItem(
     icon: () -> android.graphics.drawable.Drawable?,
     onToggle: () -> Unit,
     onOpen: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val drawable = remember(row.app.packageName) { icon() }
     val toggleDescription = stringResource(R.string.apps_toggle_description, row.app.label)
@@ -213,6 +216,7 @@ private fun AppRowItem(
     ListRow(
         title = row.app.label,
         subtitle = subtitle,
+        modifier = modifier,
         subtitleColor = if (tracked) MaterialTheme.colorScheme.primary else LocalExtraColors.current.onSurfaceMuted,
         onClick = if (tracked) onOpen else onToggle,
         leading = { AppIcon(drawable = drawable, label = row.app.label) },

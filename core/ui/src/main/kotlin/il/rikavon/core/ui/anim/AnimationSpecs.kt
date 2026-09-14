@@ -96,8 +96,53 @@ object AnimationSpecs {
     /** Every pressed surface scales to this within [MICRO_MILLIS]. */
     const val PRESSED_SCALE = 0.97f
 
-    /** Skeleton shimmer period while a screen loads. */
+    /** Skeleton shimmer sweep period while a screen loads. */
     const val SKELETON_PULSE_MILLIS = 1100
+
+    // ---- Choreography (design system): entrances, pops, counters ------------------------------
+
+    /** Stagger between list rows entering; capped so long lists never feel slow. */
+    const val LIST_STAGGER_MILLIS = 35
+    const val LIST_STAGGER_MAX_INDEX = 8
+    const val LIST_ENTER_MILLIS = 280
+    const val LIST_ENTER_OFFSET_DP = 24
+    val ListEnter: FiniteAnimationSpec<Float> = tween(LIST_ENTER_MILLIS, easing = EmphasizedDecelerate)
+
+    /** Scale-in for elements that appear (empty-state icons, granted pills, hero content). */
+    val PopIn: FiniteAnimationSpec<Float> =
+        spring(
+            dampingRatio = 0.62f,
+            stiffness = Spring.StiffnessMediumLow,
+        )
+    const val POP_IN_FROM_SCALE = 0.8f
+
+    /** Numbers count toward their new value instead of jumping. */
+    const val COUNT_MILLIS = 700
+    val Count: FiniteAnimationSpec<Float> = tween(COUNT_MILLIS, easing = Emphasized)
+
+    /** Bottom-bar icon bounce on selection. */
+    val NavBounce: FiniteAnimationSpec<Float> =
+        spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium,
+        )
+    const val NAV_BOUNCE_SCALE = 1.12f
+
+    /** Gentle float of the mascot on the home screen (transform only). */
+    const val FLOAT_LOOP_MILLIS = 3200
+    const val FLOAT_AMPLITUDE_DP = 6
+
+    /** Headline punch on the block screen. */
+    val HeadlinePunch: FiniteAnimationSpec<Float> =
+        spring(
+            dampingRatio = 0.45f,
+            stiffness = Spring.StiffnessLow,
+        )
+    const val HEADLINE_FROM_SCALE = 1.35f
+
+    /** Fade-through between the four top-level tabs: fade + scale 0.96 → 1. */
+    const val TAB_SWITCH_MILLIS = 240
+    const val TAB_SWITCH_SCALE = 0.96f
 
     // ---- Navigation / generic ------------------------------------------------------------------
     const val SCREEN_TRANSITION_MILLIS = 320

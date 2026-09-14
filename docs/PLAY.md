@@ -101,7 +101,7 @@ Rationale for every category:
 הגרסה החינמית שלמה: 3 אפליקציות, לוח זמנים אחד, שני מחמדים מיידיים והשאר בהישגים. פרימיום מסיר את המכסות.
 בלי מודעות, בלי פיוול, בלי תזכורות תשלום.
 
-**Full description (en)**: translate the above; keep the structure.
+**Full description (en)**: translate the above; keep the structure. The app itself ships in English by default with Hebrew selectable on the welcome screen and in Settings; use the English screenshots for the default listing.
 
 **Category**: Productivity (alternative: Health & Fitness → Digital wellbeing). **Content rating**: Everyone.
 

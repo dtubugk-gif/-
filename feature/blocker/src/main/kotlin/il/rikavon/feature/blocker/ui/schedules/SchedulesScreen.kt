@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
@@ -32,6 +32,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import il.rikavon.core.data.model.Schedule
 import il.rikavon.core.data.model.ScheduleType
+import il.rikavon.core.ui.anim.enterFromBelow
 import il.rikavon.core.ui.components.EmptyState
 import il.rikavon.core.ui.components.LinkButton
 import il.rikavon.core.ui.components.PrimaryButton
@@ -99,11 +100,12 @@ fun SchedulesScreen(
                     ),
                 verticalArrangement = Arrangement.spacedBy(Spacing.md),
             ) {
-                items(state.schedules, key = { it.id }) { schedule ->
+                itemsIndexed(state.schedules, key = { _, item -> item.id }) { index, schedule ->
                     ScheduleRow(
                         schedule = schedule,
                         onClick = { onEdit(schedule.id) },
                         onToggle = { viewModel.setEnabled(schedule, it) },
+                        modifier = Modifier.enterFromBelow(index),
                     )
                 }
             }
@@ -138,7 +140,12 @@ fun SchedulesScreen(
 }
 
 @Composable
-private fun ScheduleRow(schedule: Schedule, onClick: () -> Unit, onToggle: (Boolean) -> Unit) {
+private fun ScheduleRow(
+    schedule: Schedule,
+    onClick: () -> Unit,
+    onToggle: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val locale = Locale.getDefault()
     val days =
         orderedDays()
@@ -153,7 +160,7 @@ private fun ScheduleRow(schedule: Schedule, onClick: () -> Unit, onToggle: (Bool
             schedule.packages.size,
         )
     val toggleDescription = stringResource(R.string.schedule_enabled_description, schedule.name)
-    SurfaceCard(onClick = onClick, modifier = Modifier.fillMaxWidth().padding(horizontal = ScreenPadding)) {
+    SurfaceCard(onClick = onClick, modifier = modifier.fillMaxWidth().padding(horizontal = ScreenPadding)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Spacing.md)) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(schedule.name, style = MaterialTheme.typography.titleMedium)

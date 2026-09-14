@@ -1,5 +1,9 @@
 package il.rikavon.ui.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -18,7 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -46,6 +50,15 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import il.rikavon.R
+import il.rikavon.core.ui.anim.AnimatedNumber
+import il.rikavon.core.ui.anim.AnimationSpecs
+import il.rikavon.core.ui.anim.FadeThrough
+import il.rikavon.core.ui.anim.LocalReducedMotion
+import il.rikavon.core.ui.anim.bounceOn
+import il.rikavon.core.ui.anim.enterFromBelow
+import il.rikavon.core.ui.anim.floatLoop
+import il.rikavon.core.ui.anim.popEnter
+import il.rikavon.core.ui.anim.popExit
 import il.rikavon.core.ui.components.AppIcon
 import il.rikavon.core.ui.components.DotChip
 import il.rikavon.core.ui.components.EmptyState
@@ -145,11 +158,12 @@ fun HomeScreen(
                     )
                 }
             } else {
-                items(state.tracked, key = { it.limit.packageName }) { row ->
+                itemsIndexed(state.tracked, key = { _, item -> item.limit.packageName }) { index, row ->
                     TrackedRow(
                         row = row,
                         icon = { viewModel.icon(row.limit.packageName) },
                         onClick = { onOpenLimit(row.limit.packageName) },
+                        modifier = Modifier.enterFromBelow(index),
                     )
                 }
                 item {
@@ -219,6 +233,7 @@ private fun Header(state: HomeUiState, onOpenAchievements: () -> Unit, onOpenSet
         Box(
             modifier =
                 Modifier
+                    .bounceOn(trigger = state.streak)
                     .pressScale(interaction)
                     .heightIn(min = Sizes.chip)
                     .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
@@ -268,17 +283,19 @@ private fun MascotStage(state: HomeUiState, language: String, viewModel: HomeVie
             sharedKey = MASCOT_SHARED_KEY,
             modifier =
                 Modifier
+                    .floatLoop()
                     .fillMaxHeight(MASCOT_FILL)
                     .aspectRatio(1f, matchHeightConstraintsFirst = true),
         )
-        if (line.isNotBlank()) {
-            SpeechBubble(
-                text = line,
-                modifier =
-                    Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = Spacing.xs, start = ScreenPadding, end = ScreenPadding),
-            )
+        FadeThrough(
+            targetState = line,
+            label = "mascotLine",
+            modifier =
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = Spacing.xs, start = ScreenPadding, end = ScreenPadding),
+        ) { current ->
+            if (current.isNotBlank()) SpeechBubble(text = current)
         }
     }
 }
@@ -296,8 +313,19 @@ private fun ScoreBlock(state: HomeUiState) {
                 .semantics(mergeDescendants = true) { contentDescription = description },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        val animatedColor by animateColorAsState(
+            color,
+            tween(AnimationSpecs.COUNT_MILLIS, easing = AnimationSpecs.Emphasized),
+            label = "scoreColor",
+        )
+        val progress by animateFloatAsState(state.score / MAX_SCORE, AnimationSpecs.Count, label = "scoreBar")
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-            Text(state.score.toString(), style = MaterialTheme.typography.displayMedium, color = color)
+            AnimatedNumber(
+                value = state.score,
+                style = MaterialTheme.typography.displayMedium,
+                color = animatedColor,
+                modifier = Modifier.bounceOn(trigger = state.score, peak = SCORE_BOUNCE),
+            )
             Text(
                 text = stringResource(R.string.home_score_label),
                 style = MaterialTheme.typography.bodyMedium,
@@ -306,13 +334,15 @@ private fun ScoreBlock(state: HomeUiState) {
             )
         }
         ThinBar(
-            progress = state.score / MAX_SCORE,
-            color = color,
+            progress = progress,
+            color = animatedColor,
             height = SCORE_BAR_HEIGHT,
             modifier = Modifier.width(SCORE_BAR_WIDTH).padding(top = Spacing.sm),
         )
         val next = state.nextLimit
-        if (next != null) {
+        val reduced = LocalReducedMotion.current
+        AnimatedVisibility(visible = next != null, enter = popEnter(reduced), exit = popExit(reduced)) {
+            if (next == null) return@AnimatedVisibility
             Text(
                 text =
                     when (next) {
@@ -332,7 +362,12 @@ private fun ScoreBlock(state: HomeUiState) {
 }
 
 @Composable
-private fun TrackedRow(row: TrackedAppRow, icon: () -> android.graphics.drawable.Drawable?, onClick: () -> Unit) {
+private fun TrackedRow(
+    row: TrackedAppRow,
+    icon: () -> android.graphics.drawable.Drawable?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val extras = LocalExtraColors.current
     val drawable = remember(row.limit.packageName) { icon() }
     val limitText =
@@ -353,7 +388,7 @@ private fun TrackedRow(row: TrackedAppRow, icon: () -> android.graphics.drawable
     val interaction = remember { MutableInteractionSource() }
     Row(
         modifier =
-            Modifier
+            modifier
                 .fillMaxWidth()
                 .padding(horizontal = ScreenPadding, vertical = Spacing.xs)
                 .pressScale(interaction)
@@ -394,3 +429,4 @@ private val SCORE_BAR_WIDTH = 180.dp
 private val SCORE_BAR_HEIGHT = 5.dp
 private const val MAX_SCORE = 100f
 private const val NEAR_LIMIT = 0.66f
+private const val SCORE_BOUNCE = 1.08f
