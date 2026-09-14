@@ -15,7 +15,6 @@
     <string name="perm_all_files_title">גישה לכל הקבצים</string>
     <string name="perm_all_files_desc">אופציונלי. סורק גם מסמכים, הורדות וקבצים אחרים, ומוחק בלי אישור מערכת על כל קבוצה.</string>
     <string name="perm_granted">אושרה</string>
-    <string name="perm_missing">לא אושרה</string>
     <string name="perm_grant">אשר</string>
     <string name="perm_open_settings">פתח הגדרות</string>
     <string name="scope_title">מה לסרוק</string>

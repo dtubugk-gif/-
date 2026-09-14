@@ -15,7 +15,6 @@
     <string name="perm_all_files_title">All files access</string>
     <string name="perm_all_files_desc">Optional. Also scans documents, downloads and other files, and deletes without a system confirmation for every batch.</string>
     <string name="perm_granted">Granted</string>
-    <string name="perm_missing">Not granted</string>
     <string name="perm_grant">Allow</string>
     <string name="perm_open_settings">Open settings</string>
     <string name="scope_title">What to scan</string>

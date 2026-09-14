@@ -2,7 +2,7 @@ package com.duplicatecleaner.app.ui
 
 import android.app.Application
 import android.content.IntentSender
-import android.net.Uri
+import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.duplicatecleaner.app.Permissions
@@ -207,7 +207,7 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun openStream(entry: FileEntry): InputStream {
         entry.uri?.let { uri ->
-            return app.contentResolver.openInputStream(Uri.parse(uri))
+            return app.contentResolver.openInputStream(uri.toUri())
                 ?: throw IOException("Cannot open $uri")
         }
         return FileInputStream(entry.path)
