@@ -58,7 +58,10 @@ claude
 בפעם הראשונה Claude Code יבקש אישור לשני דברים:
 
 - **הפלאגין `unity@unity-agent-plugin`** – מוגדר ב-`.claude/settings.json`. מאשרים.
-- **שרת ה-MCP `unity`** – מוגדר ב-`.mcp.json` ומריץ `unity mcp`. מאשרים.
+- **שרת ה-MCP `unity-editor-mcp`** – מוגדר ב-`.mcp.json` ומריץ `unity mcp`. מאשרים.
+
+השם `unity-editor-mcp` זהה לשם ש-`unity mcp configure claude-code` כותב ברמת המשתמש,
+כך שאם תריצו את הפקודה הזו בעצמכם לא תיווצר כפילות של כלים.
 
 ## בדיקה שהחיבור עובד
 
@@ -70,7 +73,7 @@ claude
    ```
 
    צריך להופיע מופע עורך במצב `ready`.
-3. בתוך Claude Code מריצים `/mcp` – השרת `unity` צריך להופיע כמחובר.
+3. בתוך Claude Code מריצים `/mcp` – השרת `unity-editor-mcp` צריך להופיע כמחובר.
 4. מקלידים `/unity:` – רשימת הסקילים של Unity צריכה להופיע.
 5. פרומפט לבדיקה:
 
@@ -88,6 +91,12 @@ claude
   ```
 
 - **הסקילים לא מופיעים** – `rm -rf ~/.claude/plugins/cache`, ואז `/reload-plugins`.
+- **בסשן ענן (claude.ai/code) השרת מופיע כ-failed** – זה צפוי. בענן אין Unity CLI ואין עורך,
+  ולכן `unity mcp` לא יכול לעלות שם. זה לא משפיע על העבודה המקומית.
+- **השרת מחובר אבל אין כלים** – `unity mcp` עולה גם בלי עורך ומדווח 0 כלים. הכלים מופיעים רק
+  אחרי שעורך עם `com.unity.pipeline` רץ ו-`unity status` מראה `ready`.
+
+אומת מול Unity CLI 1.0.0-beta.9.
 
 ## חלופה ל-Unity ישן מ-6
 

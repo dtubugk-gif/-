@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "unity": {
+    "unity-editor-mcp": {
       "type": "stdio",
       "command": "unity",
       "args": ["mcp"]
