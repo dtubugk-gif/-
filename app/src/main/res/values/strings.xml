@@ -2,15 +2,27 @@
 <resources>
     <string name="app_name">רקבון</string>
 
-    <string name="home_streak">%1$d ימים</string>
+    <string name="home_greeting_morning">בוקר טוב.</string>
+    <string name="home_greeting_noon">צהריים טובים.</string>
+    <string name="home_greeting_evening">ערב טוב.</string>
+    <string name="home_greeting_night">לילה טוב.</string>
+    <string name="home_date_pattern">EEEE · d \'ב\'MMMM</string>
+    <string name="home_streak_pill">רצף: %1$d ימים</string>
+    <string name="home_score_label">ציון מיקוד</string>
+    <string name="home_today">היום</string>
+    <string name="home_next_limit">הגבול הקרוב: %1$s בעוד %2$s</string>
+    <string name="home_next_limit_reached">%1$s עבר את הגבול להיום</string>
+    <string name="home_add_app">+ הוספה</string>
+    <string name="home_schedules_row">לוחות זמנים</string>
+    <string name="home_schedules_active">%1$d פעילים היום</string>
+    <string name="home_schedules_none">אין לוחות פעילים</string>
+    <string name="home_score_description">ציון מיקוד %1$d מתוך 100</string>
+    <string name="nav_home">בית</string>
+    <string name="nav_gallery">גלריית מחמדים</string>
+    <string name="nav_stats">סטטיסטיקות</string>
+    <string name="nav_settings">הגדרות</string>
     <string name="home_settings">הגדרות</string>
-    <string name="home_gallery">מחמדים</string>
-    <string name="home_stats">סטטיסטיקות</string>
-    <string name="home_schedules">לוחות זמנים</string>
     <string name="home_no_limits">עוד לא הגדרת גבולות. המחמד מחכה שתחליט מה מסיח אותך.</string>
-    <string name="home_pick_apps">בחירת אפליקציות</string>
-    <string name="home_tracked_title">האפליקציות המוגבלות</string>
-    <string name="home_edit_apps">עריכה</string>
     <string name="home_usage_of_limit">%1$s / %2$s</string>
     <string name="home_full_block">חסום</string>
     <string name="home_limited_title">מצב מוגבל</string>
@@ -135,6 +147,8 @@
     <string name="premium_active">פרימיום פעיל. תודה.</string>
     <string name="premium_unavailable">רכישה דרך החנות עוד לא מחוברת בגרסה הזו.</string>
 
+    <string name="widget_focus_short">מיקוד</string>
+    <string name="widget_streak">רצף: %1$d ימים</string>
     <string name="widget_label">רקבון</string>
     <string name="widget_description">המחמד והציון של היום</string>
     <string name="widget_mascot_description">המחמד %1$s</string>

@@ -1,10 +1,15 @@
 {
   "schemaVersion": 1,
   "id": "robot",
-  "name": { "he": "רובוט", "en": "Robot" },
-  "themeColor": "#5AC8FA",
+  "name": {
+    "he": "רובוט",
+    "en": "Robot"
+  },
+  "themeColor": "#7DE3D2",
   "personality": "bureaucratic",
-  "unlock": { "achievement": "fewer_opens_50" },
+  "unlock": {
+    "achievement": "fewer_opens_50"
+  },
   "reaction": "glitch",
   "sound": "reaction.wav",
   "stages": {

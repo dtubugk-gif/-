@@ -11,6 +11,7 @@ import il.rikavon.core.data.model.DailyAppUsage
 import il.rikavon.core.data.model.DayUsageSnapshot
 import il.rikavon.core.data.permissions.PermissionChecker
 import il.rikavon.core.data.repo.LimitsRepository
+import il.rikavon.core.data.repo.SettingsRepository
 import il.rikavon.core.data.repo.UsageRepository
 import il.rikavon.core.data.time.TimeSource
 import il.rikavon.core.data.usage.InstalledAppsSource
@@ -42,6 +43,12 @@ data class StatsUiState(
     val score: FocusScore = FocusScore.PERFECT,
     val hasUsagePermission: Boolean = true,
     val hasLimits: Boolean = false,
+    val streak: Int = 0,
+    val todayMinutes: Int = 0,
+    val todayOpens: Int = 0,
+    val peakHour: Int? = null,
+    /** Tracked minutes this week vs. the previous week, in percent; null without history. */
+    val weekDeltaPercent: Int? = null,
 ) {
     companion object {
         const val HOURS = 24
@@ -56,6 +63,7 @@ class StatsViewModel @Inject constructor(
     private val time: TimeSource,
     scoreProvider: FocusScoreProvider,
     permissions: PermissionChecker,
+    settings: SettingsRepository,
 ) : ViewModel() {
     private val range = MutableStateFlow(StatsRange.WEEK)
     private val hasPermission = permissions.hasUsageAccess()
@@ -63,16 +71,13 @@ class StatsViewModel @Inject constructor(
     private val history = range.flatMapLatest { usage.observeHistory(TWO_WEEKS.coerceAtLeast(it.days)) }
 
     val state: StateFlow<StatsUiState> =
-        combine(range, history, usage.today, limits.limits, scoreProvider.score) {
-            r,
-            rows,
-            today,
-            limitList,
-            score,
-            ->
+        combine(range, history, usage.today, limits.limits, scoreProvider.score) { r, rows, today, limitList, score ->
             val tracked = limitList.map { it.packageName }.toSet()
             val byPackage = limitList.associateBy { it.packageName }
             val trackedRows = rows.filter { it.packageName in tracked }
+            val live = today.perApp.values.filter { it.packageName in tracked }
+            val hourly = opensByHour(live)
+            val comparison = comparison(trackedRows, today, tracked)
             StatsUiState(
                 range = r,
                 days = dayPoints(trackedRows, today, tracked, r.days),
@@ -86,13 +91,26 @@ class StatsViewModel @Inject constructor(
                                 byPackage[limit.packageName],
                             )
                         }.sortedByDescending { it.usage.minutes },
-                opensByHour = opensByHour(today.perApp.values.filter { it.packageName in tracked }),
-                comparison = comparison(trackedRows, today, tracked),
+                opensByHour = hourly,
+                comparison = comparison,
                 score = score,
                 hasUsagePermission = hasPermission,
                 hasLimits = limitList.isNotEmpty(),
+                todayMinutes = live.sumOf { it.minutes },
+                todayOpens = live.sumOf { it.opens },
+                peakHour =
+                    hourly
+                        .withIndex()
+                        .filter { it.value > 0 }
+                        .maxByOrNull { it.value }
+                        ?.index,
+                weekDeltaPercent =
+                    comparison?.takeIf { it.previousMinutes > 0 }?.let {
+                        ((it.minutes - it.previousMinutes) * PERCENT / it.previousMinutes)
+                    },
             )
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), StatsUiState())
+        }.combine(settings.settings) { s, prefs -> s.copy(streak = prefs.currentStreak) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), StatsUiState())
 
     init {
         viewModelScope.launch { usage.refresh() }
@@ -157,5 +175,6 @@ class StatsViewModel @Inject constructor(
         private const val WEEK = 7
         private const val TWO_WEEKS = 14
         private const val MINUTES_PER_HOUR = 60
+        private const val PERCENT = 100
     }
 }

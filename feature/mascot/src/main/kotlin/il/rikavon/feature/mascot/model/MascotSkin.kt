@@ -106,6 +106,8 @@ data class MascotSkin(
     val id: String,
     val name: Localized<String>,
     val themeColorArgb: Long,
+    /** Optional hue for tinting surfaces when it should differ from the accent (a cool grey cat with a gold accent). */
+    val surfaceTintArgb: Long?,
     val personality: String,
     val unlock: UnlockRule,
     val reaction: ReactionPreset,

@@ -15,16 +15,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,201 +30,263 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import il.rikavon.R
 import il.rikavon.core.ui.components.AppIcon
-import il.rikavon.core.ui.components.Pill
+import il.rikavon.core.ui.components.DotChip
 import il.rikavon.core.ui.components.ScreenPadding
+import il.rikavon.core.ui.components.SectionLabel
+import il.rikavon.core.ui.components.SpeechBubble
+import il.rikavon.core.ui.components.SquareIconButton
+import il.rikavon.core.ui.components.ThinBar
 import il.rikavon.core.ui.components.TouchTarget
+import il.rikavon.core.ui.theme.LocalExtraColors
+import il.rikavon.core.ui.theme.scoreColor
 import il.rikavon.core.ui.util.formatMinutes
 import il.rikavon.feature.mascot.ui.MASCOT_SHARED_KEY
 import il.rikavon.feature.mascot.ui.MascotView
 import il.rikavon.feature.mascot.ui.UiLanguage
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
+/** Home, design 1a "the pet's room" with the streak pill and next-limit line from 1b. */
 @Composable
 fun HomeScreen(
     onOpenApps: () -> Unit,
     onOpenLimit: (String) -> Unit,
     onOpenSchedules: () -> Unit,
-    onOpenStats: () -> Unit,
-    onOpenGallery: () -> Unit,
     onOpenAchievements: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenOnboarding: () -> Unit,
+    bottomBar: @Composable () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val language = UiLanguage.current()
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onResume() }
+    val extras = LocalExtraColors.current
 
-    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background, bottomBar = bottomBar) { padding ->
         LazyColumn(
             contentPadding =
                 PaddingValues(
-                    top = padding.calculateTopPadding(),
-                    bottom = padding.calculateBottomPadding() + ScreenPadding,
+                    top = padding.calculateTopPadding() + 4.dp,
+                    bottom = padding.calculateBottomPadding() + 12.dp,
                 ),
         ) {
+            item { Header(state = state, onOpenAchievements = onOpenAchievements, onOpenSettings = onOpenSettings) }
             item {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = ScreenPadding, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Pill(
-                        text = stringResource(R.string.home_streak, state.streak),
-                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        modifier =
-                            Modifier
-                                .clickable(onClick = onOpenAchievements, role = Role.Button)
-                                .heightIn(min = 32.dp),
-                    )
-                    IconButton(onClick = onOpenSettings, modifier = Modifier.size(TouchTarget)) {
-                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.home_settings))
-                    }
-                }
+                MascotStage(state = state, language = language, viewModel = viewModel)
             }
-            item {
-                val skin = state.skin
-                val mascotHeight = (LocalConfiguration.current.screenHeightDp * MASCOT_SCREEN_FRACTION).dp
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(mascotHeight.coerceAtLeast(MASCOT_MIN_HEIGHT)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (skin != null) {
-                        MascotView(
-                            skin = skin,
-                            stage = state.stage,
-                            effectTrigger = state.effect,
-                            textForTap = { viewModel.tapText(language) },
-                            onLongPress = viewModel::onLongPress,
-                            onEffectSound = viewModel::onEffectSound,
-                            sharedKey = MASCOT_SHARED_KEY,
-                            modifier =
-                                Modifier
-                                    .fillMaxHeight()
-                                    .aspectRatio(1f, matchHeightConstraintsFirst = true),
-                        )
-                    }
-                }
-                Text(
-                    text = state.mascotLine.ifBlank { skin?.name?.resolve(language).orEmpty() },
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = ScreenPadding)
-                            .heightIn(min = 48.dp),
-                )
-            }
+            item { ScoreBlock(state = state) }
             val perms = state.permissions
             if (perms != null && !perms.coreGranted) {
-                item {
-                    LimitedModeBanner(onClick = onOpenOnboarding)
-                }
+                item { LimitedModeBanner(onClick = onOpenOnboarding) }
             }
             if (!state.trackingEnabled) {
                 item {
                     Text(
                         text = stringResource(R.string.home_tracking_paused),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
+                        color = extras.danger,
                         modifier = Modifier.padding(horizontal = ScreenPadding, vertical = 8.dp),
                     )
                 }
             }
-            item {
-                Row(
-                    modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = ScreenPadding, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    OutlinedButton(
-                        onClick = onOpenGallery,
-                        modifier = Modifier.weight(1f).heightIn(min = TouchTarget),
-                    ) {
-                        Text(stringResource(R.string.home_gallery))
-                    }
-                    OutlinedButton(onClick = onOpenStats, modifier = Modifier.weight(1f).heightIn(min = TouchTarget)) {
-                        Text(stringResource(R.string.home_stats))
-                    }
-                    OutlinedButton(
-                        onClick = onOpenSchedules,
-                        modifier = Modifier.weight(1f).heightIn(min = TouchTarget),
-                    ) {
-                        Text(stringResource(R.string.home_schedules))
-                    }
-                }
-            }
+            item { SectionLabel(stringResource(R.string.home_today), modifier = Modifier.padding(top = 10.dp)) }
             if (state.tracked.isEmpty()) {
                 item {
-                    Column(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = ScreenPadding),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.home_no_limits),
-                            style = MaterialTheme.typography.bodyLarge,
-                            textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Button(onClick = onOpenApps, modifier = Modifier.heightIn(min = TouchTarget + 8.dp)) {
-                            Text(stringResource(R.string.home_pick_apps))
-                        }
-                    }
-                }
-            } else {
-                item {
-                    Row(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = ScreenPadding, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.home_tracked_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.weight(1f),
-                        )
-                        OutlinedButton(onClick = onOpenApps, modifier = Modifier.heightIn(min = TouchTarget)) {
-                            Text(stringResource(R.string.home_edit_apps))
-                        }
-                    }
-                }
-                items(state.tracked, key = { it.limit.packageName }) { row ->
-                    TrackedRow(row = row, icon = {
-                        viewModel.icon(row.limit.packageName)
-                    }, onClick = { onOpenLimit(row.limit.packageName) })
+                    Text(
+                        text = stringResource(R.string.home_no_limits),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = extras.onSurfaceMuted,
+                        modifier = Modifier.padding(horizontal = ScreenPadding, vertical = 4.dp),
+                    )
                 }
             }
+            items(state.tracked, key = { it.limit.packageName }) { row ->
+                TrackedRow(row = row, icon = {
+                    viewModel.icon(row.limit.packageName)
+                }, onClick = { onOpenLimit(row.limit.packageName) })
+            }
+            item {
+                Row(
+                    modifier = Modifier.padding(horizontal = ScreenPadding, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    DotChip(
+                        text = stringResource(R.string.home_add_app),
+                        dot = MaterialTheme.colorScheme.primary,
+                        onClick = onOpenApps,
+                    )
+                    DotChip(
+                        text =
+                            stringResource(R.string.home_schedules_row) + " · " +
+                                if (state.activeSchedules > 0) {
+                                    stringResource(R.string.home_schedules_active, state.activeSchedules)
+                                } else {
+                                    stringResource(R.string.home_schedules_none)
+                                },
+                        dot = if (state.activeSchedules > 0) extras.success else extras.onSurfaceFaint,
+                        onClick = onOpenSchedules,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Header(state: HomeUiState, onOpenAchievements: () -> Unit, onOpenSettings: () -> Unit) {
+    val extras = LocalExtraColors.current
+    val pattern = stringResource(R.string.home_date_pattern)
+    val locale = Locale.getDefault()
+    val dateText =
+        remember(state.date, pattern, locale) { state.date.format(DateTimeFormatter.ofPattern(pattern, locale)) }
+    val greeting =
+        stringResource(
+            when (state.greeting) {
+                Greeting.MORNING -> R.string.home_greeting_morning
+                Greeting.NOON -> R.string.home_greeting_noon
+                Greeting.EVENING -> R.string.home_greeting_evening
+                Greeting.NIGHT -> R.string.home_greeting_night
+            },
+        )
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = ScreenPadding, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(dateText, style = MaterialTheme.typography.bodySmall, color = extras.onSurfaceFaint, maxLines = 1)
+            Text(
+                greeting,
+                style = MaterialTheme.typography.headlineLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Text(
+            text = stringResource(R.string.home_streak_pill, state.streak),
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp),
+            color = MaterialTheme.colorScheme.primary,
+            maxLines = 1,
+            modifier =
+                Modifier
+                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                    .clickable(onClick = onOpenAchievements, role = Role.Button)
+                    .heightIn(min = 32.dp)
+                    .padding(horizontal = 12.dp, vertical = 7.dp),
+        )
+        SquareIconButton(
+            icon = Icons.Filled.Settings,
+            contentDescription = stringResource(R.string.home_settings),
+            onClick = onOpenSettings,
+        )
+    }
+}
+
+@Composable
+private fun MascotStage(state: HomeUiState, language: String, viewModel: HomeViewModel) {
+    val skin = state.skin ?: return
+    val mascotHeight = (LocalConfiguration.current.screenHeightDp * MASCOT_SCREEN_FRACTION).dp
+    val line = state.mascotLine.ifBlank { viewModel.idleLine(language) }
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(mascotHeight.coerceAtLeast(MASCOT_MIN_HEIGHT)),
+        contentAlignment = Alignment.Center,
+    ) {
+        MascotView(
+            skin = skin,
+            stage = state.stage,
+            effectTrigger = state.effect,
+            textForTap = { viewModel.tapText(language) },
+            onLongPress = viewModel::onLongPress,
+            onEffectSound = viewModel::onEffectSound,
+            sharedKey = MASCOT_SHARED_KEY,
+            modifier =
+                Modifier
+                    .fillMaxHeight(MASCOT_FILL)
+                    .aspectRatio(1f, matchHeightConstraintsFirst = true),
+        )
+        if (line.isNotBlank()) {
+            SpeechBubble(
+                text = line,
+                modifier =
+                    Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 6.dp, start = ScreenPadding, end = ScreenPadding),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ScoreBlock(state: HomeUiState) {
+    val extras = LocalExtraColors.current
+    val color = scoreColor(state.score)
+    val description = stringResource(R.string.home_score_description, state.score)
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = ScreenPadding)
+                .semantics(mergeDescendants = true) { contentDescription = description },
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(state.score.toString(), style = MaterialTheme.typography.displayMedium, color = color)
+            Text(
+                text = stringResource(R.string.home_score_label),
+                style = MaterialTheme.typography.bodyMedium,
+                color = extras.onSurfaceMuted,
+                modifier = Modifier.padding(bottom = 10.dp),
+            )
+        }
+        ThinBar(
+            progress = state.score / MAX_SCORE,
+            color = color,
+            height = 5.dp,
+            modifier = Modifier.width(SCORE_BAR_WIDTH).padding(top = 10.dp),
+        )
+        val next = state.nextLimit
+        if (next != null) {
+            Text(
+                text =
+                    when (next) {
+                        is NextLimit.Upcoming ->
+                            stringResource(
+                                R.string.home_next_limit,
+                                next.label,
+                                formatMinutes(next.minutesLeft),
+                            )
+                        is NextLimit.Reached -> stringResource(R.string.home_next_limit_reached, next.label)
+                    },
+                style = MaterialTheme.typography.bodySmall,
+                color = if (next is NextLimit.Reached) extras.overLimit else extras.onSurfaceFaint,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 8.dp),
+            )
         }
     }
 }
@@ -246,13 +306,14 @@ private fun LimitedModeBanner(onClick: () -> Unit) {
         Text(
             text = stringResource(R.string.home_limited_body),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = LocalExtraColors.current.onSurfaceMuted,
         )
     }
 }
 
 @Composable
 private fun TrackedRow(row: TrackedAppRow, icon: () -> android.graphics.drawable.Drawable?, onClick: () -> Unit) {
+    val extras = LocalExtraColors.current
     val drawable = remember(row.limit.packageName) { icon() }
     val limitText =
         if (row.limit.fullBlock) {
@@ -262,23 +323,26 @@ private fun TrackedRow(row: TrackedAppRow, icon: () -> android.graphics.drawable
         } else {
             formatMinutes(row.limit.limitMinutes)
         }
-    val ratio =
-        if (row.limit.fullBlock) {
-            if (row.usage.minutes > 0) 1f else 0f
-        } else {
-            (row.usage.minutes.toFloat() / row.limit.limitMinutes.coerceAtLeast(1)).coerceIn(0f, 1f)
+    val ratio = row.ratio
+    val barColor: Color =
+        when {
+            ratio >= 1f -> extras.danger
+            ratio >= NEAR_LIMIT -> extras.overLimit
+            else -> MaterialTheme.colorScheme.primary
         }
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .padding(horizontal = ScreenPadding, vertical = 5.dp)
+                .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(16.dp))
                 .clickable(onClick = onClick, role = Role.Button)
-                .heightIn(min = TouchTarget + 12.dp)
-                .padding(horizontal = ScreenPadding, vertical = 8.dp),
+                .heightIn(min = TouchTarget + 14.dp)
+                .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        AppIcon(drawable = drawable, label = row.label, size = 40.dp)
+        AppIcon(drawable = drawable, label = row.label, size = 38.dp)
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -286,32 +350,24 @@ private fun TrackedRow(row: TrackedAppRow, icon: () -> android.graphics.drawable
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = stringResource(R.string.home_usage_of_limit, formatMinutes(row.usage.minutes), limitText),
                     style = MaterialTheme.typography.bodySmall,
-                    color =
-                        if (ratio >=
-                            1f
-                        ) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
+                    color = if (ratio >= NEAR_LIMIT) barColor else extras.onSurfaceMuted,
+                    maxLines = 1,
                 )
             }
-            LinearProgressIndicator(
-                progress = { ratio },
-                color = if (ratio >= 1f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(top = 6.dp)
-                        .height(6.dp),
-            )
+            Spacer(Modifier.height(7.dp))
+            ThinBar(progress = ratio, color = barColor)
         }
     }
 }
 
 private const val MASCOT_SCREEN_FRACTION = 0.4f
+private const val MASCOT_FILL = 0.88f
 private val MASCOT_MIN_HEIGHT = 220.dp
+private val SCORE_BAR_WIDTH = 180.dp
+private const val MAX_SCORE = 100f
+private const val NEAR_LIMIT = 0.66f

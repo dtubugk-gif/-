@@ -1,8 +1,11 @@
 {
   "schemaVersion": 1,
   "id": "brain",
-  "name": { "he": "מוח", "en": "Brain" },
-  "themeColor": "#FF7EB6",
+  "name": {
+    "he": "מוח",
+    "en": "Brain"
+  },
+  "themeColor": "#F08BAB",
   "personality": "cynical",
   "unlock": "free",
   "reaction": "pulse",

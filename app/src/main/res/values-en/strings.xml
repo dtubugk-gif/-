@@ -2,15 +2,27 @@
 <resources>
     <string name="app_name">Rikavon</string>
 
-    <string name="home_streak">%1$d days</string>
+    <string name="home_greeting_morning">Good morning.</string>
+    <string name="home_greeting_noon">Good afternoon.</string>
+    <string name="home_greeting_evening">Good evening.</string>
+    <string name="home_greeting_night">Good night.</string>
+    <string name="home_date_pattern">EEEE · MMMM d</string>
+    <string name="home_streak_pill">Streak: %1$d days</string>
+    <string name="home_score_label">focus score</string>
+    <string name="home_today">Today</string>
+    <string name="home_next_limit">Next limit: %1$s in %2$s</string>
+    <string name="home_next_limit_reached">%1$s is over its limit for today</string>
+    <string name="home_add_app">+ Add</string>
+    <string name="home_schedules_row">Schedules</string>
+    <string name="home_schedules_active">%1$d active today</string>
+    <string name="home_schedules_none">No active schedules</string>
+    <string name="home_score_description">Focus score %1$d out of 100</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_gallery">Pet gallery</string>
+    <string name="nav_stats">Statistics</string>
+    <string name="nav_settings">Settings</string>
     <string name="home_settings">Settings</string>
-    <string name="home_gallery">Pets</string>
-    <string name="home_stats">Statistics</string>
-    <string name="home_schedules">Schedules</string>
     <string name="home_no_limits">No limits yet. The pet is waiting for you to decide what distracts you.</string>
-    <string name="home_pick_apps">Pick apps</string>
-    <string name="home_tracked_title">Limited apps</string>
-    <string name="home_edit_apps">Edit</string>
     <string name="home_usage_of_limit">%1$s / %2$s</string>
     <string name="home_full_block">Blocked</string>
     <string name="home_limited_title">Limited mode</string>
@@ -135,6 +147,8 @@
     <string name="premium_active">Premium is active. Thank you.</string>
     <string name="premium_unavailable">Store purchases are not connected in this build yet.</string>
 
+    <string name="widget_focus_short">focus</string>
+    <string name="widget_streak">Streak: %1$d days</string>
     <string name="widget_label">Rikavon</string>
     <string name="widget_description">Today\'s pet and score</string>
     <string name="widget_mascot_description">The pet %1$s</string>

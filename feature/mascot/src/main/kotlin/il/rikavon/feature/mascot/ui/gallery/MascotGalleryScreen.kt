@@ -1,13 +1,11 @@
 package il.rikavon.feature.mascot.ui.gallery
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,55 +17,77 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import il.rikavon.core.ui.components.EmptyState
-import il.rikavon.core.ui.components.Pill
+import il.rikavon.core.ui.components.LockBadge
+import il.rikavon.core.ui.components.PillButton
 import il.rikavon.core.ui.components.RikavonTopBar
 import il.rikavon.core.ui.components.ScreenPadding
+import il.rikavon.core.ui.components.ScreenTitle
 import il.rikavon.core.ui.components.TouchTarget
+import il.rikavon.core.ui.theme.LocalExtraColors
 import il.rikavon.feature.mascot.R
-import il.rikavon.feature.mascot.model.MascotSkin
 import il.rikavon.feature.mascot.model.MascotStage
 import il.rikavon.feature.mascot.ui.MASCOT_SHARED_KEY
 import il.rikavon.feature.mascot.ui.MascotStrings
 import il.rikavon.feature.mascot.ui.MascotView
 import il.rikavon.feature.mascot.ui.UiLanguage
 
+/** Gallery, design 1d: hero card for the selected pet, a 3-column grid, locked cards with a badge. */
 @Composable
 fun MascotGalleryScreen(
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
+    bottomBar: @Composable () -> Unit = {},
     viewModel: MascotGalleryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var preview by remember { mutableStateOf<GalleryItem?>(null) }
+    val language = UiLanguage.current()
+    val snackbar = remember { SnackbarHostState() }
+    val lockedFormat = stringResource(R.string.gallery_locked_by)
+    val noticeText = state.notice?.let { stringResource(MascotStrings.achievementTitle(it)) }
+    LaunchedEffect(noticeText) {
+        if (noticeText != null) {
+            snackbar.showSnackbar(lockedFormat.format(noticeText))
+            viewModel.clearNotice()
+        }
+    }
 
     Scaffold(
-        topBar = { RikavonTopBar(title = stringResource(R.string.gallery_title), onBack = onBack) },
+        topBar = {
+            if (onBack !=
+                null
+            ) {
+                RikavonTopBar(title = stringResource(R.string.gallery_title_design), onBack = onBack)
+            }
+        },
+        bottomBar = bottomBar,
+        snackbarHost = { SnackbarHost(snackbar) },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         if (state.loaded && state.items.isEmpty()) {
@@ -75,7 +95,7 @@ fun MascotGalleryScreen(
             return@Scaffold
         }
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+            columns = GridCells.Fixed(GRID_COLUMNS),
             contentPadding =
                 PaddingValues(
                     start = ScreenPadding,
@@ -83,29 +103,46 @@ fun MascotGalleryScreen(
                     top = padding.calculateTopPadding() + 8.dp,
                     bottom = padding.calculateBottomPadding() + ScreenPadding,
                 ),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            if (state.tier.allMascotsUnlocked.not()) {
+            if (onBack == null) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text(
-                        text = stringResource(R.string.gallery_premium_hint),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 6.dp),
+                    ScreenTitle(
+                        title = stringResource(R.string.gallery_title_design),
+                        subtitle = stringResource(R.string.gallery_subtitle),
+                        modifier = Modifier.padding(horizontal = 0.dp),
+                    )
+                }
+            }
+            state.selected?.let { hero ->
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    HeroCard(
+                        item = hero,
+                        stage = state.heroStage,
+                        quote = { viewModel.quote(hero.skin, state.heroStage, language) },
+                        onSelect = { viewModel.choose(hero) },
+                        onReaction = { viewModel.playReaction(hero.skin) },
+                        onPreview = viewModel::preview,
                     )
                 }
             }
             items(state.items, key = { it.skin.id }) { item ->
-                GalleryCard(
-                    item = item,
-                    stage = state.currentStage,
-                    onClick = { preview = item },
-                )
+                SmallCard(item = item, onClick = { viewModel.choose(item) })
+            }
+            if (state.tier.allMascotsUnlocked.not()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Text(
+                        text = stringResource(R.string.gallery_premium_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = LocalExtraColors.current.onSurfaceFaint,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
             }
             if (state.validationErrors.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
-                    Column(modifier = Modifier.padding(top = 16.dp)) {
+                    Column(modifier = Modifier.padding(top = 12.dp)) {
                         Text(
                             text = stringResource(R.string.gallery_errors_title),
                             style = MaterialTheme.typography.titleSmall,
@@ -115,7 +152,7 @@ fun MascotGalleryScreen(
                             Text(
                                 it,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = LocalExtraColors.current.onSurfaceMuted,
                             )
                         }
                     }
@@ -123,206 +160,149 @@ fun MascotGalleryScreen(
             }
         }
     }
-
-    preview?.let { item ->
-        PreviewSheet(
-            item = item,
-            initialStage = state.currentStage,
-            onSelect = {
-                viewModel.select(item.skin)
-                preview = null
-            },
-            onReaction = { viewModel.playReaction(item.skin) },
-            onDismiss = { preview = null },
-        )
-    }
 }
 
 @Composable
-private fun GalleryCard(item: GalleryItem, stage: MascotStage, onClick: () -> Unit) {
+private fun HeroCard(
+    item: GalleryItem,
+    stage: MascotStage,
+    quote: () -> String,
+    onSelect: () -> Unit,
+    onReaction: () -> Unit,
+    onPreview: (MascotStage?) -> Unit,
+) {
     val language = UiLanguage.current()
     val name = item.skin.name.resolve(language) ?: item.skin.id
-    val accent = Color(item.skin.themeColorArgb)
-    val requirement = item.requiredAchievement?.let { stringResource(MascotStrings.achievementTitle(it)) }
-    val lockedText = requirement?.let { stringResource(R.string.gallery_locked_by, it) }
-    val personalityRes = MascotStrings.personality(item.skin.personality)
-    val personality = personalityRes?.let { stringResource(it) } ?: item.skin.personality
-    val description =
-        if (item.unlocked) {
-            stringResource(R.string.gallery_card_description, name, personality)
-        } else {
-            stringResource(R.string.gallery_locked_description, name, lockedText.orEmpty())
-        }
-    val borderColor = if (item.selected) accent else MaterialTheme.colorScheme.outlineVariant
-
+    val line = remember(item.skin.id, stage) { quote() }
+    val sliderLabel = stringResource(R.string.gallery_stage_slider)
     Column(
         modifier =
             Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.large)
-                .border(if (item.selected) 3.dp else 1.dp, borderColor, MaterialTheme.shapes.large)
-                .clickable(onClick = onClick, role = Role.Button)
-                .semantics { contentDescription = description }
-                .padding(14.dp),
+                .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(24.dp))
+                .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
+        MascotView(
+            skin = item.skin,
+            stage = stage,
+            interactive = true,
+            textForTap = quote,
+            onLongPress = onReaction,
+            sharedKey = if (item.selected) MASCOT_SHARED_KEY else null,
             modifier =
                 Modifier
-                    .fillMaxWidth()
+                    .size(HERO_MASCOT)
                     .aspectRatio(1f),
-            contentAlignment = Alignment.Center,
-        ) {
-            MascotView(
-                skin = item.skin,
-                stage = if (item.unlocked) stage else MascotStage.WORN,
-                interactive = false,
-                sharedKey = if (item.selected) MASCOT_SHARED_KEY else null,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f),
-            )
-            if (!item.unlocked) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(TouchTarget)
-                            .background(
-                                MaterialTheme.colorScheme.background.copy(alpha = LOCK_BADGE_ALPHA),
-                                MaterialTheme.shapes.medium,
-                            ),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Filled.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground)
-                }
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        Text(name, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
-        Text(
-            text = personality,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(8.dp))
-        when {
-            item.selected -> Pill(stringResource(R.string.gallery_selected), accent)
-            !item.unlocked && lockedText != null ->
-                Text(
-                    text = lockedText,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-        }
-    }
-}
-
-@Composable
-private fun PreviewSheet(
-    item: GalleryItem,
-    initialStage: MascotStage,
-    onSelect: () -> Unit,
-    onReaction: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val language = UiLanguage.current()
-    val name = item.skin.name.resolve(language) ?: item.skin.id
-    var stageIndex by remember { mutableStateOf(MascotStage.entries.indexOf(initialStage).toFloat()) }
-    val stage = MascotStage.entries[stageIndex.toInt().coerceIn(0, MascotStage.entries.lastIndex)]
-    val sliderLabel = stringResource(R.string.gallery_stage_slider)
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-    ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = ScreenPadding)
-                    .padding(bottom = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(stringResource(R.string.gallery_preview_title, name), style = MaterialTheme.typography.headlineSmall)
-            Spacer(Modifier.height(12.dp))
-            MascotView(
-                skin = item.skin,
-                stage = stage,
-                interactive = true,
-                textForTap = {
-                    item.skin
-                        .stage(stage)
-                        .texts
-                        .resolve(language)
-                        ?.randomOrNull()
-                        .orEmpty()
-                },
-                onLongPress = onReaction,
-                modifier =
-                    Modifier
-                        .fillMaxWidth(PREVIEW_WIDTH_FRACTION)
-                        .aspectRatio(1f),
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.gallery_preview_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Slider(
-                value = stageIndex,
-                onValueChange = { stageIndex = it },
-                valueRange = 0f..MascotStage.entries.lastIndex.toFloat(),
-                steps = MascotStage.entries.size - 2,
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = TouchTarget)
-                        .semantics { contentDescription = sliderLabel },
-            )
-            Spacer(Modifier.height(8.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                if (item.unlocked) {
-                    Button(onClick = onSelect, modifier = Modifier.heightIn(min = TouchTarget)) {
-                        Text(
-                            if (item.selected) {
-                                stringResource(
-                                    R.string.gallery_selected,
-                                )
-                            } else {
-                                stringResource(R.string.gallery_select)
-                            },
+        Text(name, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 6.dp))
+        Text(
+            text = "“$line”",
+            style = MaterialTheme.typography.bodySmall,
+            color = LocalExtraColors.current.onSurfaceMuted,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 3.dp),
+        )
+        Spacer(Modifier.height(12.dp))
+        if (item.unlocked) {
+            PillButton(
+                text = stringResource(if (item.selected) R.string.gallery_selected_now else R.string.gallery_select),
+                onClick = onSelect,
+                minHeight = TouchTarget,
+                leading = {
+                    if (item.selected) {
+                        Icon(
+                            Icons.Filled.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onPrimary,
                         )
                     }
-                } else {
-                    val requirement =
-                        item.requiredAchievement
-                            ?.let {
-                                stringResource(MascotStrings.achievementTitle(it))
-                            }.orEmpty()
-                    Text(
-                        text = stringResource(R.string.gallery_locked_by, requirement),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
+                },
+            )
+        } else {
+            val requirement =
+                item.requiredAchievement
+                    ?.let {
+                        stringResource(
+                            MascotStrings.achievementTitle(it),
+                        )
+                    }.orEmpty()
+            Text(
+                text = stringResource(R.string.gallery_locked_by, requirement),
+                style = MaterialTheme.typography.titleSmall,
+                color = LocalExtraColors.current.onSurfaceMuted,
+                textAlign = TextAlign.Center,
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = stringResource(R.string.gallery_preview_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = LocalExtraColors.current.onSurfaceFaint,
+        )
+        val index = MascotStage.entries.indexOf(stage).toFloat()
+        Slider(
+            value = index,
+            onValueChange = { onPreview(MascotStage.entries[it.toInt().coerceIn(0, MascotStage.entries.lastIndex)]) },
+            onValueChangeFinished = { },
+            valueRange = 0f..MascotStage.entries.lastIndex.toFloat(),
+            steps = MascotStage.entries.size - 2,
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = TouchTarget)
+                    .semantics { contentDescription = sliderLabel },
+        )
+    }
+}
+
+@Composable
+private fun SmallCard(item: GalleryItem, onClick: () -> Unit) {
+    val language = UiLanguage.current()
+    val name = item.skin.name.resolve(language) ?: item.skin.id
+    val requirement = item.requiredAchievement?.let { stringResource(MascotStrings.achievementTitle(it)) }
+    val description =
+        if (item.unlocked) name else stringResource(R.string.gallery_locked_description, name, requirement.orEmpty())
+    val scheme = MaterialTheme.colorScheme
+    val background = if (item.unlocked) scheme.surfaceContainer else scheme.surfaceContainerLow
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .background(background, RoundedCornerShape(18.dp))
+                .clickable(onClick = onClick, role = Role.Button)
+                .semantics { contentDescription = description }
+                .padding(top = if (item.unlocked) 12.dp else 26.dp, bottom = 12.dp, start = 6.dp, end = 6.dp),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            MascotView(
+                skin = item.skin,
+                stage = MascotStage.PRISTINE,
+                interactive = false,
+                modifier =
+                    Modifier
+                        .size(SMALL_MASCOT)
+                        .alpha(if (item.unlocked) 1f else LOCKED_ALPHA),
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = name,
+                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 0.sp),
+                color = if (item.unlocked) scheme.onSurface else LocalExtraColors.current.onSurfaceFaint,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (!item.unlocked && requirement != null) {
+            LockBadge(text = requirement, modifier = Modifier.align(Alignment.TopStart).padding(6.dp))
         }
     }
 }
 
-private const val LOCK_BADGE_ALPHA = 0.7f
-private const val PREVIEW_WIDTH_FRACTION = 0.7f
-
-/** Exposed for hosts that show a single mascot card outside the gallery. */
-@Suppress("unused")
-@Composable
-fun MascotCardPreview(skin: MascotSkin, stage: MascotStage, modifier: Modifier = Modifier) {
-    MascotView(skin = skin, stage = stage, interactive = false, modifier = modifier)
-}
+private const val GRID_COLUMNS = 3
+private val HERO_MASCOT = 150.dp
+private val SMALL_MASCOT = 52.dp
+private const val LOCKED_ALPHA = 0.3f

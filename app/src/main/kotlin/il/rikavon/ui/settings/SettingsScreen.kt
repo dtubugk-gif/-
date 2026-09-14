@@ -42,6 +42,7 @@ import il.rikavon.core.data.model.ReduceMotionMode
 import il.rikavon.core.data.repo.BackupRepository
 import il.rikavon.core.ui.components.RikavonTopBar
 import il.rikavon.core.ui.components.ScreenPadding
+import il.rikavon.core.ui.components.ScreenTitle
 import il.rikavon.core.ui.components.SectionHeader
 import il.rikavon.core.ui.components.SettingNavRow
 import il.rikavon.core.ui.components.SettingSwitchRow
@@ -51,13 +52,14 @@ import java.time.LocalDate
 
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onOpenGallery: () -> Unit,
     onOpenOnboarding: () -> Unit,
     onOpenBattery: () -> Unit,
     onOpenPrivacy: () -> Unit,
     onOpenPremium: () -> Unit,
     onOpenScore: () -> Unit,
+    bottomBar: @Composable () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -91,7 +93,14 @@ fun SettingsScreen(
     }
 
     Scaffold(
-        topBar = { RikavonTopBar(title = stringResource(R.string.settings_title), onBack = onBack) },
+        topBar = {
+            if (onBack !=
+                null
+            ) {
+                RikavonTopBar(title = stringResource(R.string.settings_title), onBack = onBack)
+            }
+        },
+        bottomBar = bottomBar,
         snackbarHost = { SnackbarHost(snackbar) },
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
@@ -102,6 +111,14 @@ fun SettingsScreen(
                     .verticalScroll(rememberScrollState())
                     .padding(bottom = ScreenPadding),
         ) {
+            if (onBack ==
+                null
+            ) {
+                ScreenTitle(
+                    title = stringResource(R.string.settings_title),
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+            }
             SectionHeader(stringResource(R.string.settings_section_pet))
             SettingNavRow(
                 title = stringResource(R.string.settings_pet),

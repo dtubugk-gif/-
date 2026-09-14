@@ -1,10 +1,15 @@
 {
   "schemaVersion": 1,
   "id": "goldfish",
-  "name": { "he": "דג זהב", "en": "Goldfish" },
-  "themeColor": "#FFA94D",
+  "name": {
+    "he": "דג זהב",
+    "en": "Goldfish"
+  },
+  "themeColor": "#F0A457",
   "personality": "confused",
-  "unlock": { "achievement": "streak_3" },
+  "unlock": {
+    "achievement": "streak_3"
+  },
   "reaction": "flip",
   "sound": "reaction.wav",
   "stages": {

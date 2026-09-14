@@ -10,21 +10,27 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dagger.hilt.android.lifecycle.HiltViewModel
+import il.rikavon.R
 import il.rikavon.core.data.model.ReduceMotionMode
 import il.rikavon.core.data.model.Settings
 import il.rikavon.core.data.repo.SettingsRepository
 import il.rikavon.core.ui.anim.AnimationSpecs
 import il.rikavon.core.ui.anim.rememberSystemReducedMotion
+import il.rikavon.core.ui.components.BottomTab
+import il.rikavon.core.ui.components.RikavonBottomBar
 import il.rikavon.core.ui.theme.RikavonColors
 import il.rikavon.core.ui.theme.RikavonTheme
 import il.rikavon.feature.blocker.ui.apps.AppPickerScreen
@@ -69,19 +75,27 @@ object Routes {
     const val PRIVACY = "privacy"
     const val PREMIUM = "premium"
 
+    /** The four bottom-bar destinations, in bar order. */
+    val TOP_LEVEL = listOf(HOME, GALLERY, STATS, SETTINGS)
+
     fun limit(packageName: String) = "limit/$packageName"
 
     fun schedule(id: Long) = "schedule/$id"
 }
 
-data class RootUiState(val settings: Settings? = null, val skin: MascotSkin? = null)
+data class RootUiState(
+    val settings: Settings? = null,
+    val skin: MascotSkin? = null,
+)
 
 @HiltViewModel
-class RootViewModel @Inject constructor(settings: SettingsRepository, selectedMascot: SelectedMascot) : ViewModel() {
+class RootViewModel @Inject constructor(
+    settings: SettingsRepository,
+    selectedMascot: SelectedMascot,
+) : ViewModel() {
     val state: StateFlow<RootUiState> =
-        combine(settings.settings, selectedMascot.skin) { s, skin ->
-            RootUiState(s, skin)
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), RootUiState())
+        combine(settings.settings, selectedMascot.skin) { s, skin -> RootUiState(s, skin) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), RootUiState())
 
     companion object {
         private const val STOP_TIMEOUT_MILLIS = 5_000L
@@ -100,8 +114,14 @@ fun RikavonRoot(viewModel: RootViewModel = hiltViewModel()) {
             ReduceMotionMode.SYSTEM -> systemReduced
         }
     val accent = state.skin?.let { Color(it.themeColorArgb) } ?: RikavonColors.DefaultAccent
+    val surfaceTint = state.skin?.surfaceTintArgb?.let { Color(it) }
 
-    RikavonTheme(accent = accent, dynamicColor = prefs.dynamicColor, reducedMotion = reduced) {
+    RikavonTheme(
+        accent = accent,
+        surfaceTint = surfaceTint,
+        dynamicColor = prefs.dynamicColor,
+        reducedMotion = reduced,
+    ) {
         RikavonNavHost(
             startDestination = if (prefs.onboardingDone) Routes.HOME else Routes.ONBOARDING,
             reduced = reduced,
@@ -113,6 +133,7 @@ fun RikavonRoot(viewModel: RootViewModel = hiltViewModel()) {
 private fun RikavonNavHost(startDestination: String, reduced: Boolean) {
     val navController = rememberNavController()
     val duration = if (reduced) AnimationSpecs.REDUCED_MILLIS else AnimationSpecs.SCREEN_TRANSITION_MILLIS
+    val bottomBar: @Composable () -> Unit = { TopLevelBar(navController) }
     SharedTransitionLayout {
         CompositionLocalProvider(LocalSharedTransitionScope provides this) {
             NavHost(
@@ -122,8 +143,7 @@ private fun RikavonNavHost(startDestination: String, reduced: Boolean) {
                     if (reduced) {
                         fadeIn(tween(duration))
                     } else {
-                        fadeIn(tween(duration)) +
-                            slideInHorizontally(tween(duration)) { it / SLIDE_FRACTION }
+                        fadeIn(tween(duration)) + slideInHorizontally(tween(duration)) { it / SLIDE_FRACTION }
                     }
                 },
                 exitTransition = { fadeOut(tween(duration)) },
@@ -132,8 +152,7 @@ private fun RikavonNavHost(startDestination: String, reduced: Boolean) {
                     if (reduced) {
                         fadeOut(tween(duration))
                     } else {
-                        fadeOut(tween(duration)) +
-                            slideOutHorizontally(tween(duration)) { it / SLIDE_FRACTION }
+                        fadeOut(tween(duration)) + slideOutHorizontally(tween(duration)) { it / SLIDE_FRACTION }
                     }
                 },
             ) {
@@ -150,18 +169,18 @@ private fun RikavonNavHost(startDestination: String, reduced: Boolean) {
                             onOpenApps = { navController.navigate(Routes.APPS) },
                             onOpenLimit = { navController.navigate(Routes.limit(it)) },
                             onOpenSchedules = { navController.navigate(Routes.SCHEDULES) },
-                            onOpenStats = { navController.navigate(Routes.STATS) },
-                            onOpenGallery = { navController.navigate(Routes.GALLERY) },
                             onOpenAchievements = { navController.navigate(Routes.ACHIEVEMENTS) },
-                            onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                            onOpenSettings = { navController.navigateTopLevel(Routes.SETTINGS) },
                             onOpenOnboarding = { navController.navigate(Routes.ONBOARDING) },
+                            bottomBar = bottomBar,
                         )
                     }
                 }
                 composable(Routes.APPS) {
-                    AppPickerScreen(onBack = {
-                        navController.popBackStack()
-                    }, onOpenLimit = { navController.navigate(Routes.limit(it)) })
+                    AppPickerScreen(
+                        onBack = { navController.popBackStack() },
+                        onOpenLimit = { navController.navigate(Routes.limit(it)) },
+                    )
                 }
                 composable(
                     route = Routes.LIMIT,
@@ -170,9 +189,10 @@ private fun RikavonNavHost(startDestination: String, reduced: Boolean) {
                     LimitEditorScreen(onBack = { navController.popBackStack() })
                 }
                 composable(Routes.SCHEDULES) {
-                    SchedulesScreen(onBack = {
-                        navController.popBackStack()
-                    }, onEdit = { navController.navigate(Routes.schedule(it)) })
+                    SchedulesScreen(
+                        onBack = { navController.popBackStack() },
+                        onEdit = { navController.navigate(Routes.schedule(it)) },
+                    )
                 }
                 composable(
                     route = Routes.SCHEDULE,
@@ -181,26 +201,29 @@ private fun RikavonNavHost(startDestination: String, reduced: Boolean) {
                     ScheduleEditorScreen(onBack = { navController.popBackStack() })
                 }
                 composable(Routes.STATS) {
-                    StatsScreen(onBack = {
-                        navController.popBackStack()
-                    }, onOpenScore = { navController.navigate(Routes.SCORE) })
+                    StatsScreen(
+                        onBack = null,
+                        onOpenScore = { navController.navigate(Routes.SCORE) },
+                        bottomBar = bottomBar,
+                    )
                 }
                 composable(Routes.SCORE) { ScoreExplainerScreen(onBack = { navController.popBackStack() }) }
                 composable(Routes.GALLERY) {
                     CompositionLocalProvider(LocalNavAnimatedVisibilityScope provides this) {
-                        MascotGalleryScreen(onBack = { navController.popBackStack() })
+                        MascotGalleryScreen(onBack = null, bottomBar = bottomBar)
                     }
                 }
                 composable(Routes.ACHIEVEMENTS) { AchievementsScreen(onBack = { navController.popBackStack() }) }
                 composable(Routes.SETTINGS) {
                     SettingsScreen(
-                        onBack = { navController.popBackStack() },
-                        onOpenGallery = { navController.navigate(Routes.GALLERY) },
+                        onBack = null,
+                        onOpenGallery = { navController.navigateTopLevel(Routes.GALLERY) },
                         onOpenOnboarding = { navController.navigate(Routes.ONBOARDING) },
                         onOpenBattery = { navController.navigate(Routes.BATTERY) },
                         onOpenPrivacy = { navController.navigate(Routes.PRIVACY) },
                         onOpenPremium = { navController.navigate(Routes.PREMIUM) },
                         onOpenScore = { navController.navigate(Routes.SCORE) },
+                        bottomBar = bottomBar,
                     )
                 }
                 composable(Routes.BATTERY) { BatteryGuideScreen(onBack = { navController.popBackStack() }) }
@@ -208,6 +231,34 @@ private fun RikavonNavHost(startDestination: String, reduced: Boolean) {
                 composable(Routes.PREMIUM) { PremiumScreen(onBack = { navController.popBackStack() }) }
             }
         }
+    }
+}
+
+@Composable
+private fun TopLevelBar(navController: NavHostController) {
+    val entry by navController.currentBackStackEntryAsState()
+    val route = entry?.destination?.route
+    val selected = Routes.TOP_LEVEL.indexOf(route).coerceAtLeast(0)
+    val tabs =
+        listOf(
+            BottomTab(NavIcons.Home, stringResource(R.string.nav_home)),
+            BottomTab(NavIcons.Gallery, stringResource(R.string.nav_gallery)),
+            BottomTab(NavIcons.Stats, stringResource(R.string.nav_stats)),
+            BottomTab(NavIcons.Settings, stringResource(R.string.nav_settings)),
+        )
+    RikavonBottomBar(
+        tabs = tabs,
+        selected = selected,
+        onSelect = { navController.navigateTopLevel(Routes.TOP_LEVEL[it]) },
+    )
+}
+
+private fun NavHostController.navigateTopLevel(route: String) {
+    if (currentDestination?.route == route) return
+    navigate(route) {
+        popUpTo(Routes.HOME) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
     }
 }
 

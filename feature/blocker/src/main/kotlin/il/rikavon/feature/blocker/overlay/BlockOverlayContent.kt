@@ -8,18 +8,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,45 +31,64 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import il.rikavon.core.data.model.BlockReason
 import il.rikavon.core.ui.anim.AnimationSpecs
+import il.rikavon.core.ui.components.PillButton
 import il.rikavon.core.ui.components.ScreenPadding
-import il.rikavon.core.ui.components.TouchTarget
+import il.rikavon.core.ui.theme.LocalExtraColors
 import il.rikavon.core.ui.theme.RikavonTheme
+import il.rikavon.core.ui.theme.rotScheme
 import il.rikavon.feature.blocker.R
 import il.rikavon.feature.blocker.engine.BlockDecision
+import il.rikavon.feature.mascot.model.HourBucket
 import il.rikavon.feature.mascot.model.MascotSkin
 import il.rikavon.feature.mascot.model.MascotStage
 import il.rikavon.feature.mascot.ui.MascotEntrance
 import il.rikavon.feature.mascot.ui.MascotView
 import il.rikavon.feature.mascot.ui.UiLanguage
 import kotlinx.coroutines.delay
+import java.time.LocalTime
 
 /**
- * The block screen: the mascot at its worst, entering dramatically, one message, a "try again in" timer,
- * and a single close button. Nothing else to tap.
+ * The block screen (design 1c): a huge "Stop.", the mascot at its worst entering dramatically, the reason
+ * plus the mascot's line, a time-of-day aside, a "try again in" card and one close pill. Always rot-green.
  */
 @Composable
 fun BlockOverlayContent(
     decision: BlockDecision,
     skin: MascotSkin,
+    appLabel: String,
+    limitMinutes: Int,
     message: String,
     reducedMotion: Boolean,
-    dynamicColor: Boolean,
     onClose: () -> Unit,
 ) {
-    RikavonTheme(accent = Color(skin.themeColorArgb), dynamicColor = dynamicColor, reducedMotion = reducedMotion) {
+    RikavonTheme(scheme = rotScheme(), reducedMotion = reducedMotion) {
         var textVisible by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) {
             delay(if (reducedMotion) 0L else AnimationSpecs.BLOCK_TEXT_DELAY_MILLIS.toLong())
             textVisible = true
         }
         val language = UiLanguage.current()
-        val name = skin.name.resolve(language) ?: skin.id
+        val extras = LocalExtraColors.current
+        val reasonLine =
+            when (decision.reason) {
+                BlockReason.LIMIT_REACHED -> stringResource(R.string.block_reason_limit_line, limitMinutes, appLabel)
+                BlockReason.FULL_BLOCK -> stringResource(R.string.block_reason_full_line, appLabel)
+                BlockReason.SCHEDULE -> stringResource(R.string.block_reason_schedule_line, appLabel)
+            }
+        val flavor =
+            stringResource(
+                when (HourBucket.of(LocalTime.now().hour)) {
+                    HourBucket.MORNING -> R.string.block_flavor_morning
+                    HourBucket.DAY -> R.string.block_flavor_day
+                    HourBucket.EVENING -> R.string.block_flavor_evening
+                    HourBucket.NIGHT -> R.string.block_flavor_night
+                },
+            )
         Box(
             modifier =
                 Modifier
@@ -86,6 +105,12 @@ fun BlockOverlayContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
+                Text(
+                    text = stringResource(R.string.block_headline),
+                    style = MaterialTheme.typography.displayLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                Spacer(Modifier.height(18.dp))
                 MascotView(
                     skin = skin,
                     stage = MascotStage.ROTTEN,
@@ -104,7 +129,7 @@ fun BlockOverlayContent(
                             .fillMaxWidth(MASCOT_WIDTH_FRACTION)
                             .aspectRatio(1f),
                 )
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
                 AnimatedVisibility(
                     visible = textVisible,
                     enter =
@@ -125,34 +150,27 @@ fun BlockOverlayContent(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = name,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            text = message,
-                            style = MaterialTheme.typography.headlineMedium,
+                            text = reasonLine + "\n" + message,
+                            style = MaterialTheme.typography.titleLarge,
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onBackground,
+                            modifier = Modifier.widthIn(max = TEXT_MAX_WIDTH),
                         )
-                        Spacer(Modifier.height(18.dp))
-                        RetryTimer(decision = decision)
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            text = flavor,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = extras.onSurfaceMuted,
+                            textAlign = TextAlign.Center,
+                        )
                         Spacer(Modifier.height(28.dp))
-                        Button(
+                        RetryTimer(decision = decision)
+                        Spacer(Modifier.height(14.dp))
+                        PillButton(
+                            text = stringResource(R.string.block_close),
                             onClick = onClose,
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = TouchTarget + 8.dp),
-                            colors =
-                                ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                                ),
-                        ) {
-                            Text(stringResource(R.string.block_close), style = MaterialTheme.typography.labelLarge)
-                        }
+                            modifier = Modifier.widthIn(min = CLOSE_MIN_WIDTH),
+                        )
                     }
                 }
             }
@@ -174,31 +192,30 @@ private fun RetryTimer(decision: BlockDecision) {
     val minutes = (remaining % MILLIS_PER_HOUR) / MILLIS_PER_MINUTE
     val seconds = (remaining % MILLIS_PER_MINUTE) / MILLIS_PER_SECOND
     val clock = if (hours > 0) "%d:%02d:%02d".format(hours, minutes, seconds) else "%02d:%02d".format(minutes, seconds)
-    val reason =
-        stringResource(
-            when (decision.reason) {
-                BlockReason.LIMIT_REACHED -> R.string.block_reason_limit
-                BlockReason.FULL_BLOCK -> R.string.block_reason_full
-                BlockReason.SCHEDULE -> R.string.block_reason_schedule
-            },
-        )
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Row(
+        modifier =
+            Modifier
+                .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(16.dp))
+                .padding(horizontal = 22.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         Text(
-            text = reason,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
+            text = stringResource(R.string.block_try_again_label),
+            style = MaterialTheme.typography.bodyMedium,
+            color = LocalExtraColors.current.onSurfaceMuted,
         )
-        Spacer(Modifier.height(4.dp))
         Text(
-            text = stringResource(R.string.block_try_again_in, clock),
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onBackground,
+            text = clock,
+            style = MaterialTheme.typography.headlineSmall.copy(fontFeatureSettings = "tnum"),
+            color = MaterialTheme.colorScheme.primary,
         )
     }
 }
 
-private const val MASCOT_WIDTH_FRACTION = 0.8f
+private const val MASCOT_WIDTH_FRACTION = 0.6f
+private val TEXT_MAX_WIDTH = 320.dp
+private val CLOSE_MIN_WIDTH = 160.dp
 private const val TICK_MILLIS = 1_000L
 private const val MILLIS_PER_SECOND = 1_000L
 private const val MILLIS_PER_MINUTE = 60_000L

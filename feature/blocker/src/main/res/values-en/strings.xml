@@ -5,6 +5,15 @@
     <string name="service_notification_title">Rikavon is active</string>
     <string name="service_notification_text">Guarding the limits you set</string>
 
+    <string name="block_headline">Stop.</string>
+    <string name="block_reason_limit_line">Your %1$d minutes of %2$s are up.</string>
+    <string name="block_reason_full_line">%1$s is fully blocked.</string>
+    <string name="block_reason_schedule_line">%1$s is blocked by a schedule.</string>
+    <string name="block_flavor_morning">Morning. The phone can wait, the coffee can\'t.</string>
+    <string name="block_flavor_day">Everyone is on lunch break anyway. Eat something.</string>
+    <string name="block_flavor_evening">The evening is long. Some things don\'t move by scrolling.</string>
+    <string name="block_flavor_night">Night. The screen will still be here tomorrow. Sleep, less so.</string>
+    <string name="block_try_again_label">Try again in</string>
     <string name="block_close">Close</string>
     <string name="block_try_again_in">Try again in %1$s</string>
     <string name="block_reason_limit">Today\'s limit for this app is spent</string>
@@ -87,6 +96,16 @@
     <string name="stats_week_better">Less than last week. Nice.</string>
     <string name="stats_week_worse">More than last week.</string>
     <string name="stats_week_same">Same as last week.</string>
+    <string name="stats_daily_screen_time">Daily screen time</string>
+    <string name="stats_delta_less">‎−%1$d%%‎ vs last week</string>
+    <string name="stats_delta_more">‎+%1$d%%‎ vs last week</string>
+    <string name="stats_delta_same">Same as last week</string>
+    <string name="stats_tile_opens">opens today</string>
+    <string name="stats_tile_peak">Peak hour: %1$s</string>
+    <string name="stats_tile_streak">day streak</string>
+    <string name="stats_day_today">Today</string>
+    <string name="stats_app_row">%1$s · %2$d opens</string>
+    <string name="stats_hours_minutes">%1$d:%2$02d</string>
     <string name="stats_per_app">By app</string>
     <string name="stats_app_line">%1$s · %2$d opens</string>
     <string name="stats_of_limit">of %1$s</string>

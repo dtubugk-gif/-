@@ -1,10 +1,13 @@
 {
   "schemaVersion": 1,
   "id": "potato",
-  "name": { "he": "תפוח אדמה", "en": "Potato" },
-  "themeColor": "#D4A45A",
+  "name": {
+    "he": "תפוח אדמה",
+    "en": "Potato"
+  },
+  "themeColor": "#E0B64F",
   "personality": "indifferent",
-  "unlock": { "achievement": "first_clean_day" },
+  "unlock": "free",
   "reaction": "roll",
   "sound": "reaction.wav",
   "stages": {

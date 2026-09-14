@@ -23,6 +23,7 @@ import il.rikavon.core.data.repo.ScheduleRepository
 import il.rikavon.core.data.repo.SettingsRepository
 import il.rikavon.core.data.repo.UsageRepository
 import il.rikavon.core.data.time.TimeSource
+import il.rikavon.core.data.usage.InstalledAppsSource
 import il.rikavon.feature.blocker.R
 import il.rikavon.feature.blocker.engine.BlockDecision
 import il.rikavon.feature.blocker.engine.BlockerEvent
@@ -71,6 +72,8 @@ class BlockerService : LifecycleService() {
     @Inject lateinit var events: BlockerEvents
 
     @Inject lateinit var midnightAlarm: MidnightAlarmScheduler
+
+    @Inject lateinit var installed: InstalledAppsSource
 
     private val engine = EnforcementEngine()
     private val policy = PollingPolicy()
@@ -173,11 +176,15 @@ class BlockerService : LifecycleService() {
         summaries.recordBlock(decision.packageName, decision.reason)
         events.emit(BlockerEvent.Blocked(decision.packageName))
         overlay.show(
-            decision = decision,
-            skin = skin,
-            message = message,
-            appearance = overlay.appearance(prefs.reduceMotion, prefs.dynamicColor),
-            onClose = { dismissAndGoHome(decision.packageName) },
+            OverlayController.Request(
+                decision = decision,
+                skin = skin,
+                appLabel = installed.label(decision.packageName),
+                limitMinutes = limits.byPackage(decision.packageName)?.limitMinutes ?: 0,
+                message = message,
+                appearance = overlay.appearance(prefs.reduceMotion),
+                onClose = { dismissAndGoHome(decision.packageName) },
+            ),
         )
     }
 

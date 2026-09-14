@@ -1,10 +1,16 @@
 {
   "schemaVersion": 1,
   "id": "cat",
-  "name": { "he": "חתול", "en": "Cat" },
-  "themeColor": "#B48CFF",
+  "name": {
+    "he": "חתול",
+    "en": "Cat"
+  },
+  "themeColor": "#E0C26A",
+  "surfaceTint": "#8D94A3",
   "personality": "judgmental",
-  "unlock": { "achievement": "streak_7" },
+  "unlock": {
+    "achievement": "streak_7"
+  },
   "reaction": "turn_away",
   "sound": "reaction.wav",
   "stages": {

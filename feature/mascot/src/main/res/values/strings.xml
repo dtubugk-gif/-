@@ -9,6 +9,9 @@
     <string name="mascot_stage_rotten">רקוב</string>
 
     <string name="gallery_title">מחמדים</string>
+    <string name="gallery_title_design">המחמדים</string>
+    <string name="gallery_subtitle">מי ירקב בשבילך היום?</string>
+    <string name="gallery_selected_now">נבחר עכשיו</string>
     <string name="gallery_selected">נבחר</string>
     <string name="gallery_locked_by">נפתח עם ההישג: %1$s</string>
     <string name="gallery_premium_hint">בפרימיום כל המחמדים פתוחים מיד. גם בלי — כל אחד נפתח בהישג.</string>

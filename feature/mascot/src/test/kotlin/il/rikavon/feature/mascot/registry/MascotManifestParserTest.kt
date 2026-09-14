@@ -28,12 +28,14 @@ class MascotManifestParserTest {
         color: String = "#FF7EB6",
         stages: String = MascotStage.entries.joinToString(",") { stage(it.key) },
         blockBucket: String = "[\"a\", \"b\"]",
+        surfaceTint: String? = null,
     ) = """
         {
           "schemaVersion": 1,
           "id": "$id",
           "name": { "he": "מוח", "en": "Brain" },
           "themeColor": "$color",
+          ${surfaceTint?.let { "\"surfaceTint\": \"$it\"," } ?: ""}
           "personality": "cynical",
           "unlock": $unlock,
           "reaction": "$reaction",
@@ -118,6 +120,18 @@ class MascotManifestParserTest {
         }
         assertThrows(MascotManifestException::class.java) {
             parser.parse("brain", manifest(color = "pink"), allAssetsExist)
+        }
+    }
+
+    @Test
+    fun `surface tint is optional and validated when present`() {
+        assertNull(parser.parse("brain", manifest(), allAssetsExist).surfaceTintArgb)
+        assertEquals(
+            0xFF8D94A3L,
+            parser.parse("brain", manifest(surfaceTint = "#8D94A3"), allAssetsExist).surfaceTintArgb,
+        )
+        assertThrows(MascotManifestException::class.java) {
+            parser.parse("brain", manifest(surfaceTint = "grey"), allAssetsExist)
         }
     }
 

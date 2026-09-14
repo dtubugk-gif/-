@@ -38,6 +38,26 @@ Kotlin warnings are errors (`allWarningsAsErrors = true`). Release signing and P
 
 MVVM + repositories, Hilt for DI, coroutines + Flow everywhere, no `GlobalScope`, no `SharedPreferences`.
 
+### Design system
+
+The UI follows the design canvas (screens 1a–1f + the rot-cycle sheet). Every token lives in `:core:ui`:
+
+| Token | Where | Value |
+|---|---|---|
+| Typeface | `theme/Type.kt`, `res/font/rubik_*.ttf` (OFL, `docs/fonts/OFL-Rubik.txt`) | Rubik 400/500/700/800/900; 88sp "די.", 64sp score, 30sp titles, 15sp body, 13sp labels |
+| Palette | `theme/Color.kt` (`RikavonColors`) | ink `#131110`, surfaces `#161310 / #1d1a15 / #221e19`, track `#26211b`, text `#f4efe6` at 100/60/50 % |
+| Semantic | `theme/Theme.kt` (`LocalExtraColors`) | success `#7dc9a6`, danger `#c9564e`, over-limit `#e08b4f`, default accent `#e0b64f` |
+| Per-mascot theme | `schemeFromAccent(accent, surfaceTint)` | accent = manifest `themeColor`; backgrounds are tinted toward `surfaceTint` (or the accent) at 7–17 % lightness |
+| Block screen | `rotScheme()` | always rot-green `#a3b833` on `#0e120a` / `#1a2113`, whatever the pet |
+| Score colour | `scoreColor(score)` | ≥ 90 green, < 30 red, otherwise the accent (also used by the widget) |
+| Components | `components/Design.kt` | `ScreenTitle`, `SectionLabel`, `SurfaceCard`, `PillButton`, `SegmentPills`, `DotChip`, `StatTile`, `ThinBar`, `SpeechBubble`, `SquareIconButton`, `RikavonBottomBar`, `LockBadge` |
+
+Screens: home = the pet's room (1a with 1b's streak pill and next-limit line), block = 1c, gallery = 1d,
+statistics = 1e, widget = 1f (compact 180×80 dp row, full 250×140 dp card). Home / gallery / statistics /
+settings sit behind the four-tab bottom bar (`RikavonRoot.kt`, state saved per tab); everything else is pushed
+on top with a back arrow. Two canvas decisions are deliberate: the focus score is shown as a number on the home
+screen (the canvas asks for it), and the mascot art is the canvas SVG art converted to Lottie (see below).
+
 ### Data flow
 
 ```
@@ -125,6 +145,7 @@ reaction.wav                                                                    
   "id": "cactus",                          // must equal the folder name
   "name": { "he": "קקטוס", "en": "Cactus" },
   "themeColor": "#7ED957",                 // seeds the whole app theme when selected
+  "surfaceTint": "#8D94A3",                // optional: hue for backgrounds when it should differ from the accent
   "personality": "grumpy",                 // free text; known keys get a localised label
   "unlock": "free",                        // or { "achievement": "streak_7" } (see AchievementId keys)
   "reaction": "pulse",                     // pulse | wilt | flip | turn_away | glitch | roll
@@ -148,16 +169,20 @@ validates a new folder before it reaches a device.
 
 ### Regenerating the built-in art
 
-The six shipped mascots are generated procedurally so the repository has real, animated, RTL-independent
-assets from day one:
+The six shipped mascots are the design-canvas SVGs (`tools/mascots/mascot_art.py`, verbatim) converted to
+Lottie by `tools/mascots/svg_lottie.py` (paths, gradients, transforms → shape layers) and animated per stage
+by the generator: three face variants (healthy / mid / rotten), mould, flies and stink from the rot-cycle
+sheet; colours slide from `#dda94a` toward `#6f6428` as the score drops. Deterministic output:
 
 ```bash
-python3 tools/mascots/generate_lottie.py   # 36 Lottie files, deterministic
+python3 tools/mascots/generate_lottie.py   # 36 Lottie files, 200×200 @ 30 fps
 python3 tools/mascots/generate_sounds.py   # reaction + score sounds (WAV)
 ```
 
-Commissioned replacements are specified in [docs/LOTTIE_ASSETS.md](docs/LOTTIE_ASSETS.md); drop them into the
-folder with the same names and nothing else changes.
+Idle loops: healthy 3.2 s breathing, mid 2.4 s shallow breathing, rotten 2.4 s stepped twitch (the rotten
+files are 9.6 s long so the two fly orbits and the stink lines loop seamlessly). Hand-drawn replacements are
+specified in [docs/LOTTIE_ASSETS.md](docs/LOTTIE_ASSETS.md); drop them into the folder with the same names and
+nothing else changes.
 
 ---
 

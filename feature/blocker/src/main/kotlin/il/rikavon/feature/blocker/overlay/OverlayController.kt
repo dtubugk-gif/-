@@ -32,24 +32,28 @@ class OverlayController @Inject constructor(
     private val sounds: MascotSoundPlayer,
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val windowManager: WindowManager get() =
-        context.getSystemService(
-            Context.WINDOW_SERVICE,
-        ) as WindowManager
+    private val windowManager: WindowManager get() = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private var view: ComposeView? = null
     private var owner: OverlayLifecycleOwner? = null
     private var shownPackage: String? = null
 
+    /** Visual preferences resolved by the caller off the main thread. */
+    data class Appearance(val reducedMotion: Boolean)
+
+    /** Everything the block screen needs, resolved by the service off the main thread. */
+    data class Request(
+        val decision: BlockDecision,
+        val skin: MascotSkin,
+        val appLabel: String,
+        val limitMinutes: Int,
+        val message: String,
+        val appearance: Appearance,
+        val onClose: () -> Unit,
+    )
+
     fun isShowing(packageName: String): Boolean = shownPackage == packageName && view != null
 
-    /** Visual preferences resolved by the caller off the main thread. */
-    data class Appearance(val reducedMotion: Boolean, val dynamicColor: Boolean)
-
-    fun show(decision: BlockDecision, skin: MascotSkin, message: String, appearance: Appearance, onClose: () -> Unit) {
-        mainHandler.post { showOnMain(decision, skin, message, appearance, onClose) }
-    }
-
-    fun appearance(reduceMotion: ReduceMotionMode, dynamicColor: Boolean): Appearance =
+    fun appearance(reduceMotion: ReduceMotionMode): Appearance =
         Appearance(
             reducedMotion =
                 when (reduceMotion) {
@@ -57,20 +61,17 @@ class OverlayController @Inject constructor(
                     ReduceMotionMode.OFF -> false
                     ReduceMotionMode.SYSTEM -> systemReducedMotion(context)
                 },
-            dynamicColor = dynamicColor,
         )
+
+    fun show(request: Request) {
+        mainHandler.post { showOnMain(request) }
+    }
 
     fun hide() {
         mainHandler.post { hideOnMain() }
     }
 
-    private fun showOnMain(
-        decision: BlockDecision,
-        skin: MascotSkin,
-        message: String,
-        appearance: Appearance,
-        onClose: () -> Unit,
-    ) {
+    private fun showOnMain(request: Request) {
         hideOnMain()
         val lifecycleOwner = OverlayLifecycleOwner().also { owner = it }
         val composeView =
@@ -79,12 +80,13 @@ class OverlayController @Inject constructor(
                 setViewTreeSavedStateRegistryOwner(lifecycleOwner)
                 setContent {
                     BlockOverlayContent(
-                        decision = decision,
-                        skin = skin,
-                        message = message,
-                        reducedMotion = appearance.reducedMotion,
-                        dynamicColor = appearance.dynamicColor,
-                        onClose = onClose,
+                        decision = request.decision,
+                        skin = request.skin,
+                        appLabel = request.appLabel,
+                        limitMinutes = request.limitMinutes,
+                        message = request.message,
+                        reducedMotion = request.appearance.reducedMotion,
+                        onClose = request.onClose,
                     )
                 }
             }
@@ -101,16 +103,15 @@ class OverlayController @Inject constructor(
                 ).apply {
                     gravity = Gravity.TOP or Gravity.START
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                        layoutInDisplayCutoutMode =
-                            WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                        layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
                     }
                 }
         runCatching { windowManager.addView(composeView, params) }
             .onSuccess {
                 view = composeView
-                shownPackage = decision.packageName
+                shownPackage = request.decision.packageName
                 lifecycleOwner.moveTo(Lifecycle.State.RESUMED)
-                skin.soundAsset?.let { sounds.play(it, BLOCK_SOUND_VOLUME) }
+                request.skin.soundAsset?.let { sounds.play(it, BLOCK_SOUND_VOLUME) }
             }
     }
 
@@ -124,9 +125,7 @@ class OverlayController @Inject constructor(
     }
 
     /** Minimal lifecycle so Compose (and Lottie's idle loop) run and stop with the window. */
-    private class OverlayLifecycleOwner :
-        LifecycleOwner,
-        SavedStateRegistryOwner {
+    private class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
         private val registry = LifecycleRegistry(this)
         private val savedStateController = SavedStateRegistryController.create(this)
 

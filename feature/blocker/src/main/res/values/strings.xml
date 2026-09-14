@@ -5,6 +5,15 @@
     <string name="service_notification_title">רקבון פעיל</string>
     <string name="service_notification_text">שומר על הגבולות שהגדרת</string>
 
+    <string name="block_headline">די.</string>
+    <string name="block_reason_limit_line">נגמרו %1$d הדקות של %2$s.</string>
+    <string name="block_reason_full_line">%1$s חסומה לגמרי.</string>
+    <string name="block_reason_schedule_line">%1$s נחסמה לפי לוח הזמנים.</string>
+    <string name="block_flavor_morning">בוקר. הטלפון יחכה, הקפה לא.</string>
+    <string name="block_flavor_day">גם ככה כולם בהפסקת צהריים. תאכל משהו.</string>
+    <string name="block_flavor_evening">הערב עוד ארוך. יש דברים שלא זזים בגלילה.</string>
+    <string name="block_flavor_night">לילה. המסך יהיה פה גם מחר. השינה פחות.</string>
+    <string name="block_try_again_label">נסה שוב בעוד</string>
     <string name="block_close">סגירה</string>
     <string name="block_try_again_in">נסה שוב בעוד %1$s</string>
     <string name="block_reason_limit">הגבול היומי לאפליקציה הזו נגמר</string>
@@ -87,6 +96,16 @@
     <string name="stats_week_better">פחות מהשבוע הקודם. יפה.</string>
     <string name="stats_week_worse">יותר מהשבוע הקודם.</string>
     <string name="stats_week_same">כמו השבוע הקודם.</string>
+    <string name="stats_daily_screen_time">זמן מסך יומי</string>
+    <string name="stats_delta_less">‎−%1$d%%‎ משבוע שעבר</string>
+    <string name="stats_delta_more">‎+%1$d%%‎ משבוע שעבר</string>
+    <string name="stats_delta_same">כמו שבוע שעבר</string>
+    <string name="stats_tile_opens">פתיחות היום</string>
+    <string name="stats_tile_peak">שעת שיא: %1$s</string>
+    <string name="stats_tile_streak">ימים ברצף</string>
+    <string name="stats_day_today">היום</string>
+    <string name="stats_app_row">%1$s · %2$d פתיחות</string>
+    <string name="stats_hours_minutes">%1$d:%2$02d</string>
     <string name="stats_per_app">לפי אפליקציה</string>
     <string name="stats_app_line">%1$s · %2$d פתיחות</string>
     <string name="stats_of_limit">מתוך %1$s</string>

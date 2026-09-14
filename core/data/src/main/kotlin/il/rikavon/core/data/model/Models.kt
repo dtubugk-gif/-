@@ -146,7 +146,7 @@ data class Settings(
     val soundsEnabled: Boolean,
 ) {
     companion object {
-        const val DEFAULT_MASCOT_ID = "brain"
+        const val DEFAULT_MASCOT_ID = "potato"
         const val DEFAULT_SUMMARY_HOUR = 21
         val DEFAULT =
             Settings(

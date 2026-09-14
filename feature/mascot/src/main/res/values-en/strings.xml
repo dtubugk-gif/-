@@ -9,6 +9,9 @@
     <string name="mascot_stage_rotten">Rotten</string>
 
     <string name="gallery_title">Pets</string>
+    <string name="gallery_title_design">The pets</string>
+    <string name="gallery_subtitle">Who rots for you today?</string>
+    <string name="gallery_selected_now">Selected</string>
     <string name="gallery_selected">Selected</string>
     <string name="gallery_locked_by">Unlocks with: %1$s</string>
     <string name="gallery_premium_hint">Premium unlocks every pet at once. Without it, each one is earned with an achievement.</string>

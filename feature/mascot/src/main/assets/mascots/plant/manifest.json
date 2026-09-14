@@ -1,10 +1,15 @@
 {
   "schemaVersion": 1,
   "id": "plant",
-  "name": { "he": "עציץ", "en": "Plant" },
-  "themeColor": "#6EDB8F",
+  "name": {
+    "he": "עציץ",
+    "en": "Plant"
+  },
+  "themeColor": "#7DC9A6",
   "personality": "dramatic",
-  "unlock": "free",
+  "unlock": {
+    "achievement": "first_clean_day"
+  },
   "reaction": "wilt",
   "sound": "reaction.wav",
   "stages": {

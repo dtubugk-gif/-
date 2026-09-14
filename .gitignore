@@ -12,3 +12,5 @@ build/
 /keystore/*.keystore
 /keystore/*.properties
 .kotlin/
+__pycache__/
+*.pyc

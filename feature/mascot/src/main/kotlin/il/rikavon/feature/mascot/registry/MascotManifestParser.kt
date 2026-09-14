@@ -23,6 +23,7 @@ internal data class ManifestDto(
     val id: String,
     val name: Map<String, String>,
     val themeColor: String,
+    val surfaceTint: String? = null,
     val personality: String,
     val unlock: JsonElement,
     val reaction: String,
@@ -56,6 +57,7 @@ class MascotManifestParser(private val json: Json = Json { ignoreUnknownKeys = t
 
         val color =
             parseColor(dto.themeColor) ?: throw MascotManifestException("$folder: bad themeColor '${dto.themeColor}'")
+        val surfaceTint = parseSurfaceTint(folder, dto.surfaceTint)
         val reaction =
             ReactionPreset.fromKey(dto.reaction)
                 ?: throw MascotManifestException("$folder: unknown reaction '${dto.reaction}'")
@@ -110,6 +112,7 @@ class MascotManifestParser(private val json: Json = Json { ignoreUnknownKeys = t
             id = dto.id,
             name = Localized(dto.name),
             themeColorArgb = color,
+            surfaceTintArgb = surfaceTint,
             personality = dto.personality,
             unlock = unlock,
             reaction = reaction,
@@ -119,6 +122,9 @@ class MascotManifestParser(private val json: Json = Json { ignoreUnknownKeys = t
             summaries = summaries,
         )
     }
+
+    private fun parseSurfaceTint(folder: String, text: String?): Long? =
+        text?.let { parseColor(it) ?: throw MascotManifestException("$folder: bad surfaceTint '$it'") }
 
     private fun parseUnlock(folder: String, element: JsonElement): UnlockRule {
         if (element is JsonPrimitive && element.contentOrNull == FREE) return UnlockRule.Free

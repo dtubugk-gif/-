@@ -96,6 +96,8 @@ class _Rand:
 
 def hex_to_rgb(hex_color: str):
     h = hex_color.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
     return tuple(int(h[i : i + 2], 16) / 255 for i in (0, 2, 4))
 
 

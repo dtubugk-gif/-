@@ -107,18 +107,19 @@ Rationale for every category:
 
 ## 4. Screenshots to capture (phone, 1080×2400, dark)
 
-1. Home – healthy brain, tracked apps list, streak pill. (RTL, Hebrew)
-2. Home – rotten brain with flies, same layout, one app over its limit.
-3. Block overlay mid-entrance (mascot dropping in) with a Hebrew block message and the retry timer.
-4. Gallery grid – six mascots, one locked with the achievement requirement.
-5. Gallery preview sheet with the stage slider dragged to "rotting".
+1. Home (the pet's room, design 1a) – healthy potato, speech bubble, score 100 in green, "היום" rows with thin
+   bars, streak pill, bottom bar. (RTL, Hebrew)
+2. Home – rotten potato with flies, score in red, one app row orange over its limit, "next limit" line.
+3. Block screen (1c) – "די." headline, twitching mascot, bold reason + the pet's line, retry timer card, green pill.
+4. Gallery (1d) – hero card "נבחר עכשיו", 3-column grid, two locked cards with the achievement badge.
+5. Gallery – stage slider dragged to "rotting" so the hero shows the rot with flies.
 6. Limit editor – slider at 45 min, full-block switch, today's progress bar.
 7. Schedule editor – "sleep" preset, days chips, time fields, app checklist.
-8. Statistics – 7-day minutes chart, opens chart, peak hours, week comparison.
+8. Statistics (1e) – range pills, daily chart with "היום" highlighted, "−18% משבוע שעבר", the three tiles.
 9. Score explainer – today's breakdown card.
 10. Settings – strict mode, summary hour slider, reduce-motion chips, language chips.
 11. Onboarding – usage-access page with the wilted mascot.
-12. Widget – both sizes on a home screen.
+12. Widget (1f) – the compact row and the full card with the quote and the five-segment bar on one home screen.
 
 Plus the same 12 in English for the en-US listing, and one feature graphic (1024×500): the six mascots
 in a row, healthy on the left fading to rotten on the right, dark background, app name in both languages.

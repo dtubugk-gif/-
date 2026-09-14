@@ -10,8 +10,10 @@ import il.rikavon.core.data.repo.SettingsRepository
 import il.rikavon.feature.mascot.model.MascotSkin
 import il.rikavon.feature.mascot.model.MascotStage
 import il.rikavon.feature.mascot.registry.MascotRegistry
+import il.rikavon.feature.mascot.registry.MascotTexts
 import il.rikavon.feature.mascot.registry.MascotUnlocks
 import il.rikavon.feature.mascot.sound.MascotSoundPlayer
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -29,11 +31,17 @@ data class GalleryItem(
 
 data class GalleryUiState(
     val items: List<GalleryItem> = emptyList(),
+    val selected: GalleryItem? = null,
     val currentStage: MascotStage = MascotStage.PRISTINE,
+    /** Stage shown in the hero card; null follows the live stage. */
+    val previewStage: MascotStage? = null,
     val tier: Tier = Tier.FREE,
     val validationErrors: List<String> = emptyList(),
     val loaded: Boolean = false,
-)
+    val notice: AchievementId? = null,
+) {
+    val heroStage: MascotStage get() = previewStage ?: currentStage
+}
 
 @HiltViewModel
 class MascotGalleryViewModel @Inject constructor(
@@ -41,43 +49,68 @@ class MascotGalleryViewModel @Inject constructor(
     private val settings: SettingsRepository,
     achievements: AchievementRepository,
     private val sounds: MascotSoundPlayer,
+    private val texts: MascotTexts,
     currentStageSource: CurrentStageSource,
 ) : ViewModel() {
+    private val previewStage = MutableStateFlow<MascotStage?>(null)
+    private val notice = MutableStateFlow<AchievementId?>(null)
+
     val state: StateFlow<GalleryUiState> =
         combine(
             registry.skins.onStart { registry.load() },
             settings.settings,
             achievements.unlockedIds,
             currentStageSource.stage,
-            registry.errors,
-        ) { skins, prefs, unlocked, stage, errors ->
+            combine(registry.errors, previewStage, notice) { e, p, n -> Triple(e, p, n) },
+        ) { skins, prefs, unlocked, stage, extras ->
+            val (errors, preview, currentNotice) = extras
             val tier = Tier.of(prefs.premium)
+            val items =
+                skins.map { skin ->
+                    GalleryItem(
+                        skin = skin,
+                        unlocked = MascotUnlocks.isUnlocked(skin, tier, unlocked),
+                        selected = skin.id == prefs.selectedMascotId,
+                        requiredAchievement = MascotUnlocks.requiredAchievement(skin),
+                    )
+                }
             GalleryUiState(
-                items =
-                    skins.map { skin ->
-                        GalleryItem(
-                            skin = skin,
-                            unlocked = MascotUnlocks.isUnlocked(skin, tier, unlocked),
-                            selected = skin.id == prefs.selectedMascotId,
-                            requiredAchievement = MascotUnlocks.requiredAchievement(skin),
-                        )
-                    },
+                items = items,
+                selected = items.firstOrNull { it.selected } ?: items.firstOrNull(),
                 currentStage = stage,
+                previewStage = preview,
                 tier = tier,
                 validationErrors = errors,
                 loaded = true,
+                notice = currentNotice,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), GalleryUiState())
 
-    fun select(skin: MascotSkin) {
+    /** Selects an unlocked mascot; a locked one just surfaces its requirement. */
+    fun choose(item: GalleryItem) {
+        if (!item.unlocked) {
+            notice.value = item.requiredAchievement
+            return
+        }
         viewModelScope.launch {
-            settings.setMascot(skin.id)
-            skin.soundAsset?.let { sounds.play(it) }
+            settings.setMascot(item.skin.id)
+            previewStage.value = null
+            item.skin.soundAsset?.let { sounds.play(it) }
         }
     }
 
+    fun preview(stage: MascotStage?) {
+        previewStage.value = stage
+    }
+
+    fun quote(skin: MascotSkin, stage: MascotStage, language: String): String = texts.stageText(skin, stage, language)
+
     fun playReaction(skin: MascotSkin) {
         skin.soundAsset?.let { sounds.play(it) }
+    }
+
+    fun clearNotice() {
+        notice.value = null
     }
 
     companion object {
