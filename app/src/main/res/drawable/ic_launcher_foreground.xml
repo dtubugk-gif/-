@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Back copy (faded) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillAlpha="0.5"
+        android:pathData="M42,28 h20 l12,12 v26 a4,4 0 0 1 -4,4 h-28 a4,4 0 0 1 -4,-4 v-34 a4,4 0 0 1 4,-4 z" />
+    <!-- Front copy -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M34,38 h20 l12,12 v26 a4,4 0 0 1 -4,4 h-28 a4,4 0 0 1 -4,-4 v-34 a4,4 0 0 1 4,-4 z" />
+    <!-- Folded corner -->
+    <path
+        android:fillColor="#331E6FD9"
+        android:pathData="M54,38 v12 h12 z" />
+    <!-- Check mark -->
+    <path
+        android:strokeColor="#FF1E6FD9"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M41,61 l6,6 l12,-13" />
+</vector>

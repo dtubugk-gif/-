@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">OneCopy</string>
+    <string name="close">Close</string>
+    <string name="preview_copies_title">All copies (%1$d)</string>
+    <string name="preview_hint">All copies are byte-for-byte identical. Only the location differs.</string>
+    <string name="delete_group_duplicates">Delete %1$d redundant copies (%2$s)</string>
+
+    <!-- Start / scan screen -->
+    <string name="scan_title">Find duplicate files</string>
+    <string name="scan_description">Scans your phone, finds files that are exact copies of each other and shows where they are. Delete all duplicates in one tap, or one by one.</string>
+    <string name="perm_media_title">Photos, videos and audio</string>
+    <string name="perm_media_desc">Needed to scan your media library.</string>
+    <string name="perm_partial_desc">Only the items you picked are accessible. Grant full access to scan everything.</string>
+    <string name="perm_all_files_title">All files access</string>
+    <string name="perm_all_files_desc">Optional. Also scans documents, downloads and other files, and deletes without a system confirmation for every batch.</string>
+    <string name="perm_granted">Granted</string>
+    <string name="perm_missing">Not granted</string>
+    <string name="perm_grant">Allow</string>
+    <string name="perm_open_settings">Open settings</string>
+    <string name="scope_title">What to scan</string>
+    <string name="scope_images">Photos</string>
+    <string name="scope_videos">Videos</string>
+    <string name="scope_audio">Audio</string>
+    <string name="scope_other">Documents &amp; other files</string>
+    <string name="scope_other_needs_permission">Requires all files access</string>
+    <string name="scope_empty">Pick at least one file type.</string>
+    <string name="start_scan">Start scan</string>
+    <string name="cancel">Cancel</string>
+    <string name="show_last_results">Show last results</string>
+
+    <!-- Progress -->
+    <string name="phase_listing">Listing files…</string>
+    <string name="phase_sizes">Comparing sizes…</string>
+    <string name="phase_quick_hash">Quick check of candidates…</string>
+    <string name="phase_full_hash">Verifying duplicates byte by byte…</string>
+    <string name="progress_found">%1$d files found</string>
+    <string name="progress_count">%1$d of %2$d</string>
+    <string name="scan_failed">Scan failed: %1$s</string>
+
+    <!-- Results -->
+    <string name="results_title">Duplicates</string>
+    <string name="summary_groups">%1$d groups of duplicates</string>
+    <string name="summary_files">%1$d redundant files</string>
+    <string name="summary_space">%1$s can be freed</string>
+    <string name="summary_scanned">%1$d files scanned</string>
+    <string name="no_duplicates">No duplicates found</string>
+    <string name="no_duplicates_desc">Your phone is clean. No identical files were found.</string>
+    <string name="rescan">Scan again</string>
+    <string name="back">Back</string>
+    <string name="filter_all">All</string>
+    <string name="filter_images">Photos</string>
+    <string name="filter_videos">Videos</string>
+    <string name="filter_audio">Audio</string>
+    <string name="filter_other">Other</string>
+    <string name="copies_count">%1$d copies</string>
+    <string name="each_size">%1$s each</string>
+    <string name="wasted">%1$s wasted</string>
+    <string name="keep">Keep this one</string>
+    <string name="kept">Kept</string>
+    <string name="delete_this">Delete this file</string>
+    <string name="open_file">Open</string>
+    <string name="open_failed">No app can open this file.</string>
+    <string name="expand">Show files</string>
+    <string name="collapse">Hide files</string>
+    <string name="delete_selected">Delete %1$d selected (%2$s)</string>
+    <string name="nothing_selected">Nothing selected</string>
+    <string name="select_all_duplicates">Select all duplicates</string>
+    <string name="clear_selection">Clear selection</string>
+    <string name="selection_hint">One copy in each group is kept (★). Tap ★ to choose a different one.</string>
+
+    <!-- Delete dialogs -->
+    <string name="confirm_delete_title">Delete %1$d files?</string>
+    <string name="confirm_delete_body">%1$d files will be deleted and %2$s will be freed. One copy in every group stays. This cannot be undone.</string>
+    <string name="confirm_delete_one_title">Delete this file?</string>
+    <string name="confirm_delete_one_body">%1$s\n\nThis cannot be undone.</string>
+    <string name="delete">Delete</string>
+    <string name="deleting_title">Deleting…</string>
+    <string name="deleting_progress">%1$d of %2$d</string>
+    <string name="deleting_system_prompt">Confirm the system prompt to continue.</string>
+    <string name="deleted_summary">Deleted %1$d files, freed %2$s</string>
+    <string name="deleted_partial">Deleted %1$d files, freed %2$s. %3$d could not be deleted.</string>
+    <string name="delete_cancelled">Deletion cancelled</string>
+    <string name="delete_failed">Nothing was deleted</string>
+
+    <!-- Accessibility -->
+    <string name="cd_thumbnail">Preview</string>
+    <string name="cd_video">Video</string>
+</resources>

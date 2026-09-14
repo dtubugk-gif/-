@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">עותק אחד</string>
+    <string name="close">סגור</string>
+    <string name="preview_copies_title">כל העותקים (%1$d)</string>
+    <string name="preview_hint">כל העותקים זהים לחלוטין בתוכן. ההבדל היחיד הוא המיקום.</string>
+    <string name="delete_group_duplicates">מחק %1$d עותקים מיותרים (%2$s)</string>
+
+    <!-- Start / scan screen -->
+    <string name="scan_title">מציאת קבצים כפולים</string>
+    <string name="scan_description">האפליקציה סורקת את הטלפון, מוצאת קבצים שהם עותקים זהים לחלוטין זה של זה ומראה איפה הם נמצאים. אפשר למחוק את כל הכפילויות בלחיצה אחת, או אחת-אחת.</string>
+    <string name="perm_media_title">תמונות, סרטונים ואודיו</string>
+    <string name="perm_media_desc">נדרש כדי לסרוק את ספריית המדיה.</string>
+    <string name="perm_partial_desc">ניתנה גישה רק לפריטים שנבחרו. כדי לסרוק הכול, יש לאשר גישה מלאה.</string>
+    <string name="perm_all_files_title">גישה לכל הקבצים</string>
+    <string name="perm_all_files_desc">אופציונלי. סורק גם מסמכים, הורדות וקבצים אחרים, ומוחק בלי אישור מערכת על כל קבוצה.</string>
+    <string name="perm_granted">אושרה</string>
+    <string name="perm_missing">לא אושרה</string>
+    <string name="perm_grant">אשר</string>
+    <string name="perm_open_settings">פתח הגדרות</string>
+    <string name="scope_title">מה לסרוק</string>
+    <string name="scope_images">תמונות</string>
+    <string name="scope_videos">סרטונים</string>
+    <string name="scope_audio">אודיו</string>
+    <string name="scope_other">מסמכים וקבצים אחרים</string>
+    <string name="scope_other_needs_permission">דורש גישה לכל הקבצים</string>
+    <string name="scope_empty">יש לבחור לפחות סוג קבצים אחד.</string>
+    <string name="start_scan">התחל סריקה</string>
+    <string name="cancel">ביטול</string>
+    <string name="show_last_results">הצג תוצאות אחרונות</string>
+
+    <!-- Progress -->
+    <string name="phase_listing">אוסף רשימת קבצים…</string>
+    <string name="phase_sizes">משווה גדלים…</string>
+    <string name="phase_quick_hash">בדיקה מהירה של מועמדים…</string>
+    <string name="phase_full_hash">אימות כפילויות בית אחר בית…</string>
+    <string name="progress_found">נמצאו %1$d קבצים</string>
+    <string name="progress_count">%1$d מתוך %2$d</string>
+    <string name="scan_failed">הסריקה נכשלה: %1$s</string>
+
+    <!-- Results -->
+    <string name="results_title">כפילויות</string>
+    <string name="summary_groups">%1$d קבוצות של כפילויות</string>
+    <string name="summary_files">%1$d קבצים מיותרים</string>
+    <string name="summary_space">אפשר לפנות %1$s</string>
+    <string name="summary_scanned">נסרקו %1$d קבצים</string>
+    <string name="no_duplicates">לא נמצאו כפילויות</string>
+    <string name="no_duplicates_desc">הטלפון נקי. לא נמצאו קבצים זהים.</string>
+    <string name="rescan">סרוק שוב</string>
+    <string name="back">חזרה</string>
+    <string name="filter_all">הכול</string>
+    <string name="filter_images">תמונות</string>
+    <string name="filter_videos">סרטונים</string>
+    <string name="filter_audio">אודיו</string>
+    <string name="filter_other">אחר</string>
+    <string name="copies_count">%1$d עותקים</string>
+    <string name="each_size">%1$s כל אחד</string>
+    <string name="wasted">%1$s מיותר</string>
+    <string name="keep">שמור את זה</string>
+    <string name="kept">נשמר</string>
+    <string name="delete_this">מחק קובץ זה</string>
+    <string name="open_file">פתח</string>
+    <string name="open_failed">אין אפליקציה שיכולה לפתוח את הקובץ.</string>
+    <string name="expand">הצג קבצים</string>
+    <string name="collapse">הסתר קבצים</string>
+    <string name="delete_selected">מחק %1$d מסומנים (%2$s)</string>
+    <string name="nothing_selected">לא סומן כלום</string>
+    <string name="select_all_duplicates">סמן את כל הכפילויות</string>
+    <string name="clear_selection">נקה סימון</string>
+    <string name="selection_hint">בכל קבוצה נשמר עותק אחד (★). לחיצה על ★ בוחרת עותק אחר לשמירה.</string>
+
+    <!-- Delete dialogs -->
+    <string name="confirm_delete_title">למחוק %1$d קבצים?</string>
+    <string name="confirm_delete_body">יימחקו %1$d קבצים ויתפנו %2$s. בכל קבוצה יישאר עותק אחד. אי אפשר לבטל את הפעולה.</string>
+    <string name="confirm_delete_one_title">למחוק את הקובץ?</string>
+    <string name="confirm_delete_one_body">%1$s\n\nאי אפשר לבטל את הפעולה.</string>
+    <string name="delete">מחק</string>
+    <string name="deleting_title">מוחק…</string>
+    <string name="deleting_progress">%1$d מתוך %2$d</string>
+    <string name="deleting_system_prompt">יש לאשר את חלון המערכת כדי להמשיך.</string>
+    <string name="deleted_summary">נמחקו %1$d קבצים, התפנו %2$s</string>
+    <string name="deleted_partial">נמחקו %1$d קבצים, התפנו %2$s. %3$d קבצים לא נמחקו.</string>
+    <string name="delete_cancelled">המחיקה בוטלה</string>
+    <string name="delete_failed">שום דבר לא נמחק</string>
+
+    <!-- Accessibility -->
+    <string name="cd_thumbnail">תצוגה מקדימה</string>
+    <string name="cd_video">סרטון</string>
+</resources>
