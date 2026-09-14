@@ -12,6 +12,7 @@
   },
   "reaction": "wilt",
   "sound": "reaction.wav",
+  "voice": { "pitch": 1.15, "rate": 0.85 },
   "stages": {
     "100": {
       "asset": "stage_100.json",

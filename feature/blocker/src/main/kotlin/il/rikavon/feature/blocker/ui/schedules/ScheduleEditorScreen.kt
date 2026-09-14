@@ -89,7 +89,6 @@ fun ScheduleEditorScreen(onBack: () -> Unit, viewModel: ScheduleEditorViewModel 
                 secondaryText = if (editing) stringResource(R.string.schedule_delete) else null,
                 onSecondary = if (editing) ({ confirmDelete = true }) else null,
                 secondaryDestructive = true,
-                modifier = Modifier.padding(bottom = Spacing.sm),
             )
         },
         containerColor = MaterialTheme.colorScheme.background,

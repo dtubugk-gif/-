@@ -12,6 +12,7 @@
   },
   "reaction": "flip",
   "sound": "reaction.wav",
+  "voice": { "pitch": 1.35, "rate": 1.05 },
   "stages": {
     "100": {
       "asset": "stage_100.json",

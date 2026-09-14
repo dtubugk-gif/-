@@ -108,5 +108,5 @@ loop without a seam.
 | File | Purpose | Spec |
 |---|---|---|
 | `<id>/reaction.json` | replaces the transform-based long-press reaction | 1.1 s, non-looping; parser support would be a one-line addition in `MascotManifestParser` |
-| `<id>/reaction.wav` | reaction sound | ≤ 0.5 s, mono 22.05 kHz 16-bit, peak −6 dBFS; current files are synthesised |
+| `<id>/reaction.wav` | long-press vocalisation | ≤ 0.7 s, mono 22.05 kHz 16-bit, peak −2 dBFS; current files are formant-synthesised voices in each pet's character |
 | `sounds/score_up.wav`, `sounds/score_down.wav` | score change sounds | ≤ 0.6 s, same format |

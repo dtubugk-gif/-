@@ -12,6 +12,7 @@
   },
   "reaction": "glitch",
   "sound": "reaction.wav",
+  "voice": { "pitch": 0.6, "rate": 1.15 },
   "stages": {
     "100": {
       "asset": "stage_100.json",

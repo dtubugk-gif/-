@@ -148,9 +148,13 @@ private fun ScheduleRow(
 ) {
     val locale = Locale.getDefault()
     val days =
-        orderedDays()
-            .filter { it in schedule.days }
-            .joinToString(" ") { it.getDisplayName(TextStyle.SHORT, locale) }
+        if (schedule.days.size == DayOfWeek.entries.size) {
+            stringResource(R.string.schedules_every_day)
+        } else {
+            orderedDays()
+                .filter { it in schedule.days }
+                .joinToString(" ") { it.getDisplayName(TextStyle.SHORT, locale) }
+        }
     val summary =
         stringResource(
             R.string.schedules_days_summary,

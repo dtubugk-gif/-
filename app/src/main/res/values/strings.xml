@@ -171,4 +171,6 @@
     <string name="onboarding_language_label">Language</string>
     <string name="language_english">English</string>
     <string name="language_hebrew">עברית</string>
+    <string name="settings_voice">Voice</string>
+    <string name="settings_voice_hint">The pet reads its lines aloud (device text-to-speech)</string>
 </resources>

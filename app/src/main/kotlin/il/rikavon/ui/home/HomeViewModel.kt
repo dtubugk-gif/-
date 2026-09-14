@@ -21,6 +21,7 @@ import il.rikavon.feature.mascot.model.MascotStage
 import il.rikavon.feature.mascot.registry.MascotTexts
 import il.rikavon.feature.mascot.registry.SelectedMascot
 import il.rikavon.feature.mascot.sound.MascotSoundPlayer
+import il.rikavon.feature.mascot.sound.MascotVoice
 import il.rikavon.feature.mascot.ui.MascotEffect
 import il.rikavon.feature.mascot.ui.MascotEffectTrigger
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -66,6 +67,7 @@ data class HomeUiState(
     val effect: MascotEffectTrigger? = null,
     val trackingEnabled: Boolean = true,
     val soundsEnabled: Boolean = true,
+    val voiceEnabled: Boolean = true,
     val mascotLine: String = "",
     val greeting: Greeting = Greeting.MORNING,
     val date: LocalDate = LocalDate.now(),
@@ -83,6 +85,7 @@ class HomeViewModel @Inject constructor(
     private val permissions: PermissionChecker,
     private val texts: MascotTexts,
     private val sounds: MascotSoundPlayer,
+    private val voice: MascotVoice,
     private val starter: ServiceStarter,
     private val time: TimeSource,
 ) : ViewModel() {
@@ -121,6 +124,7 @@ class HomeViewModel @Inject constructor(
                 effect = currentEffect,
                 trackingEnabled = prefs.trackingEnabled,
                 soundsEnabled = prefs.soundsEnabled,
+                voiceEnabled = prefs.voiceEnabled,
                 mascotLine = line,
                 greeting = greetingFor(time.localTime().hour),
                 date = time.today(),
@@ -156,7 +160,16 @@ class HomeViewModel @Inject constructor(
 
     fun tapText(language: String): String {
         val skin = state.value.skin ?: return ""
-        return texts.stageText(skin, state.value.stage, language).also { mascotLine.value = it }
+        return texts.stageText(skin, state.value.stage, language).also {
+            mascotLine.value = it
+            speak(it, language)
+        }
+    }
+
+    /** The pet says [line] out loud when both sounds and the voice are on. */
+    private fun speak(line: String, language: String) {
+        val skin = state.value.skin ?: return
+        if (state.value.soundsEnabled && state.value.voiceEnabled) voice.speak(line, skin.voice, language)
     }
 
     /** A fresh line for the speech bubble when nothing was tapped yet. */

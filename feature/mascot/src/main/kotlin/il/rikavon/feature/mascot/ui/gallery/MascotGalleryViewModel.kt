@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import il.rikavon.core.data.domain.Tier
 import il.rikavon.core.data.model.AchievementId
+import il.rikavon.core.data.model.Settings
 import il.rikavon.core.data.repo.AchievementRepository
 import il.rikavon.core.data.repo.SettingsRepository
 import il.rikavon.feature.mascot.model.MascotSkin
@@ -13,6 +14,7 @@ import il.rikavon.feature.mascot.registry.MascotRegistry
 import il.rikavon.feature.mascot.registry.MascotTexts
 import il.rikavon.feature.mascot.registry.MascotUnlocks
 import il.rikavon.feature.mascot.sound.MascotSoundPlayer
+import il.rikavon.feature.mascot.sound.MascotVoice
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -49,11 +51,15 @@ class MascotGalleryViewModel @Inject constructor(
     private val settings: SettingsRepository,
     achievements: AchievementRepository,
     private val sounds: MascotSoundPlayer,
+    private val voice: MascotVoice,
     private val texts: MascotTexts,
     currentStageSource: CurrentStageSource,
 ) : ViewModel() {
     private val previewStage = MutableStateFlow<MascotStage?>(null)
     private val notice = MutableStateFlow<AchievementId?>(null)
+
+    private val latestSettings: StateFlow<Settings?> =
+        settings.settings.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
 
     val state: StateFlow<GalleryUiState> =
         combine(
@@ -104,6 +110,13 @@ class MascotGalleryViewModel @Inject constructor(
     }
 
     fun quote(skin: MascotSkin, stage: MascotStage, language: String): String = texts.stageText(skin, stage, language)
+
+    /** A tapped hero says a fresh line out loud (the gallery is the place to hear the voices). */
+    fun say(skin: MascotSkin, stage: MascotStage, language: String): String =
+        quote(skin, stage, language).also { line ->
+            val prefs = latestSettings.value
+            if (prefs == null || (prefs.soundsEnabled && prefs.voiceEnabled)) voice.speak(line, skin.voice, language)
+        }
 
     fun playReaction(skin: MascotSkin) {
         skin.soundAsset?.let { sounds.play(it) }

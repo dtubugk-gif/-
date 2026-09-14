@@ -122,16 +122,9 @@ fun StatsScreen(
                     options = StatsRange.entries,
                     selected = state.range,
                     onSelect = viewModel::setRange,
-                    label = {
-                        stringResource(
-                            if (it ==
-                                StatsRange.WEEK
-                            ) {
-                                R.string.stats_range_7
-                            } else {
-                                R.string.stats_range_30
-                            },
-                        )
+                    label = { range ->
+                        val week = range == StatsRange.WEEK
+                        stringResource(if (week) R.string.stats_range_7 else R.string.stats_range_30)
                     },
                     modifier = Modifier.padding(horizontal = ScreenPadding, vertical = Spacing.sm).fillMaxWidth(),
                 )
@@ -163,14 +156,10 @@ fun StatsScreen(
                                         },
                                     style = MaterialTheme.typography.labelMedium,
                                     color =
-                                        if (delta <
-                                            0
-                                        ) {
-                                            extras.success
-                                        } else if (delta > 0) {
-                                            extras.danger
-                                        } else {
-                                            extras.onSurfaceMuted
+                                        when {
+                                            delta < 0 -> extras.success
+                                            delta > 0 -> extras.danger
+                                            else -> extras.onSurfaceMuted
                                         },
                                 )
                             }

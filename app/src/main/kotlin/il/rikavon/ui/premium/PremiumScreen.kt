@@ -1,5 +1,6 @@
 package il.rikavon.ui.premium
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -74,26 +74,22 @@ fun PremiumScreen(onBack: () -> Unit, viewModel: PremiumViewModel = hiltViewMode
         },
         bottomBar = {
             if (state.tier != Tier.PREMIUM) {
-                Column {
-                    BottomActionBar(
-                        primaryText = stringResource(R.string.premium_buy),
-                        onPrimary = viewModel::purchase,
-                        primaryEnabled = state.billingAvailable,
-                        modifier = Modifier.padding(bottom = if (state.billingAvailable) Spacing.sm else 0.dp),
-                    )
+                // The note sits above the bar so the bar stays the last thing before the navigation bar inset.
+                Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
                     if (!state.billingAvailable) {
                         Text(
                             text = stringResource(R.string.premium_unavailable),
                             style = MaterialTheme.typography.bodySmall,
                             color = LocalExtraColors.current.onSurfaceMuted,
                             textAlign = TextAlign.Center,
-                            modifier =
-                                Modifier.fillMaxWidth().padding(
-                                    horizontal = ScreenPadding,
-                                    vertical = Spacing.sm,
-                                ),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = ScreenPadding),
                         )
                     }
+                    BottomActionBar(
+                        primaryText = stringResource(R.string.premium_buy),
+                        onPrimary = viewModel::purchase,
+                        primaryEnabled = state.billingAvailable,
+                    )
                 }
             }
         },

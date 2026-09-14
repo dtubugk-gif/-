@@ -13,6 +13,7 @@
   },
   "reaction": "turn_away",
   "sound": "reaction.wav",
+  "voice": { "pitch": 1.2, "rate": 0.9 },
   "stages": {
     "100": {
       "asset": "stage_100.json",

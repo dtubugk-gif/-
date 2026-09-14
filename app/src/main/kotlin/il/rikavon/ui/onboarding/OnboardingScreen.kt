@@ -221,8 +221,7 @@ fun OnboardingScreen(onDone: () -> Unit, viewModel: OnboardingViewModel = hiltVi
                     LinkButton(
                         text = stringResource(R.string.onboarding_back),
                         onClick = viewModel::back,
-                        enabled =
-                            index > 0,
+                        enabled = index > 0,
                     )
                     if (needsGrant) {
                         LinkButton(text = stringResource(R.string.onboarding_skip), onClick = viewModel::next)
@@ -307,25 +306,11 @@ fun OnboardingScreen(onDone: () -> Unit, viewModel: OnboardingViewModel = hiltVi
                         Spacer(Modifier.height(Spacing.sm))
                         SegmentPills(
                             options = listOf(AppLanguage.ENGLISH, AppLanguage.HEBREW),
-                            selected =
-                                if (state.language ==
-                                    AppLanguage.HEBREW
-                                ) {
-                                    AppLanguage.HEBREW
-                                } else {
-                                    AppLanguage.ENGLISH
-                                },
+                            selected = if (hebrewUi) AppLanguage.HEBREW else AppLanguage.ENGLISH,
                             onSelect = viewModel::setLanguage,
-                            label = {
-                                stringResource(
-                                    if (it ==
-                                        AppLanguage.HEBREW
-                                    ) {
-                                        R.string.language_hebrew
-                                    } else {
-                                        R.string.language_english
-                                    },
-                                )
+                            label = { language ->
+                                val hebrew = language == AppLanguage.HEBREW
+                                stringResource(if (hebrew) R.string.language_hebrew else R.string.language_english)
                             },
                         )
                     }

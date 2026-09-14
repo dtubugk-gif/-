@@ -123,14 +123,7 @@ enum class AppLanguage(val tag: String) {
 
     companion object {
         /** Absent (fresh install) → [ENGLISH]; an empty stored tag → [SYSTEM]. */
-        fun fromTag(tag: String?): AppLanguage =
-            if (tag ==
-                null
-            ) {
-                ENGLISH
-            } else {
-                entries.firstOrNull { it.tag == tag } ?: ENGLISH
-            }
+        fun fromTag(tag: String?): AppLanguage = entries.firstOrNull { it.tag == tag } ?: ENGLISH
     }
 }
 
@@ -152,6 +145,8 @@ data class Settings(
     val trackingEnabled: Boolean,
     val freeTierNoticeShown: Boolean,
     val soundsEnabled: Boolean,
+    /** The pet reads its lines aloud through the device's text-to-speech engine. */
+    val voiceEnabled: Boolean,
 ) {
     companion object {
         const val DEFAULT_MASCOT_ID = "potato"
@@ -173,6 +168,7 @@ data class Settings(
                 trackingEnabled = true,
                 freeTierNoticeShown = false,
                 soundsEnabled = true,
+                voiceEnabled = true,
             )
     }
 }

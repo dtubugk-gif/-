@@ -50,6 +50,7 @@ data class SettingsDto(
     val reduceMotion: String,
     val trackingEnabled: Boolean,
     val soundsEnabled: Boolean = true,
+    val voiceEnabled: Boolean = true,
 )
 
 @Serializable
@@ -143,6 +144,7 @@ class BackupRepository @Inject constructor(
                     reduceMotion = s.reduceMotion.name,
                     trackingEnabled = s.trackingEnabled,
                     soundsEnabled = s.soundsEnabled,
+                    voiceEnabled = s.voiceEnabled,
                 ),
             limits =
                 limits.all().map {
@@ -212,6 +214,7 @@ class BackupRepository @Inject constructor(
                         .getOrDefault(ReduceMotionMode.SYSTEM),
                 trackingEnabled = dto.trackingEnabled,
                 soundsEnabled = dto.soundsEnabled,
+                voiceEnabled = dto.voiceEnabled,
             ),
         )
         limits.replaceAll(

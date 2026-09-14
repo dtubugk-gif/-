@@ -155,17 +155,10 @@ fun BatteryGuideScreen(onBack: () -> Unit) {
                 title = stringResource(vendor.titleRes),
                 body = stringResource(vendor.bodyRes),
                 action = {
+                    val other = vendor == Vendor.OTHER
+                    val openRes = if (other) R.string.battery_open_app_info else R.string.battery_open_vendor
                     SecondaryButton(
-                        text =
-                            stringResource(
-                                if (vendor ==
-                                    Vendor.OTHER
-                                ) {
-                                    R.string.battery_open_app_info
-                                } else {
-                                    R.string.battery_open_vendor
-                                },
-                            ),
+                        text = stringResource(openRes),
                         onClick = { context.openVendorSettings(vendor) },
                         modifier = Modifier.fillMaxWidth(),
                     )

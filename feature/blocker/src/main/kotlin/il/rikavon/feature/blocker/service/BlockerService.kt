@@ -33,6 +33,7 @@ import il.rikavon.feature.blocker.engine.PollingPolicy
 import il.rikavon.feature.blocker.overlay.OverlayController
 import il.rikavon.feature.mascot.registry.MascotTexts
 import il.rikavon.feature.mascot.registry.SelectedMascot
+import il.rikavon.feature.mascot.sound.MascotVoice
 import il.rikavon.feature.mascot.ui.UiLanguage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -68,6 +69,8 @@ class BlockerService : LifecycleService() {
     @Inject lateinit var selectedMascot: SelectedMascot
 
     @Inject lateinit var texts: MascotTexts
+
+    @Inject lateinit var voice: MascotVoice
 
     @Inject lateinit var events: BlockerEvents
 
@@ -175,6 +178,7 @@ class BlockerService : LifecycleService() {
         val message = texts.blockMessage(skin, time.localTime().hour, language)
         summaries.recordBlock(decision.packageName, decision.reason)
         events.emit(BlockerEvent.Blocked(decision.packageName))
+        if (prefs.soundsEnabled && prefs.voiceEnabled) voice.speak(message, skin.voice, language)
         overlay.show(
             OverlayController.Request(
                 decision = decision,

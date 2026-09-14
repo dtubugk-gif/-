@@ -124,6 +124,8 @@ class SettingsViewModel @Inject constructor(
 
     fun setSounds(enabled: Boolean) = viewModelScope.launch { settings.setSoundsEnabled(enabled) }
 
+    fun setVoice(enabled: Boolean) = viewModelScope.launch { settings.setVoiceEnabled(enabled) }
+
     fun setReduceMotion(mode: ReduceMotionMode) = viewModelScope.launch { settings.setReduceMotion(mode) }
 
     fun setLanguage(language: AppLanguage) = viewModelScope.launch { settings.setLanguage(language) }

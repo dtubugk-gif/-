@@ -5,6 +5,7 @@ import il.rikavon.feature.mascot.model.HourBucket
 import il.rikavon.feature.mascot.model.MascotStage
 import il.rikavon.feature.mascot.model.ReactionPreset
 import il.rikavon.feature.mascot.model.UnlockRule
+import il.rikavon.feature.mascot.model.VoiceProfile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
@@ -29,6 +30,7 @@ class MascotManifestParserTest {
         stages: String = MascotStage.entries.joinToString(",") { stage(it.key) },
         blockBucket: String = "[\"a\", \"b\"]",
         surfaceTint: String? = null,
+        voice: String? = null,
     ) = """
         {
           "schemaVersion": 1,
@@ -40,6 +42,7 @@ class MascotManifestParserTest {
           "unlock": $unlock,
           "reaction": "$reaction",
           "sound": "reaction.wav",
+          ${voice?.let { "\"voice\": $it," } ?: ""}
           "stages": { $stages },
           "blockMessages": { "he": { "morning": $blockBucket, "day": $blockBucket, "evening": $blockBucket, "night": $blockBucket } },
           "summary": { "he": { "100": "a", "80": "b", "60": "c", "40": "d", "20": "e", "0": "f" } }
@@ -133,6 +136,19 @@ class MascotManifestParserTest {
         assertThrows(MascotManifestException::class.java) {
             parser.parse("brain", manifest(surfaceTint = "grey"), allAssetsExist)
         }
+    }
+
+    @Test
+    fun `voice falls back to the personality preset and is clamped when present`() {
+        assertEquals(VoiceProfile.forPersonality("cynical"), parser.parse("brain", manifest(), allAssetsExist).voice)
+        assertEquals(
+            VoiceProfile(pitch = 1.3f, rate = 0.9f),
+            parser.parse("brain", manifest(voice = """{ "pitch": 1.3, "rate": 0.9 }"""), allAssetsExist).voice,
+        )
+        assertEquals(
+            VoiceProfile(pitch = 2f, rate = 0.5f),
+            parser.parse("brain", manifest(voice = """{ "pitch": 9, "rate": 0.1 }"""), allAssetsExist).voice,
+        )
     }
 
     @Test

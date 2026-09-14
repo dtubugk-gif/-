@@ -55,9 +55,9 @@ import il.rikavon.core.ui.components.RikavonTopBar
 import il.rikavon.core.ui.components.ScreenPadding
 import il.rikavon.core.ui.components.SkeletonBlock
 import il.rikavon.core.ui.components.pressScale
-import il.rikavon.core.ui.components.rikavonSliderColors
 import il.rikavon.core.ui.components.rememberLargeTopBarBehavior
 import il.rikavon.core.ui.components.rememberPinnedTopBarBehavior
+import il.rikavon.core.ui.components.rikavonSliderColors
 import il.rikavon.core.ui.theme.LocalExtraColors
 import il.rikavon.core.ui.theme.Radius
 import il.rikavon.core.ui.theme.Sizes
@@ -152,6 +152,7 @@ fun MascotGalleryScreen(
                             item = hero,
                             stage = state.heroStage,
                             quote = { viewModel.quote(hero.skin, state.heroStage, language) },
+                            say = { viewModel.say(hero.skin, state.heroStage, language) },
                             onSelect = { viewModel.choose(hero) },
                             onReaction = { viewModel.playReaction(hero.skin) },
                             onPreview = viewModel::preview,
@@ -207,6 +208,7 @@ private fun HeroCard(
     item: GalleryItem,
     stage: MascotStage,
     quote: () -> String,
+    say: () -> String,
     onSelect: () -> Unit,
     onReaction: () -> Unit,
     onPreview: (MascotStage?) -> Unit,
@@ -227,7 +229,7 @@ private fun HeroCard(
             skin = item.skin,
             stage = stage,
             interactive = true,
-            textForTap = quote,
+            textForTap = say,
             onLongPress = onReaction,
             sharedKey = if (item.selected) MASCOT_SHARED_KEY else null,
             modifier = Modifier.size(HERO_MASCOT).aspectRatio(1f),
@@ -310,12 +312,7 @@ private fun SmallCard(item: GalleryItem, onClick: () -> Unit, modifier: Modifier
                 .background(background, RoundedCornerShape(Radius.lg))
                 .clickable(interactionSource = interaction, indication = null, onClick = onClick, role = Role.Button)
                 .semantics { contentDescription = description }
-                .padding(
-                    top = if (item.unlocked) Spacing.md else Spacing.xl,
-                    bottom = Spacing.md,
-                    start = Spacing.sm,
-                    end = Spacing.sm,
-                ),
+                .padding(top = Spacing.xl, bottom = Spacing.md, start = Spacing.sm, end = Spacing.sm),
     ) {
         Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             MascotView(

@@ -175,7 +175,8 @@ reaction.wav                                                                    
   "personality": "grumpy",                 // free text; known keys get a localised label
   "unlock": "free",                        // or { "achievement": "streak_7" } (see AchievementId keys)
   "reaction": "pulse",                     // pulse | wilt | flip | turn_away | glitch | roll
-  "sound": "reaction.wav",
+  "sound": "reaction.wav",                 // optional short vocalisation for the long-press reaction
+  "voice": { "pitch": 0.8, "rate": 0.8 },  // optional text-to-speech character (0.5–2.0); defaults follow the personality
   "stages": {
     "100": { "asset": "stage_100.json", "texts": { "he": [8+ strings], "en": [8+ strings] } },
     "80":  { ... }, "60": { ... }, "40": { ... }, "20": { ... }, "0": { ... }
@@ -193,6 +194,18 @@ Lottie file is missing falls back to the built-in animated `FallbackMascot` (nev
 `BuiltInMascotsTest` runs the parser over the real asset folders, so `./gradlew :feature:mascot:testDebugUnitTest`
 validates a new folder before it reaches a device.
 
+### Voices and sounds
+
+Every pet talks. `MascotVoice` wraps the device's own text-to-speech engine (nothing leaves the phone; if the
+engine or the language pack is missing the line is simply not spoken) and applies the mascot's `voice`
+profile: the cynical brain is low and slow, the dramatic plant high and drawn out, the confused goldfish
+fast and squeaky, the judgmental cat high, the bureaucratic robot flat and quick, the indifferent potato low
+and lazy. Lines are spoken when the pet is tapped on the home screen or in the gallery and when the block
+screen appears, in the UI language, gated by the *Sounds* and *Voice* switches in Settings and muted with
+the ringer. The long-press reaction plays `reaction.wav`, a synthesised vocalisation in the same character
+(`tools/mascots/generate_sounds.py`: a glottal pulse through two formant resonators, "hmph", a sigh, two
+blubs, "mrrow", two beeps, "meh").
+
 ### Regenerating the built-in art
 
 The six shipped mascots are the design-canvas SVGs (`tools/mascots/mascot_art.py`, verbatim) converted to
@@ -204,6 +217,9 @@ sheet; colours slide from `#dda94a` toward `#6f6428` as the score drops. Determi
 python3 tools/mascots/generate_lottie.py   # 36 Lottie files, 200×200 @ 30 fps
 python3 tools/mascots/generate_sounds.py   # reaction + score sounds (WAV)
 ```
+
+Shape lists in Lottie render top-down (index 0 on top) while SVG paints bottom-up, so the generator reverses
+every list of drawables (`lottie_order`); faces, mould and flies sit above the body exactly as on the canvas.
 
 Idle loops: healthy 3.2 s breathing, mid 2.4 s shallow breathing, rotten 2.4 s stepped twitch (the rotten
 files are 9.6 s long so the two fly orbits and the stink lines loop seamlessly). Hand-drawn replacements are

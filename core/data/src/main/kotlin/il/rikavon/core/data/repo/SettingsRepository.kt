@@ -34,6 +34,7 @@ class SettingsRepository @Inject constructor(private val store: DataStore<Prefer
         val TRACKING = booleanPreferencesKey("tracking_enabled")
         val FREE_NOTICE = booleanPreferencesKey("free_notice_shown")
         val SOUNDS = booleanPreferencesKey("sounds_enabled")
+        val VOICE = booleanPreferencesKey("voice_enabled")
     }
 
     val settings: Flow<Settings> = store.data.map { it.toSettings() }
@@ -74,6 +75,8 @@ class SettingsRepository @Inject constructor(private val store: DataStore<Prefer
 
     suspend fun setSoundsEnabled(enabled: Boolean) = edit { it[Keys.SOUNDS] = enabled }
 
+    suspend fun setVoiceEnabled(enabled: Boolean) = edit { it[Keys.VOICE] = enabled }
+
     suspend fun restore(settings: Settings) =
         edit {
             it[Keys.MASCOT] = settings.selectedMascotId
@@ -89,6 +92,7 @@ class SettingsRepository @Inject constructor(private val store: DataStore<Prefer
             it[Keys.REDUCE_MOTION] = settings.reduceMotion.name
             it[Keys.TRACKING] = settings.trackingEnabled
             it[Keys.SOUNDS] = settings.soundsEnabled
+            it[Keys.VOICE] = settings.voiceEnabled
         }
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
@@ -116,6 +120,7 @@ class SettingsRepository @Inject constructor(private val store: DataStore<Prefer
             trackingEnabled = this[Keys.TRACKING] ?: defaults.trackingEnabled,
             freeTierNoticeShown = this[Keys.FREE_NOTICE] ?: defaults.freeTierNoticeShown,
             soundsEnabled = this[Keys.SOUNDS] ?: defaults.soundsEnabled,
+            voiceEnabled = this[Keys.VOICE] ?: defaults.voiceEnabled,
         )
     }
 }

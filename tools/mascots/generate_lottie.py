@@ -418,7 +418,24 @@ MASCOTS = {
 }
 
 
+DRAWABLE_TYPES = {"gr", "sh", "el", "rc", "sr"}
+
+
+def lottie_order(items):
+    """Lottie draws a shape list top-down (index 0 on top) while SVG paints bottom-up, so every list of
+    drawables is reversed, recursively; fills, strokes and the transform keep their place after them."""
+    drawables = [it for it in items if it.get("ty") in DRAWABLE_TYPES]
+    others = [it for it in items if it.get("ty") not in DRAWABLE_TYPES]
+    fixed = []
+    for it in reversed(drawables):
+        if it.get("ty") == "gr":
+            it = dict(it, it=lottie_order(it["it"]))
+        fixed.append(it)
+    return fixed + others
+
+
 def composition(name, shapes, total, layer_kwargs):
+    shapes = lottie_order(shapes)
     lyr = layer(name, shapes, total, 1, p=layer_kwargs.get("p", ANCHOR), a=ANCHOR, s=layer_kwargs.get("s"), r=layer_kwargs.get("r"))
     return {
         "v": "5.7.4",

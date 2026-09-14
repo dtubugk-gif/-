@@ -97,6 +97,7 @@
     <string name="stats_week_worse">יותר מהשבוע הקודם.</string>
     <string name="stats_week_same">כמו השבוע הקודם.</string>
     <string name="stats_daily_screen_time">זמן מסך יומי</string>
+    <string name="schedules_every_day">כל יום</string>
     <string name="stats_delta_less">‎−%1$d%%‎ משבוע שעבר</string>
     <string name="stats_delta_more">‎+%1$d%%‎ משבוע שעבר</string>
     <string name="stats_delta_same">כמו שבוע שעבר</string>
@@ -118,7 +119,7 @@
     <string name="score_title">ציון המיקוד</string>
     <string name="score_intro">ציון בין 0 ל-100 שמחושב מחדש כל כמה שניות מהשימוש של היום בלבד. הוא מזין את מצב המחמד.</string>
     <string name="score_part_minutes">50 נקודות — דקות מול הגבול</string>
-    <string name="score_part_minutes_body">סכום הדקות בכל האפליקציות המוגבלות חלקי סכום הגבולות. 0%% שימוש = 50 נקודות, 100%% = 0 נקודות. אפליקציה בחסימה מלאה נחשבת לגבול של דקה אחת.</string>
+    <string name="score_part_minutes_body" formatted="false">סכום הדקות בכל האפליקציות המוגבלות חלקי סכום הגבולות. 0% שימוש = 50 נקודות, 100% = 0 נקודות. אפליקציה בחסימה מלאה נחשבת לגבול של דקה אחת.</string>
     <string name="score_part_opens">30 נקודות — מספר פתיחות</string>
     <string name="score_part_opens_body">יעד הפתיחות הוא פתיחה אחת לכל 10 דקות גבול (ולפחות 3 לאפליקציה). מתחת ליעד = 30 נקודות, פי שתיים מהיעד = 0. חזרה לאפליקציה תוך פחות מ-2 שניות לא נספרת.</string>
     <string name="score_part_streak">20 נקודות — הרצף הנקי הארוך ביום</string>

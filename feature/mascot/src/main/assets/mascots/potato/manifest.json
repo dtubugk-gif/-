@@ -10,6 +10,7 @@
   "unlock": "free",
   "reaction": "roll",
   "sound": "reaction.wav",
+  "voice": { "pitch": 0.8, "rate": 0.8 },
   "stages": {
     "100": {
       "asset": "stage_100.json",

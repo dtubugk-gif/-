@@ -97,6 +97,7 @@
     <string name="stats_week_worse">More than last week.</string>
     <string name="stats_week_same">Same as last week.</string>
     <string name="stats_daily_screen_time">Daily screen time</string>
+    <string name="schedules_every_day">Every day</string>
     <string name="stats_delta_less">‎−%1$d%%‎ vs last week</string>
     <string name="stats_delta_more">‎+%1$d%%‎ vs last week</string>
     <string name="stats_delta_same">Same as last week</string>
@@ -118,7 +119,7 @@
     <string name="score_title">Focus score</string>
     <string name="score_intro">A 0–100 score recomputed every few seconds from today\'s usage only. It drives the pet\'s state.</string>
     <string name="score_part_minutes">50 points — minutes vs. the limit</string>
-    <string name="score_part_minutes_body">Total minutes across limited apps divided by the total of their limits. 0%% usage = 50 points, 100%% = 0. A fully blocked app counts as a one-minute limit.</string>
+    <string name="score_part_minutes_body" formatted="false">Total minutes across limited apps divided by the total of their limits. 0% usage = 50 points, 100% = 0. A fully blocked app counts as a one-minute limit.</string>
     <string name="score_part_opens">30 points — number of opens</string>
     <string name="score_part_opens_body">The target is one open per 10 minutes of limit (at least 3 per app). Under the target = 30 points, double the target = 0. Returning to an app within 2 seconds does not count.</string>
     <string name="score_part_streak">20 points — longest clean streak today</string>

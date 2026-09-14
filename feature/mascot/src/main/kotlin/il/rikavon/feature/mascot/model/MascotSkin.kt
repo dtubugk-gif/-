@@ -112,6 +112,8 @@ data class MascotSkin(
     val unlock: UnlockRule,
     val reaction: ReactionPreset,
     val soundAsset: String?,
+    /** How the pet sounds when it reads a line aloud (text-to-speech pitch and rate). */
+    val voice: VoiceProfile,
     val stages: Map<MascotStage, StageSkin>,
     val blockMessages: Localized<Map<HourBucket, List<String>>>,
     val summaries: Localized<Map<MascotStage, String>>,
@@ -122,5 +124,29 @@ data class MascotSkin(
         const val MIN_TEXTS_PER_STAGE = 8
         const val MIN_BLOCK_MESSAGES_PER_BUCKET = 2
         const val SCHEMA_VERSION = 1
+    }
+}
+
+/** Text-to-speech character: [pitch] 0.5–2.0 (1 = neutral), [rate] 0.5–2.0 (1 = normal). */
+data class VoiceProfile(val pitch: Float, val rate: Float) {
+    companion object {
+        val NEUTRAL = VoiceProfile(pitch = 1f, rate = 1f)
+        private const val MIN = 0.5f
+        private const val MAX = 2f
+
+        /** A voice that fits the personality when the manifest does not specify one. */
+        fun forPersonality(personality: String): VoiceProfile =
+            when (personality) {
+                "cynical" -> VoiceProfile(pitch = 0.75f, rate = 0.95f)
+                "dramatic" -> VoiceProfile(pitch = 1.15f, rate = 0.85f)
+                "confused" -> VoiceProfile(pitch = 1.35f, rate = 1.05f)
+                "judgmental" -> VoiceProfile(pitch = 1.2f, rate = 0.9f)
+                "bureaucratic" -> VoiceProfile(pitch = 0.6f, rate = 1.15f)
+                "indifferent" -> VoiceProfile(pitch = 0.8f, rate = 0.8f)
+                else -> NEUTRAL
+            }
+
+        fun clamped(pitch: Float, rate: Float): VoiceProfile =
+            VoiceProfile(pitch.coerceIn(MIN, MAX), rate.coerceIn(MIN, MAX))
     }
 }

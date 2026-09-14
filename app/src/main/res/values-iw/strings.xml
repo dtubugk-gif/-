@@ -171,4 +171,6 @@
     <string name="onboarding_language_label">שפה</string>
     <string name="language_english">English</string>
     <string name="language_hebrew">עברית</string>
+    <string name="settings_voice">קול</string>
+    <string name="settings_voice_hint">המחמד מקריא את השורות שלו בקול (הקראת טקסט של המכשיר)</string>
 </resources>

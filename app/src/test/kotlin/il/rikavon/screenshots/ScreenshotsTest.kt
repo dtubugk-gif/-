@@ -18,13 +18,15 @@ import android.os.Looper
 import android.os.PowerManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.filter
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
-import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.printToString
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -110,7 +112,7 @@ class ScreenshotsTest {
         runBlocking { settings.setLanguage(AppLanguage.SYSTEM) }
         launchMain(string("onboarding_next")).use {
             capture("01_onboarding_welcome")
-            compose.onNodeWithText(string("onboarding_next")).performClick()
+            click(string("onboarding_next"))
             waitFor(string("onboarding_usage_title"))
             capture("02_onboarding_usage")
         }
@@ -128,30 +130,30 @@ class ScreenshotsTest {
         seedLimitsAndUsage()
         launchMain("Instagram").use {
             capture("04_home")
-            compose.onNodeWithText("Instagram").performClick()
+            click("Instagram")
             waitFor(string("limit_save"))
             capture("05_limit_editor")
             it.onActivity { activity -> activity.onBackPressedDispatcher.onBackPressed() }
             waitFor(string("nav_gallery"))
-            compose.onNodeWithText(string("nav_gallery")).performClick()
+            click(string("nav_gallery"))
             waitFor(string("gallery_selected_now"))
             settle(LONG_SETTLE)
             capture("06_gallery")
-            compose.onNodeWithText(string("nav_stats")).performClick()
+            click(string("nav_stats"))
             waitFor(string("stats_per_app"))
             settle(LONG_SETTLE)
             capture("07_stats")
-            compose.onNodeWithText(string("nav_settings")).performClick()
+            click(string("nav_settings"))
             waitFor(string("settings_pet"))
             capture("08_settings")
             scrollTo(string("settings_score"))
-            compose.onNodeWithText(string("settings_score")).performClick()
+            click(string("settings_score"))
             waitFor(string("score_total_label"))
             capture("09_score_explainer")
             it.onActivity { activity -> activity.onBackPressedDispatcher.onBackPressed() }
-            waitFor(string("settings_premium"))
+            waitFor(string("settings_pet"))
             scrollTo(string("settings_premium"))
-            compose.onNodeWithText(string("settings_premium")).performClick()
+            click(string("settings_premium"))
             waitFor(string("premium_buy"))
             capture("10_premium")
         }
@@ -177,16 +179,16 @@ class ScreenshotsTest {
         }
         launchMain("Instagram").use {
             scrollTo(string("home_add_app"))
-            compose.onNodeWithText(string("home_add_app")).performClick()
+            click(string("home_add_app"))
             waitFor("WhatsApp")
             capture("11_app_picker")
             it.onActivity { activity -> activity.onBackPressedDispatcher.onBackPressed() }
-            waitFor(string("home_schedules_row"), substringOk = true)
+            waitFor(string("home_schedules_row"))
             scrollTo(string("home_schedules_row"))
-            compose.onNodeWithText(string("home_schedules_row"), substring = true).performClick()
+            click(string("home_schedules_row"), substring = true)
             waitFor("Sleep")
             capture("12_schedules")
-            compose.onNodeWithText("Sleep").performClick()
+            click("Sleep")
             waitFor(string("schedule_save"))
             capture("13_schedule_editor")
         }
@@ -196,7 +198,7 @@ class ScreenshotsTest {
     fun achievements() {
         seedBase()
         launchMain(string("home_empty_title")).use {
-            compose.onNodeWithText(string("home_streak_pill", STREAK)).performClick()
+            click(string("home_streak_pill", STREAK))
             waitFor(string("achievements_streak_best"))
             capture("14_achievements")
         }
@@ -205,7 +207,12 @@ class ScreenshotsTest {
     @Test
     fun blockScreen() {
         val skin = runBlocking { registry.load() }.first { it.id == "potato" }
-        val message = skin.blockMessages.resolve("en")?.get(HourBucket.DAY)?.firstOrNull().orEmpty()
+        val message =
+            skin.blockMessages
+                .resolve("en")
+                ?.get(HourBucket.DAY)
+                ?.firstOrNull()
+                .orEmpty()
         ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 activity.setContent {
@@ -240,7 +247,7 @@ class ScreenshotsTest {
         seedLimitsAndUsage()
         launchMain("Instagram").use {
             capture("16_home_he")
-            compose.onNodeWithText(string("nav_settings")).performClick()
+            click(string("nav_settings"))
             waitFor(string("settings_pet"))
             capture("17_settings_he")
         }
@@ -269,6 +276,7 @@ class ScreenshotsTest {
             limits.save(AppLimit(YOUTUBE, YOUTUBE_LIMIT, fullBlock = false, enabled = true, createdAt = 0L))
             val stats = shadowOf(context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager)
             val now = System.currentTimeMillis()
+
             fun session(pkg: String, startAgoMinutes: Long, minutes: Long) {
                 val start = now - startAgoMinutes * MINUTE_MILLIS
                 stats.addEvent(event(pkg, start, UsageEvents.Event.ACTIVITY_RESUMED))
@@ -309,7 +317,12 @@ class ScreenshotsTest {
                 nonLocalizedLabel = label
                 flags = 0
             }
-        pm.installPackage(PackageInfo().apply { packageName = pkg; applicationInfo = appInfo })
+        pm.installPackage(
+            PackageInfo().apply {
+                packageName = pkg
+                applicationInfo = appInfo
+            },
+        )
         val activity =
             ActivityInfo().apply {
                 packageName = pkg
@@ -344,21 +357,53 @@ class ScreenshotsTest {
             Thread.sleep(REAL_SLEEP_MILLIS)
             shadowOf(Looper.getMainLooper()).idle()
             compose.mainClock.advanceTimeByFrame()
-            val found = runCatching { compose.onNodeWithText(text, substring = substringOk).fetchSemanticsNode() }.isSuccess
-            if (found) {
+            if (exists(text, substringOk)) {
                 settle()
                 return
             }
         }
-        scenario?.let { captureFrom(it, "debug_timeout_" + text.filter { c -> c.isLetterOrDigit() }.take(TIMEOUT_NAME_CHARS)) }
+        scenario?.let {
+            val ascii = text.filter { c -> c in 'a'..'z' || c in 'A'..'Z' || c.isDigit() }.take(TIMEOUT_NAME_CHARS)
+            captureFrom(it, "debug_timeout_" + ascii.ifEmpty { text.hashCode().toUInt().toString(radix = 16) })
+        }
         println("TIMEOUT waiting for '$text' codepoints=" + text.codePoints().toArray().joinToString())
         println("TIMEOUT tree: " + runCatching { compose.onRoot().printToString() }.getOrElse { it.toString() })
         error("timed out waiting for '$text'")
     }
 
-    /** Scrolls the screen's lazy list until the node with [text] is composed (index-based, no animation). */
+    /**
+     * Scrolls the screen's lazy list one item at a time until a node with [text] is composed. The clock is
+     * paused, so each step gets a few frames for the list to lay out before the next look-up;
+     * `performScrollToNode` would spin forever here because it never lets a frame through.
+     */
     private fun scrollTo(text: String) {
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText(text, substring = true))
+        val list = compose.onNode(hasScrollAction())
+        var index = 0
+        while (!exists(text)) {
+            check(index < MAX_SCROLL_ITEMS) { "could not scroll to '$text'" }
+            val target = index++
+            runCatching { list.performSemanticsAction(SemanticsActions.ScrollToIndex) { it(target) } }
+            settle(SCROLL_STEP_MILLIS)
+        }
+        settle()
+    }
+
+    /** True when at least one node shows [text]; a substring may legitimately match several nodes. */
+    private fun exists(text: String, substring: Boolean = true): Boolean =
+        runCatching {
+            compose.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().isNotEmpty()
+        }.getOrDefault(false)
+
+    /**
+     * Invokes the click action of the first clickable node showing [text]. Goes through semantics rather
+     * than touch injection so rows that are composed just below the viewport (lazy-list prefetch) still work.
+     */
+    private fun click(text: String, substring: Boolean = false) {
+        compose
+            .onAllNodesWithText(text, substring = substring)
+            .filter(hasClickAction())
+            .onFirst()
+            .performSemanticsAction(SemanticsActions.OnClick)
         settle()
     }
 
@@ -422,6 +467,8 @@ class ScreenshotsTest {
         private const val PNG_QUALITY = 100
         private const val WAIT_TIMEOUT_MILLIS = 30_000L
         private const val TIMEOUT_NAME_CHARS = 12
+        private const val MAX_SCROLL_ITEMS = 40
+        private const val SCROLL_STEP_MILLIS = 400L
     }
 }
 

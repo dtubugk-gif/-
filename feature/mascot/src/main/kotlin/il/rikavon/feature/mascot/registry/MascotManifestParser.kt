@@ -8,6 +8,7 @@ import il.rikavon.feature.mascot.model.MascotStage
 import il.rikavon.feature.mascot.model.ReactionPreset
 import il.rikavon.feature.mascot.model.StageSkin
 import il.rikavon.feature.mascot.model.UnlockRule
+import il.rikavon.feature.mascot.model.VoiceProfile
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -28,6 +29,7 @@ internal data class ManifestDto(
     val unlock: JsonElement,
     val reaction: String,
     val sound: String? = null,
+    val voice: VoiceDto? = null,
     val stages: Map<String, StageDto>,
     val blockMessages: Map<String, Map<String, List<String>>>,
     val summary: Map<String, Map<String, String>>,
@@ -35,6 +37,9 @@ internal data class ManifestDto(
 
 @Serializable
 internal data class StageDto(val asset: String? = null, val texts: Map<String, List<String>>)
+
+@Serializable
+internal data class VoiceDto(val pitch: Float = 1f, val rate: Float = 1f)
 
 class MascotManifestException(message: String) : IllegalArgumentException(message)
 
@@ -117,6 +122,9 @@ class MascotManifestParser(private val json: Json = Json { ignoreUnknownKeys = t
             unlock = unlock,
             reaction = reaction,
             soundAsset = dto.sound?.takeIf(assetExists)?.let { "$ASSET_ROOT/$folder/$it" },
+            voice =
+                dto.voice?.let { VoiceProfile.clamped(it.pitch, it.rate) }
+                    ?: VoiceProfile.forPersonality(dto.personality),
             stages = stages,
             blockMessages = blockMessages,
             summaries = summaries,

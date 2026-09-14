@@ -2,13 +2,12 @@ package il.rikavon.ui.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -136,176 +135,175 @@ fun SettingsScreen(
                 ),
         ) {
             item {
-            SectionLabel(stringResource(R.string.settings_section_pet))
-            GroupCard {
-                SettingNavRow(
-                    title = stringResource(R.string.settings_pet),
-                    subtitle = state.skin?.name?.resolve(language),
-                    onClick = onOpenGallery,
-                )
-                SettingSwitchRow(
-                    title = stringResource(R.string.settings_sounds),
-                    subtitle = stringResource(R.string.settings_sounds_hint),
-                    checked = prefs.soundsEnabled,
-                    onCheckedChange = viewModel::setSounds,
-                )
-            }
-            }
-            item {
-            SectionLabel(
-                stringResource(R.string.settings_section_tracking),
-                modifier = Modifier.padding(top = Spacing.md),
-            )
-            GroupCard {
-                SettingSwitchRow(
-                    title = stringResource(R.string.settings_tracking),
-                    subtitle = stringResource(R.string.settings_tracking_hint),
-                    checked = prefs.trackingEnabled,
-                    onCheckedChange = viewModel::setTracking,
-                )
-                SettingSwitchRow(
-                    title = stringResource(R.string.settings_strict),
-                    subtitle = stringResource(R.string.settings_strict_hint),
-                    checked = prefs.strictMode,
-                    onCheckedChange = viewModel::setStrictMode,
-                )
-                val perms = state.permissions
-                SettingNavRow(
-                    title = stringResource(R.string.settings_permissions),
-                    subtitle =
-                        stringResource(
-                            if (perms?.coreGranted ==
-                                true
-                            ) {
-                                R.string.settings_permissions_ok
-                            } else {
-                                R.string.settings_permissions_missing
-                            },
-                        ),
-                    onClick = onOpenOnboarding,
-                )
-                SettingNavRow(
-                    title = stringResource(R.string.settings_battery),
-                    subtitle = stringResource(R.string.settings_battery_hint),
-                    onClick = onOpenBattery,
-                )
-                SettingNavRow(
-                    title = stringResource(R.string.settings_score),
-                    subtitle = stringResource(R.string.settings_score_hint),
-                    onClick = onOpenScore,
-                )
-            }
-            }
-            item {
-            SectionLabel(
-                stringResource(R.string.settings_section_notifications),
-                modifier = Modifier.padding(top = Spacing.md),
-            )
-            GroupCard {
-                SettingSwitchRow(
-                    title = stringResource(R.string.settings_summary),
-                    subtitle = stringResource(R.string.settings_summary_hint),
-                    checked = prefs.dailySummaryEnabled,
-                    onCheckedChange = { viewModel.setDailySummary(it, prefs.dailySummaryHour) },
-                )
-                if (prefs.dailySummaryEnabled) {
-                    val hourLabel = stringResource(R.string.settings_summary_hour, prefs.dailySummaryHour)
-                    Text(
-                        text = hourLabel,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = LocalExtraColors.current.onSurfaceMuted,
-                        modifier = Modifier.padding(horizontal = ScreenPadding),
+                SectionLabel(stringResource(R.string.settings_section_pet))
+                GroupCard {
+                    SettingNavRow(
+                        title = stringResource(R.string.settings_pet),
+                        subtitle = state.skin?.name?.resolve(language),
+                        onClick = onOpenGallery,
                     )
-                    Slider(
-                        value = prefs.dailySummaryHour.toFloat(),
-                        onValueChange = { viewModel.setDailySummary(true, it.toInt()) },
-                        valueRange = SUMMARY_MIN_HOUR.toFloat()..SUMMARY_MAX_HOUR.toFloat(),
-                        steps = SUMMARY_MAX_HOUR - SUMMARY_MIN_HOUR - 1,
-                        colors = rikavonSliderColors(),
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = ScreenPadding)
-                                .heightIn(min = Sizes.touch)
-                                .semantics { contentDescription = hourLabel },
+                    SettingSwitchRow(
+                        title = stringResource(R.string.settings_sounds),
+                        subtitle = stringResource(R.string.settings_sounds_hint),
+                        checked = prefs.soundsEnabled,
+                        onCheckedChange = viewModel::setSounds,
+                    )
+                    SettingSwitchRow(
+                        title = stringResource(R.string.settings_voice),
+                        subtitle = stringResource(R.string.settings_voice_hint),
+                        checked = prefs.voiceEnabled,
+                        onCheckedChange = viewModel::setVoice,
+                        enabled = prefs.soundsEnabled,
                     )
                 }
             }
+            item {
+                SectionLabel(
+                    stringResource(R.string.settings_section_tracking),
+                    modifier = Modifier.padding(top = Spacing.md),
+                )
+                GroupCard {
+                    SettingSwitchRow(
+                        title = stringResource(R.string.settings_tracking),
+                        subtitle = stringResource(R.string.settings_tracking_hint),
+                        checked = prefs.trackingEnabled,
+                        onCheckedChange = viewModel::setTracking,
+                    )
+                    SettingSwitchRow(
+                        title = stringResource(R.string.settings_strict),
+                        subtitle = stringResource(R.string.settings_strict_hint),
+                        checked = prefs.strictMode,
+                        onCheckedChange = viewModel::setStrictMode,
+                    )
+                    val permissionsOk = state.permissions?.coreGranted == true
+                    val permissionsRes =
+                        if (permissionsOk) R.string.settings_permissions_ok else R.string.settings_permissions_missing
+                    SettingNavRow(
+                        title = stringResource(R.string.settings_permissions),
+                        subtitle = stringResource(permissionsRes),
+                        onClick = onOpenOnboarding,
+                    )
+                    SettingNavRow(
+                        title = stringResource(R.string.settings_battery),
+                        subtitle = stringResource(R.string.settings_battery_hint),
+                        onClick = onOpenBattery,
+                    )
+                    SettingNavRow(
+                        title = stringResource(R.string.settings_score),
+                        subtitle = stringResource(R.string.settings_score_hint),
+                        onClick = onOpenScore,
+                    )
+                }
             }
             item {
-            SectionLabel(
-                stringResource(R.string.settings_section_appearance),
-                modifier = Modifier.padding(top = Spacing.md),
-            )
-            GroupCard {
-                SettingSwitchRow(
-                    title = stringResource(R.string.settings_dynamic_color),
-                    subtitle = stringResource(R.string.settings_dynamic_color_hint),
-                    checked = prefs.dynamicColor,
-                    onCheckedChange = viewModel::setDynamicColor,
+                SectionLabel(
+                    stringResource(R.string.settings_section_notifications),
+                    modifier = Modifier.padding(top = Spacing.md),
                 )
-                SettingNavRow(
-                    title = stringResource(R.string.settings_reduce_motion),
-                    subtitle = stringResource(prefs.reduceMotion.label()),
-                    onClick = { sheet = Sheet.REDUCE_MOTION },
-                )
-                SettingNavRow(
-                    title = stringResource(R.string.settings_language),
-                    subtitle = stringResource(prefs.language.label()),
-                    onClick = { sheet = Sheet.LANGUAGE },
-                )
-            }
-            }
-            item {
-            SectionLabel(stringResource(R.string.settings_section_data), modifier = Modifier.padding(top = Spacing.md))
-            GroupCard {
-                SettingNavRow(
-                    title = stringResource(R.string.settings_backup_export),
-                    subtitle = stringResource(R.string.settings_backup_export_hint),
-                    onClick = { exportLauncher.launch("${BackupRepository.FILE_NAME_PREFIX}${LocalDate.now()}.json") },
-                )
-                SettingNavRow(
-                    title = stringResource(R.string.settings_backup_import),
-                    subtitle = stringResource(R.string.settings_backup_import_hint),
-                    onClick = { importLauncher.launch(arrayOf(BackupRepository.MIME_TYPE, MIME_ANY)) },
-                )
-                SettingNavRow(
-                    title = stringResource(R.string.settings_privacy),
-                    subtitle = stringResource(R.string.settings_privacy_hint),
-                    onClick = onOpenPrivacy,
-                )
-            }
+                GroupCard {
+                    SettingSwitchRow(
+                        title = stringResource(R.string.settings_summary),
+                        subtitle = stringResource(R.string.settings_summary_hint),
+                        checked = prefs.dailySummaryEnabled,
+                        onCheckedChange = { viewModel.setDailySummary(it, prefs.dailySummaryHour) },
+                    )
+                    if (prefs.dailySummaryEnabled) {
+                        val hourLabel = stringResource(R.string.settings_summary_hour, prefs.dailySummaryHour)
+                        Text(
+                            text = hourLabel,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = LocalExtraColors.current.onSurfaceMuted,
+                            modifier = Modifier.padding(horizontal = ScreenPadding),
+                        )
+                        Slider(
+                            value = prefs.dailySummaryHour.toFloat(),
+                            onValueChange = { viewModel.setDailySummary(true, it.toInt()) },
+                            valueRange = SUMMARY_MIN_HOUR.toFloat()..SUMMARY_MAX_HOUR.toFloat(),
+                            steps = SUMMARY_MAX_HOUR - SUMMARY_MIN_HOUR - 1,
+                            colors = rikavonSliderColors(),
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = ScreenPadding)
+                                    .heightIn(min = Sizes.touch)
+                                    .semantics { contentDescription = hourLabel },
+                        )
+                    }
+                }
             }
             item {
-            SectionLabel(
-                stringResource(R.string.settings_section_premium),
-                modifier = Modifier.padding(top = Spacing.md),
-            )
-            GroupCard {
-                SettingNavRow(
-                    title = stringResource(R.string.settings_premium),
-                    subtitle =
-                        stringResource(
-                            if (state.tier ==
-                                Tier.PREMIUM
-                            ) {
-                                R.string.settings_premium_active
-                            } else {
-                                R.string.settings_premium_free
-                            },
-                        ),
-                    onClick = onOpenPremium,
+                SectionLabel(
+                    stringResource(R.string.settings_section_appearance),
+                    modifier = Modifier.padding(top = Spacing.md),
                 )
+                GroupCard {
+                    SettingSwitchRow(
+                        title = stringResource(R.string.settings_dynamic_color),
+                        subtitle = stringResource(R.string.settings_dynamic_color_hint),
+                        checked = prefs.dynamicColor,
+                        onCheckedChange = viewModel::setDynamicColor,
+                    )
+                    SettingNavRow(
+                        title = stringResource(R.string.settings_reduce_motion),
+                        subtitle = stringResource(prefs.reduceMotion.label()),
+                        onClick = { sheet = Sheet.REDUCE_MOTION },
+                    )
+                    SettingNavRow(
+                        title = stringResource(R.string.settings_language),
+                        subtitle = stringResource(prefs.language.label()),
+                        onClick = { sheet = Sheet.LANGUAGE },
+                    )
+                }
             }
+            item {
+                SectionLabel(
+                    stringResource(R.string.settings_section_data),
+                    modifier = Modifier.padding(top = Spacing.md),
+                )
+                GroupCard {
+                    SettingNavRow(
+                        title = stringResource(R.string.settings_backup_export),
+                        subtitle = stringResource(R.string.settings_backup_export_hint),
+                        onClick = {
+                            exportLauncher.launch(
+                                "${BackupRepository.FILE_NAME_PREFIX}${LocalDate.now()}.json",
+                            )
+                        },
+                    )
+                    SettingNavRow(
+                        title = stringResource(R.string.settings_backup_import),
+                        subtitle = stringResource(R.string.settings_backup_import_hint),
+                        onClick = { importLauncher.launch(arrayOf(BackupRepository.MIME_TYPE, MIME_ANY)) },
+                    )
+                    SettingNavRow(
+                        title = stringResource(R.string.settings_privacy),
+                        subtitle = stringResource(R.string.settings_privacy_hint),
+                        onClick = onOpenPrivacy,
+                    )
+                }
+            }
+            item {
+                SectionLabel(
+                    stringResource(R.string.settings_section_premium),
+                    modifier = Modifier.padding(top = Spacing.md),
+                )
+                GroupCard {
+                    val premium = state.tier == Tier.PREMIUM
+                    val premiumRes = if (premium) R.string.settings_premium_active else R.string.settings_premium_free
+                    SettingNavRow(
+                        title = stringResource(R.string.settings_premium),
+                        subtitle = stringResource(premiumRes),
+                        onClick = onOpenPremium,
+                    )
+                }
 
-            Spacer(Modifier.height(Spacing.lg))
-            Text(
-                text = stringResource(R.string.settings_version, state.versionName),
-                style = MaterialTheme.typography.bodySmall,
-                color = LocalExtraColors.current.onSurfaceFaint,
-                modifier = Modifier.padding(horizontal = ScreenPadding),
-            )
-        
+                Spacer(Modifier.height(Spacing.lg))
+                Text(
+                    text = stringResource(R.string.settings_version, state.versionName),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = LocalExtraColors.current.onSurfaceFaint,
+                    modifier = Modifier.padding(horizontal = ScreenPadding),
+                )
             }
         }
 

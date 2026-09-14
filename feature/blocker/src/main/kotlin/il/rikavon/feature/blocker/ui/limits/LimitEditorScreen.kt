@@ -205,7 +205,6 @@ fun LimitEditorScreen(onBack: () -> Unit, viewModel: LimitEditorViewModel = hilt
                     secondaryText = if (state.exists) stringResource(R.string.limit_remove) else null,
                     onSecondary = if (state.exists) ({ confirmRemove = true }) else null,
                     secondaryDestructive = true,
-                    modifier = Modifier.padding(bottom = Spacing.sm),
                 )
             }
         },
