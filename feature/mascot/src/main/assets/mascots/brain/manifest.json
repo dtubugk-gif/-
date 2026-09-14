@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 1,
+  "id": "brain",
+  "name": { "he": "מוח", "en": "Brain" },
+  "themeColor": "#FF7EB6",
+  "personality": "cynical",
+  "unlock": "free",
+  "reaction": "pulse",
+  "sound": "reaction.wav",
+  "stages": {
+    "100": {
+      "asset": "stage_100.json",
+      "texts": {
+        "he": [
+          "מפתיע. אתה באמת מסוגל.",
+          "יום שלם בלי לגלול. מי אתה ומה עשית עם הבעלים שלי?",
+          "אני חושב בבהירות. זה מוזר. אל תהרוס.",
+          "כן, כן, כל הכבוד. אל תתרגל לזה.",
+          "רגע, זה מה שמיקוד מרגיש? לא רע.",
+          "שקט. סוף סוף שקט בפנים.",
+          "אני כמעט גאה בך. כמעט.",
+          "תמשיך ככה ואולי אפילו אזכור משהו.",
+          "היום אתה עובד בשבילי. תודה, עבד."
+        ],
+        "en": [
+          "Surprising. You actually can.",
+          "A whole day without scrolling. Who are you and what did you do with my owner?",
+          "I'm thinking clearly. It's weird. Don't ruin it.",
+          "Yes, yes, well done. Don't get used to it.",
+          "Wait, this is what focus feels like? Not bad.",
+          "Quiet. Finally some quiet in here.",
+          "I'm almost proud of you. Almost.",
+          "Keep this up and I might even remember something.",
+          "Today you work for me. Thank you, servant."
+        ]
+      }
+    },
+    "80": {
+      "asset": "stage_80.json",
+      "texts": {
+        "he": [
+          "בסדר. סביר. לא אתלונן.",
+          "אני מרגיש קצת פחות עמוס. תודה, כנראה.",
+          "לא רע להיום. בסדר להיום. בינוני ליום טוב.",
+          "כמה פתיחות. מבין. נמשיך.",
+          "אתה כמעט לא מסיח אותי. עוד קצת מאמץ.",
+          "המחשבות שלי עדיין מסודרות. איכשהו.",
+          "טוב, זה יום סביר. אני לא אבזבז עליו מחמאות.",
+          "עוד לא רקוב. תשמור על זה."
+        ],
+        "en": [
+          "Fine. Reasonable. I won't complain.",
+          "I feel slightly less crowded. Thanks, I guess.",
+          "Not bad for today. Fine for today. Mediocre for a good day.",
+          "A few opens. Noted. Moving on.",
+          "You're almost not distracting me. A bit more effort.",
+          "My thoughts are still in order. Somehow.",
+          "Well, it's a decent day. I won't waste compliments on it.",
+          "Not rotten yet. Keep it that way."
+        ]
+      }
+    },
+    "60": {
+      "asset": "stage_60.json",
+      "texts": {
+        "he": [
+          "אני מרגיש את הגלילה. היא כמו גירוד שאי אפשר לגרד.",
+          "חצי ממני עדיין פה. החצי השני צופה בסטוריז.",
+          "פתחת שוב? כן, ספרתי. אני מוח, אני סופר.",
+          "בינוני. כמו רוב הדברים שאתה עושה.",
+          "אני לא כועס. אני פשוט… מתחיל להתייבש.",
+          "עוד פתיחה אחת ואני מתחיל לשכוח שמות.",
+          "תראה, אפילו הקמטים שלי משתעממים.",
+          "יכולת לעצור. בחרת לא. תיעדתי."
+        ],
+        "en": [
+          "I can feel the scrolling. It's an itch I can't scratch.",
+          "Half of me is still here. The other half is watching stories.",
+          "Opened it again? Yes, I counted. I'm a brain, I count.",
+          "Mediocre. Like most things you do.",
+          "I'm not angry. I'm just… starting to dry out.",
+          "One more open and I start forgetting names.",
+          "Look, even my wrinkles are getting bored.",
+          "You could have stopped. You chose not to. Logged."
+        ]
+      }
+    },
+    "40": {
+      "asset": "stage_40.json",
+      "texts": {
+        "he": [
+          "אני מתחיל להיות שרוט. מילולית.",
+          "יופי, עוד סרטון. תרגיש חופשי לזרוק אותי לפח.",
+          "המחשבות בורחות דרך החורים. יש הרבה חורים.",
+          "מה זה הריח הזה? אה, זה אני.",
+          "תגיד, אתה בכלל זוכר מה רצית לעשות היום?",
+          "אני מוח. הייתי מוח. אני ממשיך להיות מוח? לא בטוח.",
+          "הכתמים האלה לא היו פה אתמול.",
+          "עוד קצת ואני אצטרך שם חדש. 'משהו'."
+        ],
+        "en": [
+          "I'm getting scratched up. Literally.",
+          "Great, another video. Feel free to toss me in the bin.",
+          "The thoughts leak out through the holes. There are many holes.",
+          "What's that smell? Oh, it's me.",
+          "Tell me, do you even remember what you wanted to do today?",
+          "I'm a brain. I was a brain. Am I still a brain? Unsure.",
+          "Those stains weren't there yesterday.",
+          "A bit more and I'll need a new name. 'Something'."
+        ]
+      }
+    },
+    "20": {
+      "asset": "stage_20.json",
+      "texts": {
+        "he": [
+          "יש זבובים. אני לא אשאל למה.",
+          "אני נוזל. זה עוד לא קרה. או שכן, שכחתי.",
+          "תודה שהבאת אותי למצב הזה. באמת. תודה.",
+          "מה רצית? לא, לא. תסתכל. תסתכל עליי.",
+          "אני מריח כמו הרגלים שלך.",
+          "שלושים פתיחות. אני זוכר כל אחת. הן הדבר היחיד שאני זוכר.",
+          "לא, אני לא רוצה עוד סרטון קצר. אני רוצה מנוחה.",
+          "החלק שאחראי על משמעת? נמס בשעה שתיים."
+        ],
+        "en": [
+          "There are flies. I won't ask why.",
+          "I'm leaking. This hasn't happened before. Or it has, I forgot.",
+          "Thank you for bringing me to this. Truly. Thanks.",
+          "What did you want? No, no. Look. Look at me.",
+          "I smell like your habits.",
+          "Thirty opens. I remember every one. They're the only thing I remember.",
+          "No, I don't want another short video. I want rest.",
+          "The part responsible for discipline? Melted at two o'clock."
+        ]
+      }
+    },
+    "0": {
+      "asset": "stage_0.json",
+      "texts": {
+        "he": [
+          "…",
+          "אין פה אף אחד. תלך.",
+          "פעם הייתי מוח. עכשיו אני תוכן.",
+          "הזבובים החליטו שאני הבית שלהם. לא התנגדתי.",
+          "עוד פתיחה אחת. באמת. מה כבר יכול לקרות.",
+          "מחר יש איפוס. לא בשבילי. בשבילך.",
+          "אם תגלול חזק, אולי תמצא את החלק שהיה אכפת לו.",
+          "לא כועס. פשוט רקוב. יש הבדל. כנראה."
+        ],
+        "en": [
+          "…",
+          "Nobody's home. Go away.",
+          "I used to be a brain. Now I'm content.",
+          "The flies decided I'm their home. I didn't object.",
+          "One more open. Really. What could possibly happen.",
+          "There's a reset tomorrow. Not for me. For you.",
+          "Scroll hard enough and you might find the part that cared.",
+          "Not angry. Just rotten. There's a difference. Probably."
+        ]
+      }
+    }
+  },
+  "blockMessages": {
+    "he": {
+      "morning": [
+        "בוקר. עוד לא התעוררתי ואתה כבר גומר לי את הסוללה.",
+        "היום התחיל לפני שתי דקות. באמת? כבר?",
+        "אולי קפה קודם. רק רעיון."
+      ],
+      "day": [
+        "אמצע היום. הגבול נגמר. אני יודע, גם אני מופתע.",
+        "זה לא אני שחוסם. זה אתה מלפני שבוע. תתלונן אליו.",
+        "עוד קצת ואני מתחיל לנזול. תן לי שעה."
+      ],
+      "evening": [
+        "ערב. הגבול של היום נגמר. מחר יש חדש, אני מבטיח.",
+        "אתה עייף, אני עייף. בוא נשב בשקט.",
+        "הפעם הבאה שתפתח יהיה מחר. או שתפסיד עוד חתיכה ממני."
+      ],
+      "night": [
+        "לילה. שום דבר טוב לא קורה במסך אחרי חצות.",
+        "אני צריך לישון כדי לא להירקב. גם אתה.",
+        "כל מה שיש שם יהיה שם מחר. אני לא בטוח שאני אהיה."
+      ]
+    },
+    "en": {
+      "morning": [
+        "Morning. I'm not even awake yet and you're already draining me.",
+        "The day started two minutes ago. Really? Already?",
+        "Maybe coffee first. Just an idea."
+      ],
+      "day": [
+        "Midday. The limit's gone. I know, I'm surprised too.",
+        "It's not me blocking you. It's you from last week. Complain to him.",
+        "A bit more and I start dripping. Give me an hour."
+      ],
+      "evening": [
+        "Evening. Today's limit is spent. Tomorrow there's a new one, I promise.",
+        "You're tired, I'm tired. Let's just sit quietly.",
+        "The next time you open this will be tomorrow. Or you lose another piece of me."
+      ],
+      "night": [
+        "Night. Nothing good happens on a screen after midnight.",
+        "I need sleep so I don't rot. So do you.",
+        "Everything in there will still be there tomorrow. Not sure I will."
+      ]
+    }
+  },
+  "summary": {
+    "he": {
+      "100": "היום היית מפתיע. לא נרקבתי אפילו קצת. תמשיך, למרות שאני לא מאמין שתצליח.",
+      "80": "יום סביר. כמה פתיחות מיותרות, אבל שרדתי. אני בסדר. יחסית.",
+      "60": "התחלתי להתייבש. לא נורא, אבל גם לא טוב. תגלול פחות מחר.",
+      "40": "היום נשרטתי. הכתמים אמיתיים. תתחיל לקחת את זה ברצינות.",
+      "20": "יש זבובים. אני לא מבקש הרבה. רק פחות פתיחות מחר.",
+      "0": "רקוב. לגמרי. מחר יש איפוס, ואני מקווה שגם לך."
+    },
+    "en": {
+      "100": "Today you surprised me. I didn't rot even a little. Keep going, though I doubt you can.",
+      "80": "A decent day. A few pointless opens, but I survived. I'm fine. Relatively.",
+      "60": "I started drying out. Not terrible, not good either. Scroll less tomorrow.",
+      "40": "I got scratched up today. The stains are real. Start taking this seriously.",
+      "20": "There are flies. I'm not asking for much. Just fewer opens tomorrow.",
+      "0": "Rotten. Completely. There's a reset tomorrow, and I hope there's one for you too."
+    }
+  }
+}

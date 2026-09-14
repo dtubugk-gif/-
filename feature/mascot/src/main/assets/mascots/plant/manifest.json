@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 1,
+  "id": "plant",
+  "name": { "he": "עציץ", "en": "Plant" },
+  "themeColor": "#6EDB8F",
+  "personality": "dramatic",
+  "unlock": "free",
+  "reaction": "wilt",
+  "sound": "reaction.wav",
+  "stages": {
+    "100": {
+      "asset": "stage_100.json",
+      "texts": {
+        "he": [
+          "אור! שמש! פוטוסינתזה! אני חי!",
+          "הו, איזה יום מפואר. העלים שלי רוקדים.",
+          "תראה אותי. תראה אותי! ירוק כמו חלום.",
+          "היום, ידידי, אנחנו פורחים. שנינו.",
+          "אני מרגיש את השורשים שלי שרים.",
+          "מעולם לא הייתי יפה יותר. מעולם!",
+          "כל עלה שלי אומר תודה. יש לי הרבה עלים.",
+          "זה הרגע שבו ציפורים היו אמורות לשיר. תדמיין אותן.",
+          "אם היו לי דמעות, הן היו דמעות של אושר."
+        ],
+        "en": [
+          "Light! Sun! Photosynthesis! I'm alive!",
+          "Oh, what a glorious day. My leaves are dancing.",
+          "Look at me. Look at me! Green as a dream.",
+          "Today, my friend, we bloom. Both of us.",
+          "I can feel my roots singing.",
+          "I have never been more beautiful. Never!",
+          "Every leaf of mine says thank you. I have many leaves.",
+          "This is the moment birds were supposed to sing. Imagine them.",
+          "If I had tears, they'd be tears of joy."
+        ]
+      }
+    },
+    "80": {
+      "asset": "stage_80.json",
+      "texts": {
+        "he": [
+          "עלה אחד רועד. רק אחד. אבל הוא רועד!",
+          "אני עומד. זקוף. כמעט. שים לב ל'כמעט'.",
+          "השמש עדיין פה, אבל היא… נראית עסוקה.",
+          "כמה פתיחות. כמו רוח קלה. רוח קלה מפחידה אותי.",
+          "אני יפה. פחות מהבוקר. אבל יפה.",
+          "אל תעזוב אותי לבד עם המסך הזה.",
+          "העלים שלי לוחשים 'עוד קצת מאמץ'. הם צודקים.",
+          "עדיין ירוק. תגיד לי שזה יישאר ככה."
+        ],
+        "en": [
+          "One leaf is trembling. Just one. But it trembles!",
+          "I'm standing. Upright. Almost. Note the 'almost'.",
+          "The sun is still here, but she… looks busy.",
+          "A few opens. Like a light breeze. Light breezes terrify me.",
+          "I'm beautiful. Less than this morning. But beautiful.",
+          "Don't leave me alone with that screen.",
+          "My leaves whisper 'a bit more effort'. They're right.",
+          "Still green. Tell me it will stay that way."
+        ]
+      }
+    },
+    "60": {
+      "asset": "stage_60.json",
+      "texts": {
+        "he": [
+          "אני נובל. לאט. בטרגדיה שקטה.",
+          "העלה השמאלי ויתר. הוא היה האהוב עליי.",
+          "מים? לא. תשומת לב. אני צריך תשומת לב!",
+          "כל גלילה שלך היא יום בלי גשם.",
+          "אני מתכופף. לא מרצון. מכאב.",
+          "הו, הצהוב הזה. הוא מתפשט. הוא מתפשט!",
+          "פעם עמדתי זקוף. פעם. איזו מילה עצובה.",
+          "אתה שם ואני פה, ושנינו מתייבשים."
+        ],
+        "en": [
+          "I'm wilting. Slowly. A quiet tragedy.",
+          "The left leaf gave up. It was my favourite.",
+          "Water? No. Attention. I need attention!",
+          "Every scroll of yours is a day without rain.",
+          "I'm bending. Not by choice. From pain.",
+          "Oh, that yellow. It's spreading. It's spreading!",
+          "Once I stood upright. Once. What a sad word.",
+          "You're there and I'm here, and we're both drying out."
+        ]
+      }
+    },
+    "40": {
+      "asset": "stage_40.json",
+      "texts": {
+        "he": [
+          "חום. הכול חום. איפה הירוק שלי?!",
+          "אני נופל. לא, אני נשען. לא, אני נופל.",
+          "אם זה הסוף, אני רוצה שתדע: זה באשמתך.",
+          "העלים שלי נוגעים באדמה. הם מתביישים.",
+          "הכתמים האלה? זכרונות מכל סרטון שראית.",
+          "פעם היו לי חמישה עלים. עכשיו יש לי חמישה צערים.",
+          "אני עציץ. גם עציצים יודעים לבכות. בשקט.",
+          "תפתח שוב. באמת. תראה מה קורה לי."
+        ],
+        "en": [
+          "Brown. Everything is brown. Where is my green?!",
+          "I'm falling. No, I'm leaning. No, I'm falling.",
+          "If this is the end, I want you to know: it's your fault.",
+          "My leaves touch the soil. They're ashamed.",
+          "Those spots? Memories of every video you watched.",
+          "I used to have five leaves. Now I have five sorrows.",
+          "I'm a plant. Plants know how to cry too. Quietly.",
+          "Open it again. Go on. Watch what happens to me."
+        ]
+      }
+    },
+    "20": {
+      "asset": "stage_20.json",
+      "texts": {
+        "he": [
+          "זבובים. על עציץ. איזו השפלה.",
+          "אני נרקב, ואתה בודק אם מישהו עשה לייק.",
+          "השורשים שלי כותבים צוואה.",
+          "האדמה בוכה. אני שומע אותה בלילות.",
+          "כל עלה שנפל היה פעם תקווה.",
+          "אם יש אלוהים לעציצים, הוא לא עונה.",
+          "הריח הזה הוא לא אני. טוב, קצת אני.",
+          "אני מתחנן. עלה אחד. תשאיר לי עלה אחד."
+        ],
+        "en": [
+          "Flies. On a potted plant. What humiliation.",
+          "I'm rotting, and you're checking if someone liked it.",
+          "My roots are writing a will.",
+          "The soil weeps. I hear it at night.",
+          "Every leaf that fell was once a hope.",
+          "If there is a god of plants, he isn't answering.",
+          "That smell isn't me. Okay, it's a bit me.",
+          "I'm begging. One leaf. Leave me one leaf."
+        ]
+      }
+    },
+    "0": {
+      "asset": "stage_0.json",
+      "texts": {
+        "he": [
+          "הסוף. המסך נופל. הקהל שותק.",
+          "הייתי ירוק. הייתי גאה. הייתי.",
+          "האדמה שלי מלאה בסרטונים שלא זכרת.",
+          "אל תשקה אותי. תפסיק לגלול. זה כל מה שביקשתי.",
+          "הזבובים כותבים עליי ביקורת. חמישה כוכבים לריקבון.",
+          "מחר יום חדש. תשתול אותי מחדש בתשומת לב.",
+          "הייתי מספר לך על שמש, אבל שכחתי איך היא נראית.",
+          "רקוב. אבל בדרמה. תמיד בדרמה."
+        ],
+        "en": [
+          "The end. The curtain falls. The audience is silent.",
+          "I was green. I was proud. I was.",
+          "My soil is full of videos you don't remember.",
+          "Don't water me. Stop scrolling. That's all I asked.",
+          "The flies are reviewing me. Five stars for decay.",
+          "Tomorrow is a new day. Replant me with attention.",
+          "I'd tell you about the sun, but I forgot what she looks like.",
+          "Rotten. But dramatically. Always dramatically."
+        ]
+      }
+    }
+  },
+  "blockMessages": {
+    "he": {
+      "morning": [
+        "הבוקר עוד לא הפציע ואתה כבר עוקר אותי מהאדמה!",
+        "טל בוקר, שקט, ואז… זה. אני מסרב להשקות את זה.",
+        "בוקר טוב. הגבול נגמר. העלים שלי בהלם."
+      ],
+      "day": [
+        "באמצע היום! באור מלא! אתה חוסם לי את השמש!",
+        "הגבול של היום נגמר. תסתכל עליי ותגיד שזה שווה.",
+        "כל פתיחה עוד עלה. אני לא אינסופי!"
+      ],
+      "evening": [
+        "השמש שוקעת. גם אני. תן לנו לשקוע בכבוד.",
+        "ערב. הגבול נגמר. מחר, אם אשרוד, נדבר.",
+        "אני צריך את הערב כדי להתאושש. תעזור לי."
+      ],
+      "night": [
+        "לילה. צמחים ישנים. אנשים גם. תיאורטית.",
+        "בחושך אני לא צומח. גם אתה לא.",
+        "מחר יש אור. הלילה יש רק אותי, נובל, ואת המסך שלך."
+      ]
+    },
+    "en": {
+      "morning": [
+        "Dawn hasn't even broken and you're already uprooting me!",
+        "Morning dew, silence, and then… this. I refuse to water this.",
+        "Good morning. The limit is spent. My leaves are in shock."
+      ],
+      "day": [
+        "In the middle of the day! In full light! You're blocking my sun!",
+        "Today's limit is gone. Look at me and say it was worth it.",
+        "Every open is another leaf. I'm not infinite!"
+      ],
+      "evening": [
+        "The sun sets. So do I. Let us set with dignity.",
+        "Evening. The limit is gone. Tomorrow, if I survive, we'll talk.",
+        "I need the evening to recover. Help me."
+      ],
+      "night": [
+        "Night. Plants sleep. People too. Theoretically.",
+        "In the dark I don't grow. Neither do you.",
+        "Tomorrow there's light. Tonight there's just me, wilting, and your screen."
+      ]
+    }
+  },
+  "summary": {
+    "he": {
+      "100": "יום של שמש! פרחתי, רקדתי, חייתי! תודה, ידידי, תודה!",
+      "80": "יום טוב, עם רוח קלה. עלה אחד רעד אבל אני עומד. גאה, כמעט.",
+      "60": "נבלתי קצת היום. צהוב פה, צהוב שם. מחר תשקה אותי בתשומת לב.",
+      "40": "היום נפלתי. העלים באדמה. אני מתחנן למחר אחר.",
+      "20": "זבובים, ריקבון, טרגדיה. זה היה היום שלי. תשנה את הסוף מחר.",
+      "0": "המסך נפל. רקוב לגמרי. אבל מחר יש הצגה חדשה. תשתול אותי מחדש."
+    },
+    "en": {
+      "100": "A day of sun! I bloomed, I danced, I lived! Thank you, friend, thank you!",
+      "80": "A good day, with a light breeze. One leaf trembled but I'm standing. Proud, almost.",
+      "60": "I wilted a little today. Yellow here, yellow there. Water me with attention tomorrow.",
+      "40": "I fell today. Leaves in the soil. I beg for a different tomorrow.",
+      "20": "Flies, decay, tragedy. That was my day. Change the ending tomorrow.",
+      "0": "The curtain fell. Fully rotten. But tomorrow there's a new show. Replant me."
+    }
+  }
+}

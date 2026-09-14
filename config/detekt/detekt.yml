@@ -1,0 +1,81 @@
+build:
+  maxIssues: 0
+
+config:
+  validation: true
+  warningsAsErrors: true
+
+complexity:
+  LongMethod:
+    threshold: 120
+    ignoreAnnotated: ['Composable']
+  LongParameterList:
+    functionThreshold: 9
+    constructorThreshold: 10
+    ignoreAnnotated: ['Composable', 'Inject']
+  TooManyFunctions:
+    thresholdInFiles: 20
+    thresholdInClasses: 20
+    thresholdInInterfaces: 20
+    thresholdInObjects: 20
+    ignorePrivate: true
+  CyclomaticComplexMethod:
+    threshold: 20
+    ignoreAnnotated: ['Composable']
+  LargeClass:
+    threshold: 800
+  NestedBlockDepth:
+    threshold: 5
+  ComplexCondition:
+    threshold: 5
+
+naming:
+  FunctionNaming:
+    ignoreAnnotated: ['Composable']
+  TopLevelPropertyNaming:
+    constantPattern: '[A-Za-z][_A-Za-z0-9]*'
+  MatchingDeclarationName:
+    active: false
+
+style:
+  MagicNumber:
+    active: true
+    ignoreAnnotated: ['Composable', 'Preview']
+    ignoreNumbers: ['-1', '0', '1', '2', '0.5', '100', '1000']
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreEnums: true
+    ignoreHashCodeFunction: true
+    ignoreNamedArgument: true
+    ignoreLocalVariableDeclaration: true
+    ignoreConstantDeclaration: true
+  MaxLineLength:
+    maxLineLength: 120
+  ReturnCount:
+    max: 4
+  UnusedPrivateMember:
+    ignoreAnnotated: ['Preview']
+  UnusedParameter:
+    active: true
+  ForbiddenComment:
+    active: false
+  WildcardImport:
+    active: false
+  ThrowsCount:
+    max: 4
+  LoopWithTooManyJumpStatements:
+    maxJumpCount: 3
+  UnusedPrivateProperty:
+    ignoreAnnotated: ['Preview']
+  DestructuringDeclarationWithTooManyEntries:
+    maxDestructuringEntries: 4
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
+  SwallowedException:
+    active: false
+
+empty-blocks:
+  EmptyFunctionBlock:
+    ignoreOverridden: true

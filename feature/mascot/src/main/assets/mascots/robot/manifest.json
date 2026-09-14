@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 1,
+  "id": "robot",
+  "name": { "he": "רובוט", "en": "Robot" },
+  "themeColor": "#5AC8FA",
+  "personality": "bureaucratic",
+  "unlock": { "achievement": "fewer_opens_50" },
+  "reaction": "glitch",
+  "sound": "reaction.wav",
+  "stages": {
+    "100": {
+      "asset": "stage_100.json",
+      "texts": {
+        "he": [
+          "סטטוס: תקין. טופס 1א אושר.",
+          "כל המערכות פועלות. אין תלונות רשומות.",
+          "היום עמד בתקן. חותמת. אישור. הבא בתור.",
+          "דוח יומי: אפס חריגות. מצוין. תייק.",
+          "הבקשה שלך לתפקוד תקין אושרה. מזל טוב.",
+          "אני מזהה משמעת. מעדכן רשומה. תודה על שיתוף הפעולה.",
+          "המנועים שקטים. הרשומות מסודרות. סדר.",
+          "לא נדרשת פעולה. חזור מחר לביקורת שגרתית.",
+          "אין תור. אין המתנה. זה מה שקורה כשעומדים בנהלים."
+        ],
+        "en": [
+          "Status: nominal. Form 1A approved.",
+          "All systems operational. No complaints on record.",
+          "Today met the standard. Stamped. Approved. Next.",
+          "Daily report: zero deviations. Excellent. File it.",
+          "Your request for proper functioning has been approved. Congratulations.",
+          "I detect discipline. Updating record. Thank you for your cooperation.",
+          "Engines quiet. Records tidy. Order.",
+          "No action required. Return tomorrow for routine inspection.",
+          "No queue. No waiting. This is what happens when procedures are followed."
+        ]
+      }
+    },
+    "80": {
+      "asset": "stage_80.json",
+      "texts": {
+        "he": [
+          "חריגה קלה נרשמה. סעיף 3ב. לא נדרש דיון.",
+          "פתיחה מס׳ 4 מתועדת. יש לצרף הסבר בכתב.",
+          "התפקוד סביר. הטופס נשלח לאישור נוסף.",
+          "מומלץ להפחית פתיחות. זו לא פקודה. עדיין.",
+          "אזהרה ראשונה. לא מחייבת. מתויקת לנצח.",
+          "המנוע מזמזם קצת. בתוך הטולרנס.",
+          "אני מעדכן את הרשומה שלך ל'משביע רצון'. בקושי.",
+          "בקשה לזמן מסך נוסף: נדחתה. יש לפנות מחר."
+        ],
+        "en": [
+          "Minor deviation recorded. Section 3B. No hearing required.",
+          "Open #4 documented. Attach a written explanation.",
+          "Functioning reasonable. Form forwarded for further approval.",
+          "Reducing opens is recommended. This is not an order. Yet.",
+          "First warning. Non-binding. Filed forever.",
+          "The engine hums a little. Within tolerance.",
+          "Updating your record to 'satisfactory'. Barely.",
+          "Request for additional screen time: denied. Reapply tomorrow."
+        ]
+      }
+    },
+    "60": {
+      "asset": "stage_60.json",
+      "texts": {
+        "he": [
+          "חלודה זוהתה. פותח קריאת שירות. זמן טיפול: לא ידוע.",
+          "המסך שלי מהבהב. המסך שלך לא. אירוני. רשום.",
+          "פתיחה 11. פתיחה 12. אני מפסיק לספר, לא לספור.",
+          "אזהרה שנייה. הפעם עם העתק למנהל. אתה המנהל.",
+          "הנהלים נשברו. גם הבורג השמאלי.",
+          "בקשתך לתפקוד תקין: בהמתנה. לנצח.",
+          "יש לי טופס לזה. הוא נקרא 'התדרדרות'.",
+          "המנוע חורק. זה ההרגלים שלך שנכנסים למנגנון."
+        ],
+        "en": [
+          "Rust detected. Opening a service ticket. Handling time: unknown.",
+          "My screen flickers. Yours doesn't. Ironic. Noted.",
+          "Open 11. Open 12. I've stopped narrating, not counting.",
+          "Second warning. This time copied to your manager. You are the manager.",
+          "Procedures broken. So is the left bolt.",
+          "Your request for proper functioning: pending. Forever.",
+          "I have a form for this. It's called 'Deterioration'.",
+          "The engine grinds. That's your habits getting into the mechanism."
+        ]
+      }
+    },
+    "40": {
+      "asset": "stage_40.json",
+      "texts": {
+        "he": [
+          "האנטנה מכופפת. הקליטה: רק התראות שלך.",
+          "מצב: מקולקל. סיבה: ראה נספח 'אתה'.",
+          "עשרים פתיחות. הרשומה נסגרה מרוב עמודים.",
+          "בקשת חלפים הוגשה. הופנתה למחר. מחר הופנה ליום אחר.",
+          "העין השמאלית מהבהבת. זה קוד. הקוד אומר 'תפסיק'.",
+          "אני לא כועס. אין לי מודול כזה. יש לי מודול תיעוד.",
+          "שיבוש חלקי. השיבוש הוא אתה.",
+          "אזהרה שלישית. אין רביעית. יש רק חלודה."
+        ],
+        "en": [
+          "Antenna bent. Reception: only your notifications.",
+          "Status: malfunctioning. Cause: see appendix 'You'.",
+          "Twenty opens. The record closed from too many pages.",
+          "Parts request submitted. Deferred to tomorrow. Tomorrow deferred to another day.",
+          "Left eye flickering. It's a code. The code says 'stop'.",
+          "I'm not angry. I don't have that module. I have a documentation module.",
+          "Partial malfunction. The malfunction is you.",
+          "Third warning. There is no fourth. There is only rust."
+        ]
+      }
+    },
+    "20": {
+      "asset": "stage_20.json",
+      "texts": {
+        "he": [
+          "ניצוצות. לא מסוג החגיגה. מסוג הקצר.",
+          "עין אחת כבויה. השנייה מסתכלת עליך. בתיעוד.",
+          "המערכת מבקשת כיבוי. אתה מבקש עוד סרטון. הבקשה שלך זכתה.",
+          "יש לי רשימה של הפתיחות שלך. היא ארוכה יותר מהנהלים.",
+          "עשן? לא. עדיין לא. אבל יש טופס מוכן.",
+          "המנועים חורקים. אני מצטט: 'די'.",
+          "מצב חירום. מוגדר בסעיף 9. סעיף 9 נשרף.",
+          "לא ניתן להגיש תלונה. המתלונן הוא הנתבע."
+        ],
+        "en": [
+          "Sparks. Not the celebratory kind. The short-circuit kind.",
+          "One eye is off. The other watches you. For the record.",
+          "The system requests shutdown. You request another video. Your request won.",
+          "I have a list of your opens. It's longer than the regulations.",
+          "Smoke? No. Not yet. But there's a form ready.",
+          "Engines grinding. Quoting: 'enough'.",
+          "Emergency state. Defined in section 9. Section 9 burned.",
+          "Complaint cannot be filed. The complainant is the defendant."
+        ]
+      }
+    },
+    "0": {
+      "asset": "stage_0.json",
+      "texts": {
+        "he": [
+          "מצב: השבתה. סיבה: תועדה. אתה.",
+          "עשן. הטופס מולא מראש.",
+          "כל האזהרות נוצלו. נשאר רק שקט ופיח.",
+          "הרשומה הסופית: יום שלם של פתיחות. חתום.",
+          "אין שירות. אין תור. אין רובוט.",
+          "המערכת תאותחל מחר בשעה 00:00. תוצאות באחריותך.",
+          "בקשה אחרונה: פחות. פשוט פחות.",
+          "אישור סופי לריקבון. הופק אוטומטית."
+        ],
+        "en": [
+          "Status: decommissioned. Cause: documented. You.",
+          "Smoke. The form was pre-filled.",
+          "All warnings used. Only silence and soot remain.",
+          "Final record: a full day of opens. Signed.",
+          "No service. No queue. No robot.",
+          "System reboots tomorrow at 00:00. Results are your responsibility.",
+          "Final request: less. Simply less.",
+          "Final approval for decay. Generated automatically."
+        ]
+      }
+    }
+  },
+  "blockMessages": {
+    "he": {
+      "morning": [
+        "שעות פעילות: לא עכשיו. הגבול נוצל בבוקר. תיעוד נשלח.",
+        "בוקר. המכסה היומית סגורה. יש לפנות מחר בשעות הקבלה.",
+        "מערכת: הגבול נגמר. סיבה: פתיחות מוקדמות. המלצה: קפה."
+      ],
+      "day": [
+        "המכסה נוצלה. הבקשה לתוספת נדחתה אוטומטית.",
+        "טופס חסימה מס׳ 0042. חתום. תייק. תמשיך בעבודה.",
+        "אין גישה. הסעיף הרלוונטי: 'אמרתי לך'."
+      ],
+      "evening": [
+        "שעות קבלה הסתיימו. המכסה גם. תחזור מחר עם אישור.",
+        "ערב. המערכת נועלת. המנוע צריך מנוחה. גם המפעיל.",
+        "הבקשה שלך תטופל מחר בשעה 00:00. בסדר הגעה."
+      ],
+      "night": [
+        "לילה. אין שירות. יש שינה. מומלץ.",
+        "פעילות מחוץ לשעות. נרשם. תלך לישון.",
+        "המערכת בכיבוי לילי. גם אתה אמור להיות."
+      ]
+    },
+    "en": {
+      "morning": [
+        "Operating hours: not now. The limit was spent in the morning. Documentation sent.",
+        "Morning. The daily quota is closed. Reapply tomorrow during office hours.",
+        "System: limit reached. Cause: early opens. Recommendation: coffee."
+      ],
+      "day": [
+        "Quota consumed. Extension request automatically denied.",
+        "Block form #0042. Signed. Filed. Return to work.",
+        "No access. Relevant section: 'I told you'."
+      ],
+      "evening": [
+        "Office hours are over. So is the quota. Return tomorrow with approval.",
+        "Evening. The system locks. The engine needs rest. So does the operator.",
+        "Your request will be handled tomorrow at 00:00. In order of arrival."
+      ],
+      "night": [
+        "Night. No service. There is sleep. Recommended.",
+        "After-hours activity. Recorded. Go to sleep.",
+        "System in nightly shutdown. So should you be."
+      ]
+    }
+  },
+  "summary": {
+    "he": {
+      "100": "דוח יומי: אפס חריגות. כל המערכות תקינות. תויק. חותמת.",
+      "80": "דוח יומי: חריגות קלות. בתוך הטולרנס. אזהרה לא מחייבת.",
+      "60": "דוח יומי: חלודה. קריאת שירות פתוחה. הפחת פתיחות מחר.",
+      "40": "דוח יומי: תקלה. אנטנה מכופפת, עין מהבהבת. נדרש תיקון התנהגותי.",
+      "20": "דוח יומי: ניצוצות. מצב חירום. סעיף 9 נשרף. תשנה מחר.",
+      "0": "דוח סופי: השבתה. אתחול מחר ב-00:00. אחריות: המפעיל."
+    },
+    "en": {
+      "100": "Daily report: zero deviations. All systems nominal. Filed. Stamped.",
+      "80": "Daily report: minor deviations. Within tolerance. Non-binding warning.",
+      "60": "Daily report: rust. Service ticket open. Reduce opens tomorrow.",
+      "40": "Daily report: malfunction. Bent antenna, flickering eye. Behavioural repair required.",
+      "20": "Daily report: sparks. Emergency state. Section 9 burned. Change tomorrow.",
+      "0": "Final report: decommissioned. Reboot tomorrow at 00:00. Responsibility: operator."
+    }
+  }
+}

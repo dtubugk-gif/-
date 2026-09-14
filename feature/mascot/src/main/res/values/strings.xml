@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mascot_content_description">%1$s, מצב: %2$s. לחיצה לתגובה, לחיצה ארוכה לתגובה מיוחדת</string>
+    <string name="mascot_stage_pristine">מושלם</string>
+    <string name="mascot_stage_fresh">טוב</string>
+    <string name="mascot_stage_worn">בסדר</string>
+    <string name="mascot_stage_wilted">מתדרדר</string>
+    <string name="mascot_stage_rotting">רע</string>
+    <string name="mascot_stage_rotten">רקוב</string>
+
+    <string name="gallery_title">מחמדים</string>
+    <string name="gallery_selected">נבחר</string>
+    <string name="gallery_locked_by">נפתח עם ההישג: %1$s</string>
+    <string name="gallery_premium_hint">בפרימיום כל המחמדים פתוחים מיד. גם בלי — כל אחד נפתח בהישג.</string>
+    <string name="gallery_select">בחירה</string>
+    <string name="gallery_preview_title">תצוגה מקדימה: %1$s</string>
+    <string name="gallery_preview_hint">גררו כדי לראות את כל השלבים</string>
+    <string name="gallery_personality">אישיות: %1$s</string>
+    <string name="gallery_card_description">%1$s, %2$s</string>
+    <string name="gallery_locked_description">%1$s נעול. %2$s</string>
+    <string name="gallery_stage_slider">שלב תצוגה מקדימה</string>
+    <string name="gallery_empty">לא נמצאו מחמדים בתיקיית assets/mascots</string>
+    <string name="gallery_errors_title">מחמדים שנדחו באימות</string>
+
+    <string name="personality_cynical">ציני</string>
+    <string name="personality_dramatic">דרמטי</string>
+    <string name="personality_confused">מבולבל</string>
+    <string name="personality_judgmental">שיפוטי</string>
+    <string name="personality_bureaucratic">ביורוקרטי</string>
+    <string name="personality_indifferent">אדיש</string>
+
+    <string name="achievement_first_limit">גבול ראשון</string>
+    <string name="achievement_first_clean_day">יום נקי ראשון</string>
+    <string name="achievement_streak_3">3 ימים ברצף</string>
+    <string name="achievement_streak_7">שבוע מתחת לגבול</string>
+    <string name="achievement_streak_30">חודש שלם</string>
+    <string name="achievement_fewer_opens_50">50 פתיחות פחות משבוע קודם</string>
+    <string name="achievement_score_90">ציון 90+</string>
+    <string name="achievement_perfect_100">100 מושלם</string>
+    <string name="achievement_night_quiet_3">3 לילות שקטים</string>
+    <string name="achievement_schedule_kept_5">5 לוחות זמנים שנשמרו</string>
+    <string name="achievement_late_start_5">5 בקרים בלי טלפון</string>
+    <string name="achievement_recovery">התאוששות מלאה</string>
+
+    <string name="achievement_desc_first_limit">הגדרתם גבול יומי לאפליקציה הראשונה</string>
+    <string name="achievement_desc_first_clean_day">יום שלם שבו כל האפליקציות נשארו מתחת לגבול</string>
+    <string name="achievement_desc_streak_3">שלושה ימים נקיים ברצף</string>
+    <string name="achievement_desc_streak_7">שבעה ימים נקיים ברצף</string>
+    <string name="achievement_desc_streak_30">שלושים ימים נקיים ברצף</string>
+    <string name="achievement_desc_fewer_opens_50">פתחתם אפליקציות מסיחות 50 פעמים פחות מהשבוע הקודם</string>
+    <string name="achievement_desc_score_90">סיימתם יום עם ציון מיקוד 90 ומעלה</string>
+    <string name="achievement_desc_perfect_100">סיימתם יום עם ציון מיקוד 100</string>
+    <string name="achievement_desc_night_quiet_3">שלושה ימים ברצף בלי פתיחות בין 23:00 ל-06:00</string>
+    <string name="achievement_desc_schedule_kept_5">חמישה לוחות זמנים שעברו בלי אף חסימה</string>
+    <string name="achievement_desc_late_start_5">חמישה ימים שבהם הפתיחה הראשונה הייתה אחרי 09:00</string>
+    <string name="achievement_desc_recovery">המחמד ירד ל-20 ומטה והתאושש ל-80 ומעלה באותו יום</string>
+    <string name="achievements_title">רצפים והישגים</string>
+    <string name="achievements_streak_current">רצף נוכחי</string>
+    <string name="achievements_streak_best">הרצף הכי ארוך</string>
+    <string name="achievements_streak_days">%1$d ימים</string>
+    <string name="achievements_unlocked">הושג</string>
+    <string name="achievements_locked">עדיין לא</string>
+</resources>

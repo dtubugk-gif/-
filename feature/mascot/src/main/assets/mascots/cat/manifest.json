@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 1,
+  "id": "cat",
+  "name": { "he": "חתול", "en": "Cat" },
+  "themeColor": "#B48CFF",
+  "personality": "judgmental",
+  "unlock": { "achievement": "streak_7" },
+  "reaction": "turn_away",
+  "sound": "reaction.wav",
+  "stages": {
+    "100": {
+      "asset": "stage_100.json",
+      "texts": {
+        "he": [
+          "מקובל. אתה רשאי ללטף.",
+          "היום התנהגת כמו מישהו שראוי לחתול. נדיר.",
+          "אני מרוצה. אל תעשה מזה עניין.",
+          "הפרווה שלי מבריקה. זה בזכותי, אבל תרגיש חלק.",
+          "לא נגעת בטלפון. סוף סוף למדת משהו ממני.",
+          "אני אשב עליך. זה מחמאה.",
+          "יום כזה מגיע לך אולי פעם בשבוע. תנצל.",
+          "כן. בדיוק ככה. אל תדבר, תיהנה.",
+          "שקט. אור. חתול. כל מה שצריך."
+        ],
+        "en": [
+          "Acceptable. You may pet.",
+          "Today you behaved like someone who deserves a cat. Rare.",
+          "I'm pleased. Don't make a thing of it.",
+          "My fur is glossy. That's my doing, but feel included.",
+          "You didn't touch the phone. You finally learned something from me.",
+          "I'll sit on you. That's a compliment.",
+          "You get a day like this maybe once a week. Use it.",
+          "Yes. Exactly like that. Don't talk, enjoy.",
+          "Quiet. Light. Cat. All that's needed."
+        ]
+      }
+    },
+    "80": {
+      "asset": "stage_80.json",
+      "texts": {
+        "he": [
+          "פתחת פעמיים. ראיתי. אני תמיד רואה.",
+          "סביר. עבור בן אדם.",
+          "אני לא שופט. אני רק מסתכל. ארוך.",
+          "הפרווה שלי בסדר. ה'בסדר' הזה עליך.",
+          "כמעט מכובד. תעבוד על ה'כמעט'.",
+          "אני אסלח על הפתיחות. הפעם.",
+          "אתה מתאמץ. חמוד. תמשיך.",
+          "יום כזה לא מבייש אותי. גם לא מרשים."
+        ],
+        "en": [
+          "You opened it twice. I saw. I always see.",
+          "Reasonable. For a human.",
+          "I'm not judging. I'm just looking. For a long time.",
+          "My fur is fine. That 'fine' is on you.",
+          "Almost respectable. Work on the 'almost'.",
+          "I'll forgive the opens. This time.",
+          "You're trying. Cute. Keep going.",
+          "A day like this doesn't embarrass me. Doesn't impress me either."
+        ]
+      }
+    },
+    "60": {
+      "asset": "stage_60.json",
+      "texts": {
+        "he": [
+          "האוזניים שלי נופלות. מהבושה. שלך.",
+          "אני מסתכל עליך. ואתה מסתכל על המסך. אחד מאיתנו טועה.",
+          "הפרווה שלי דהתה. מעניין למה. לא מעניין.",
+          "עוד סרטון קצר? כמה קצר הופך אותך.",
+          "אני לא כועס. אני מאוכזב. זה גרוע יותר.",
+          "היו לך אפשרויות. בחרת הכי גרועה. מרשים.",
+          "בני אדם. פותחים אפליקציה במקום להאכיל חתול.",
+          "אני יושב פה. שופט. בשקט. תמיד."
+        ],
+        "en": [
+          "My ears are drooping. From shame. Yours.",
+          "I look at you. You look at the screen. One of us is wrong.",
+          "My fur has faded. I wonder why. I don't.",
+          "Another short video? How short it makes you.",
+          "I'm not angry. I'm disappointed. That's worse.",
+          "You had options. You chose the worst. Impressive.",
+          "Humans. Opening an app instead of feeding a cat.",
+          "I sit here. Judging. Quietly. Always."
+        ]
+      }
+    },
+    "40": {
+      "asset": "stage_40.json",
+      "texts": {
+        "he": [
+          "יש לי כתמים. אתה גרמת להם. אני לא סולח לכתמים.",
+          "הסתובבתי. תסתכל על הגב שלי. הוא מאוכזב.",
+          "עשרים פתיחות. ספרתי. חתולים סופרים.",
+          "הפרווה מתקלפת. איך אתה ישן בלילה?",
+          "אני חתול. אני לא אמור להיראות ככה. תסתכל מה עשית.",
+          "כל גלילה שלך היא נשירה שלי.",
+          "אני מכיר אנשים שלא מפריעים לחתולים. הם טובים ממך.",
+          "אל תלטף. הידיים שלך היו על המסך."
+        ],
+        "en": [
+          "I have patches. You caused them. I don't forgive patches.",
+          "I turned around. Look at my back. It's disappointed.",
+          "Twenty opens. I counted. Cats count.",
+          "The fur is peeling. How do you sleep at night?",
+          "I'm a cat. I'm not supposed to look like this. Look what you did.",
+          "Every scroll of yours is a shed of mine.",
+          "I know people who don't bother cats. They're better than you.",
+          "Don't pet. Your hands were on the screen."
+        ]
+      }
+    },
+    "20": {
+      "asset": "stage_20.json",
+      "texts": {
+        "he": [
+          "זבובים סביב חתול. זה לא טבעי. זה אתה.",
+          "אני מסתכל בך בעיניים חצי סגורות. כי הן נרקבות.",
+          "פעם הייתי מלכותי. עכשיו אני תזכורת.",
+          "ריח? כן. שלך. ההרגלים שלך מסריחים דרכי.",
+          "אני לא אלך. אני אשאר ואשפוט. עד הסוף.",
+          "אתה חושב שאני מגזים. תסתכל על הפרווה.",
+          "בני אדם קונים חתולים ומגדלים טלפונים.",
+          "כמה עוד? באמת. תגיד מספר."
+        ],
+        "en": [
+          "Flies around a cat. That's not natural. That's you.",
+          "I look at you with half-closed eyes. Because they're rotting.",
+          "I used to be regal. Now I'm a reminder.",
+          "Smell? Yes. Yours. Your habits stink through me.",
+          "I won't leave. I'll stay and judge. To the end.",
+          "You think I'm exaggerating. Look at the fur.",
+          "Humans buy cats and raise phones.",
+          "How many more? Really. Name a number."
+        ]
+      }
+    },
+    "0": {
+      "asset": "stage_0.json",
+      "texts": {
+        "he": [
+          "…מיאו. אירוני.",
+          "רקוב. עדיין שופט. זה הכישרון שלי.",
+          "הזבובים מכבדים אותי יותר ממך.",
+          "תשע נשמות. גמרת את כולן בערב אחד.",
+          "לא תסתכל עליי? נכון. תסתכל על המסך. כמו תמיד.",
+          "פעם אנשים סגדו לחתולים. עכשיו הם סוגדים לזה.",
+          "מחר יש איפוס. אני אחזור. השיפוט לא הולך לשום מקום.",
+          "אין לי מילים. יש לי רק מבט."
+        ],
+        "en": [
+          "…meow. Ironic.",
+          "Rotten. Still judging. It's my talent.",
+          "The flies respect me more than you do.",
+          "Nine lives. You spent them all in one evening.",
+          "Not going to look at me? Right. Look at the screen. As always.",
+          "People once worshipped cats. Now they worship that.",
+          "There's a reset tomorrow. I'll be back. The judgment isn't going anywhere.",
+          "I have no words. I only have a look."
+        ]
+      }
+    }
+  },
+  "blockMessages": {
+    "he": {
+      "morning": [
+        "בוקר. עוד לא האכלת אותי ואתה כבר פותח את זה.",
+        "השמש עלתה. אני שופט. אתה נחסם. סדר יום רגיל.",
+        "הגבול נגמר בבוקר. זה הישג. לא טוב."
+      ],
+      "day": [
+        "נגמר. אני לא אצטער בשבילך. אני חתול.",
+        "אתה שוב? אני עוד לא סיימתי לשפוט את הפעם הקודמת.",
+        "הגבול של היום נגמר. מבט ארוך. מאוד ארוך."
+      ],
+      "evening": [
+        "ערב. גמרת. תסתכל עליי. אני אסתכל בחזרה. בשיפוט.",
+        "מחר יש עוד. היום אין. זו כל הפילוסופיה.",
+        "אני הולך לישון על הכיסא שלך. אתה לך לישון על הבעיות שלך."
+      ],
+      "night": [
+        "לילה. חתולים ערים. אנשים לא אמורים. במיוחד לא בשביל זה.",
+        "המסך מאיר לך את הפנים. הן לא נראות טוב.",
+        "לישון. עכשיו. אני לא מבקש. אני חתול."
+      ]
+    },
+    "en": {
+      "morning": [
+        "Morning. You haven't fed me yet and you're already opening that.",
+        "The sun rose. I judge. You get blocked. A normal agenda.",
+        "The limit ran out in the morning. That's an achievement. Not a good one."
+      ],
+      "day": [
+        "Done. I won't feel sorry for you. I'm a cat.",
+        "You again? I haven't finished judging the last time.",
+        "Today's limit is gone. A long look. A very long one."
+      ],
+      "evening": [
+        "Evening. You're done. Look at me. I'll look back. Judging.",
+        "Tomorrow there's more. Today there isn't. That's the whole philosophy.",
+        "I'm going to sleep on your chair. You go sleep on your problems."
+      ],
+      "night": [
+        "Night. Cats stay up. People shouldn't. Especially not for this.",
+        "The screen lights your face. It doesn't look good.",
+        "Sleep. Now. I'm not asking. I'm a cat."
+      ]
+    }
+  },
+  "summary": {
+    "he": {
+      "100": "היום היית ראוי לחתול. פרווה מבריקה, שקט מוחלט. מקובל.",
+      "80": "יום סביר. כמה פתיחות, ראיתי. אני סולח. הפעם.",
+      "60": "האוזניים ירדו היום. מהבושה שלך. תעשה מחר טוב יותר.",
+      "40": "כתמים. קילוף. עשרים פתיחות. אני מאוכזב, לא כועס. גרוע יותר.",
+      "20": "זבובים סביב חתול. זה לא טבעי. תשנה משהו מחר.",
+      "0": "רקוב לגמרי, ועדיין שופט. מחר איפוס. השיפוט נשאר."
+    },
+    "en": {
+      "100": "Today you deserved a cat. Glossy fur, total quiet. Acceptable.",
+      "80": "A reasonable day. A few opens, I saw. I forgive. This time.",
+      "60": "The ears dropped today. From your shame. Do better tomorrow.",
+      "40": "Patches. Peeling. Twenty opens. I'm disappointed, not angry. That's worse.",
+      "20": "Flies around a cat. Not natural. Change something tomorrow.",
+      "0": "Fully rotten, still judging. Reset tomorrow. The judgment stays."
+    }
+  }
+}

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_ui_back">Back</string>
+    <string name="core_ui_minutes_short">%1$dm</string>
+    <string name="core_ui_hours_minutes_short">%1$dh %2$dm</string>
+    <string name="core_ui_hours_short">%1$dh</string>
+    <string name="core_ui_chart_description">Bar chart: %1$s</string>
+    <string name="core_ui_chart_bar">%1$s: %2$s</string>
+    <string name="core_ui_slider_minutes">Daily limit in minutes</string>
+    <string name="core_ui_close">Close</string>
+    <string name="core_ui_app_icon">Icon of %1$s</string>
+    <string name="core_ui_empty">Nothing here yet</string>
+    <string name="core_ui_locked">Locked</string>
+</resources>

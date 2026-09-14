@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 1,
+  "id": "potato",
+  "name": { "he": "תפוח אדמה", "en": "Potato" },
+  "themeColor": "#D4A45A",
+  "personality": "indifferent",
+  "unlock": { "achievement": "first_clean_day" },
+  "reaction": "roll",
+  "sound": "reaction.wav",
+  "stages": {
+    "100": {
+      "asset": "stage_100.json",
+      "texts": {
+        "he": [
+          "יופי.",
+          "אוקיי. טוב. יאללה.",
+          "לא פתחת כלום. גם אני לא. יש לנו משהו במשותף.",
+          "אני תפוח אדמה. זה כל הסיפור.",
+          "נחמד. לא שאכפת לי.",
+          "יום טוב. אני אמשיך לשבת.",
+          "הנבט שלי קטן. אני מרוצה. או משהו כזה.",
+          "תמשיך. או לא. אני אהיה פה.",
+          "מה שתגיד. היום היה סבבה."
+        ],
+        "en": [
+          "Cool.",
+          "Okay. Fine. Sure.",
+          "You didn't open anything. Neither did I. We have something in common.",
+          "I'm a potato. That's the whole story.",
+          "Nice. Not that I care.",
+          "Good day. I'll keep sitting.",
+          "My sprout is small. I'm satisfied. Or something like that.",
+          "Keep going. Or don't. I'll be here.",
+          "Whatever you say. Today was fine."
+        ]
+      }
+    },
+    "80": {
+      "asset": "stage_80.json",
+      "texts": {
+        "he": [
+          "מה שיהיה.",
+          "פתחת כמה פעמים. אה. בסדר.",
+          "יש לי נבט חדש. לא ביקשתי.",
+          "בסדר. לא נהדר. לא נורא. תפוח אדמה.",
+          "אני לא אתלונן. זה דורש מאמץ.",
+          "שמת לב שאני עדיין פה? גם אני לא.",
+          "הכול טוב. פחות או יותר. יותר פחות.",
+          "היום היה. זהו. זה כל מה שיש לי להגיד."
+        ],
+        "en": [
+          "Whatever.",
+          "You opened it a few times. Oh. Okay.",
+          "I have a new sprout. Didn't ask for it.",
+          "Fine. Not great. Not terrible. Potato.",
+          "I won't complain. That takes effort.",
+          "Did you notice I'm still here? Neither did I.",
+          "All good. More or less. More less.",
+          "Today was. That's it. That's all I've got."
+        ]
+      }
+    },
+    "60": {
+      "asset": "stage_60.json",
+      "texts": {
+        "he": [
+          "נובט. לא בכוונה.",
+          "אתה גולל. אני נובט. כל אחד והדבר שלו.",
+          "יש לי כתם. יש לך הרגל. שווה.",
+          "מה, כבר חצי מהגבול? לא הרגשתי. אני לא מרגיש.",
+          "אני מתחיל להיות ירוק. זה לא בריא. גם לא לך.",
+          "עוד פתיחה, עוד נבט. זו הכלכלה.",
+          "אם היה לי כוח לדאוג, הייתי דואג.",
+          "מ. זהו. זה כל הטקסט."
+        ],
+        "en": [
+          "Sprouting. Not on purpose.",
+          "You scroll. I sprout. To each their own.",
+          "I have a spot. You have a habit. Even.",
+          "What, half the limit already? Didn't feel it. I don't feel.",
+          "I'm turning green. That's not healthy. Not for you either.",
+          "Another open, another sprout. That's the economy.",
+          "If I had the energy to worry, I'd worry.",
+          "Meh. That's it. That's the whole text."
+        ]
+      }
+    },
+    "40": {
+      "asset": "stage_40.json",
+      "texts": {
+        "he": [
+          "הנבטים גדולים ממני. סבבה.",
+          "אני רך. לא בקטע טוב.",
+          "פתחת שוב. כן. שמתי לב. לא עשיתי כלום עם זה.",
+          "יש כתמים. הם שלי עכשיו.",
+          "היה פעם תפוח אדמה קשה. עכשיו יש פירה.",
+          "אני לא כועס. זה תפוח אדמה. אין לי כעס. יש לי עמילן.",
+          "כל סרטון קצר — עוד נבט ארוך.",
+          "תעשה מה שאתה רוצה. אתה כבר עושה."
+        ],
+        "en": [
+          "The sprouts are bigger than me. Cool.",
+          "I'm soft. Not in a good way.",
+          "You opened it again. Yes. I noticed. I did nothing about it.",
+          "There are spots. They're mine now.",
+          "There was a firm potato once. Now there's mash.",
+          "I'm not angry. It's a potato. I have no anger. I have starch.",
+          "Every short video, another long sprout.",
+          "Do what you want. You already are."
+        ]
+      }
+    },
+    "20": {
+      "asset": "stage_20.json",
+      "texts": {
+        "he": [
+          "זבובים. הם חברים עכשיו.",
+          "אני נוזל. בסדר. גם זה משהו.",
+          "לא, אני לא מבקש שתפסיק. אני תפוח אדמה. אני לא מבקש.",
+          "יש ריח. אתה תתרגל. אני התרגלתי.",
+          "הנבטים כבר לא נבטים. הם יער.",
+          "מישהו היה צריך לזרוק אותי אתמול. גם את הטלפון.",
+          "עוד פתיחה. עוד. עוד. אני לא סופר. הזבובים סופרים.",
+          "מ. שוב."
+        ],
+        "en": [
+          "Flies. They're friends now.",
+          "I'm leaking. Fine. That's something too.",
+          "No, I'm not asking you to stop. I'm a potato. I don't ask.",
+          "There's a smell. You'll get used to it. I did.",
+          "The sprouts aren't sprouts anymore. They're a forest.",
+          "Someone should have thrown me out yesterday. The phone too.",
+          "Another open. Another. Another. I don't count. The flies count.",
+          "Meh. Again."
+        ]
+      }
+    },
+    "0": {
+      "asset": "stage_0.json",
+      "texts": {
+        "he": [
+          "…",
+          "רקוב. אוקיי.",
+          "הייתי תפוח אדמה. זה עדיין נכון, טכנית.",
+          "הזבובים ירשו אותי. מגיע להם.",
+          "אתה עדיין פה? אני לא.",
+          "מחר איפוס. או לא. לי זה אותו דבר.",
+          "לא כעסתי. לא התחננתי. פשוט נרקבתי. נאמן לעצמי.",
+          "זהו. סוף. מ."
+        ],
+        "en": [
+          "…",
+          "Rotten. Okay.",
+          "I was a potato. Technically still true.",
+          "The flies inherited me. They deserve it.",
+          "You still here? I'm not.",
+          "Reset tomorrow. Or not. Same to me.",
+          "I didn't get angry. I didn't beg. I just rotted. True to myself.",
+          "That's it. The end. Meh."
+        ]
+      }
+    }
+  },
+  "blockMessages": {
+    "he": {
+      "morning": [
+        "בוקר. הגבול נגמר. מ.",
+        "כבר? אוקיי. אני אמשיך לשבת.",
+        "תפוחי אדמה לא ממהרים בבוקר. גם אתה לא צריך."
+      ],
+      "day": [
+        "נגמר. לא שאכפת לי. אבל נגמר.",
+        "אתה יכול לנסות שוב מחר. או לא. אני אהיה פה.",
+        "הגבול. נגמר. סיימתי לדבר."
+      ],
+      "evening": [
+        "ערב. גמרת. אני לא מופתע. אני לא כלום.",
+        "מחר יש עוד. היום אין. זהו.",
+        "שב. תנוח. אני תפוח אדמה, אני מומחה."
+      ],
+      "night": [
+        "לילה. לך לישון. אני לא הולך לשום מקום.",
+        "אין שם כלום שלא יהיה מחר. סמוך על תפוח אדמה.",
+        "חשוך. סבבה. גם לי."
+      ]
+    },
+    "en": {
+      "morning": [
+        "Morning. Limit's gone. Meh.",
+        "Already? Okay. I'll keep sitting.",
+        "Potatoes don't rush in the morning. Neither should you."
+      ],
+      "day": [
+        "Done. Not that I care. But done.",
+        "You can try again tomorrow. Or not. I'll be here.",
+        "The limit. Gone. I'm done talking."
+      ],
+      "evening": [
+        "Evening. You're done. I'm not surprised. I'm not anything.",
+        "Tomorrow there's more. Today there isn't. That's it.",
+        "Sit. Rest. I'm a potato, I'm an expert."
+      ],
+      "night": [
+        "Night. Go to sleep. I'm not going anywhere.",
+        "There's nothing in there that won't be there tomorrow. Trust a potato.",
+        "Dark. Cool. Same for me."
+      ]
+    }
+  },
+  "summary": {
+    "he": {
+      "100": "יום טוב. לא פתחת. לא נבטתי. סבבה.",
+      "80": "יום בסדר. כמה פתיחות. נבט קטן. מה שיהיה.",
+      "60": "נבטתי קצת היום. ירקרק. תפתח פחות מחר. או לא.",
+      "40": "רך, כתמים, נבטים ארוכים. זה היום. מ.",
+      "20": "זבובים. נוזל. יער נבטים. לא מבקש כלום. אבל מחר.",
+      "0": "רקוב. אוקיי. מחר איפוס. או לא. לי זה אותו דבר."
+    },
+    "en": {
+      "100": "Good day. You didn't open. I didn't sprout. Cool.",
+      "80": "Okay day. A few opens. A small sprout. Whatever.",
+      "60": "I sprouted a bit today. Greenish. Open less tomorrow. Or don't.",
+      "40": "Soft, spots, long sprouts. That's the day. Meh.",
+      "20": "Flies. Leaking. A forest of sprouts. Not asking for anything. But tomorrow.",
+      "0": "Rotten. Okay. Reset tomorrow. Or not. Same to me."
+    }
+  }
+}

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="core_ui_back">חזרה</string>
+    <string name="core_ui_minutes_short">%1$d דק׳</string>
+    <string name="core_ui_hours_minutes_short">%1$d ש׳ %2$d דק׳</string>
+    <string name="core_ui_hours_short">%1$d ש׳</string>
+    <string name="core_ui_chart_description">גרף עמודות: %1$s</string>
+    <string name="core_ui_chart_bar">%1$s: %2$s</string>
+    <string name="core_ui_slider_minutes">גבול יומי בדקות</string>
+    <string name="core_ui_close">סגירה</string>
+    <string name="core_ui_app_icon">אייקון של %1$s</string>
+    <string name="core_ui_empty">עדיין אין כאן כלום</string>
+    <string name="core_ui_locked">נעול</string>
+</resources>

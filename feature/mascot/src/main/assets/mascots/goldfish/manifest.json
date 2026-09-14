@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 1,
+  "id": "goldfish",
+  "name": { "he": "דג זהב", "en": "Goldfish" },
+  "themeColor": "#FFA94D",
+  "personality": "confused",
+  "unlock": { "achievement": "streak_3" },
+  "reaction": "flip",
+  "sound": "reaction.wav",
+  "stages": {
+    "100": {
+      "asset": "stage_100.json",
+      "texts": {
+        "he": [
+          "מים! נקיים! רגע, מה רציתי להגיד?",
+          "אני שוחה. לאן? לא חשוב. שוחה!",
+          "היום אתה… משהו טוב. שכחתי את המילה. טוב!",
+          "בועות! תראה! בועות! עוד אחת!",
+          "אני מרגיש מצוין. למה? לא זוכר. לא משנה.",
+          "מי אתה? אה, אתה. שלום! שוב!",
+          "המים מבריקים היום. או שאני מבריק. אחד מהשניים.",
+          "זה הרגע הכי טוב בחיי. גם הקודם היה.",
+          "לא פתחת כלום? יופי! מה זה 'כלום'?"
+        ],
+        "en": [
+          "Water! Clean! Wait, what did I want to say?",
+          "I'm swimming. Where to? Doesn't matter. Swimming!",
+          "Today you're… something good. I forgot the word. Good!",
+          "Bubbles! Look! Bubbles! Another one!",
+          "I feel great. Why? Don't remember. Doesn't matter.",
+          "Who are you? Oh, you. Hello! Again!",
+          "The water sparkles today. Or I sparkle. One of the two.",
+          "This is the best moment of my life. So was the last one.",
+          "You didn't open anything? Great! What's 'anything'?"
+        ]
+      }
+    },
+    "80": {
+      "asset": "stage_80.json",
+      "texts": {
+        "he": [
+          "המים קצת… משהו. לא זוכר מה.",
+          "פתחת אפליקציה? איזו? אה. נשמע מוכר.",
+          "אני בסדר! נראה לי. מה זה 'בסדר'?",
+          "שחיתי סיבוב. עוד אחד. הם דומים.",
+          "יש פה טעם של מסך. זה הגיוני?",
+          "אתה נראה קצת עסוק. או שזה אני. מי אני?",
+          "בועה אחת פחות היום. לא, לא ספרתי. או שכן.",
+          "טוב, זה עדיין טוב. אני חושב. אני דג."
+        ],
+        "en": [
+          "The water is a bit… something. Can't remember what.",
+          "You opened an app? Which one? Oh. Sounds familiar.",
+          "I'm fine! I think. What's 'fine'?",
+          "I swam a lap. Another one. They look alike.",
+          "It tastes like screen in here. Does that make sense?",
+          "You look a bit busy. Or that's me. Who am I?",
+          "One bubble fewer today. No, I didn't count. Or I did.",
+          "Okay, it's still good. I think. I'm a fish."
+        ]
+      }
+    },
+    "60": {
+      "asset": "stage_60.json",
+      "texts": {
+        "he": [
+          "המים ירוקים? מתי זה קרה? מה זה ירוק?",
+          "אני שוחה הצידה. זה חדש. או לא.",
+          "פתחת שוב. או שזה היה קודם. הכול אותו רגע.",
+          "יש משהו מוזר. אני. אני המשהו המוזר.",
+          "האקווריום מסתובב. או שאני. שוב הדילמה.",
+          "בועה יצאה מהצד הלא נכון. תעשה עם זה משהו.",
+          "רציתי לשחות לשם. איפה 'שם'? שכחתי.",
+          "אני לא מודאג. אני לא זוכר איך."
+        ],
+        "en": [
+          "The water is green? When did that happen? What's green?",
+          "I'm swimming sideways. That's new. Or not.",
+          "You opened it again. Or that was earlier. It's all the same moment.",
+          "Something's odd. Me. I'm the odd something.",
+          "The bowl is spinning. Or I am. That dilemma again.",
+          "A bubble came out the wrong side. Do something about it.",
+          "I wanted to swim over there. Where's 'there'? Forgot.",
+          "I'm not worried. I don't remember how."
+        ]
+      }
+    },
+    "40": {
+      "asset": "stage_40.json",
+      "texts": {
+        "he": [
+          "למה אני הפוך? מי הפך אותי? היי!",
+          "המים מריחים כמו התראות. זה לא ריח טוב.",
+          "אני רואה את השמיים. מהצד. זה לא בסדר, נכון?",
+          "אתה גולל, אני שוקע. יש פה קשר?",
+          "יש אצות. הן לא היו פה. או שכן. שלום, אצות.",
+          "פתיחה, פתיחה, פתיחה. זה מה שאני שומע. מה זה פתיחה?",
+          "תשאל אותי מה קרה. לא אזכור. אבל תשאל.",
+          "אני צף. לא בכיוון הנכון."
+        ],
+        "en": [
+          "Why am I upside down? Who flipped me? Hey!",
+          "The water smells like notifications. Not a good smell.",
+          "I can see the sky. Sideways. That's not right, is it?",
+          "You scroll, I sink. Is there a connection?",
+          "There's algae. It wasn't here. Or it was. Hello, algae.",
+          "Open, open, open. That's what I hear. What's an open?",
+          "Ask me what happened. I won't remember. But ask.",
+          "I'm floating. Not in the right direction."
+        ]
+      }
+    },
+    "20": {
+      "asset": "stage_20.json",
+      "texts": {
+        "he": [
+          "זבובים מעל המים. הם לא שוחים. מוזרים.",
+          "אני בטן למעלה. זה הצד היפה שלי? לא זוכר.",
+          "המים חומים. אתה חום? אני חום?",
+          "לא נושם טוב. גם לא זוכר טוב. אבל את זה ידעת.",
+          "היה פה אור. עכשיו יש מסך. הם אותו דבר?",
+          "בועה אחרונה. או ראשונה. הן אותו דבר.",
+          "אם אני נראה עצוב, זה כי אני. או כי אני דג.",
+          "תחליף לי מים. או הרגלים. אחד מהם."
+        ],
+        "en": [
+          "Flies above the water. They don't swim. Weird.",
+          "I'm belly up. Is that my good side? Don't remember.",
+          "The water is brown. Are you brown? Am I brown?",
+          "Not breathing well. Not remembering well either. But you knew that.",
+          "There was light here. Now there's a screen. Are they the same?",
+          "Last bubble. Or first. They're the same.",
+          "If I look sad, it's because I am. Or because I'm a fish.",
+          "Change my water. Or your habits. One of them."
+        ]
+      }
+    },
+    "0": {
+      "asset": "stage_0.json",
+      "texts": {
+        "he": [
+          "…בלופ.",
+          "אני צף. סוף סוף שקט. חכה, למה שקט?",
+          "הזבובים אומרים שאני שלהם. אין לי כוח להתווכח.",
+          "שלושה שניות זיכרון. שלושה שניות של ריקבון. חוזר.",
+          "אתה עדיין גולל? אני עדיין הפוך. כולנו עקביים.",
+          "היה פה דג. הוא היה זהב. הוא היה.",
+          "מחר יש מים חדשים. תזכור בשבילי.",
+          "מה רציתי? אה כן. לחיות. שכחתי."
+        ],
+        "en": [
+          "…bloop.",
+          "I'm floating. Finally quiet. Wait, why quiet?",
+          "The flies say I belong to them. I have no strength to argue.",
+          "Three seconds of memory. Three seconds of rot. Repeat.",
+          "Still scrolling? I'm still upside down. We're all consistent.",
+          "There was a fish here. It was gold. It was.",
+          "Tomorrow there's new water. Remember for me.",
+          "What did I want? Oh yes. To live. Forgot."
+        ]
+      }
+    }
+  },
+  "blockMessages": {
+    "he": {
+      "morning": [
+        "בוקר! רגע, כבר נגמר הגבול? מה זה גבול?",
+        "אני עוד לא סיימתי לשחות סיבוב ואתה כבר בטלפון.",
+        "בבוקר המים צלולים. תשאיר אותם ככה."
+      ],
+      "day": [
+        "נגמר. הגבול. שכחתי מה זה אבל הוא נגמר.",
+        "אתה שוב פה? אה, לא, זה אני שוב פה. או שנינו.",
+        "המים מתעכרים כל פעם שאתה פותח. או שזה הדמיון שלי. אין לי דמיון."
+      ],
+      "evening": [
+        "ערב. הגבול נגמר. או התחיל. לא, נגמר.",
+        "אני צריך את הערב כדי לשכוח את היום. אתה גם.",
+        "מחר יהיו מים חדשים. היום נגמר. בלופ."
+      ],
+      "night": [
+        "בלילה דגים ישנים בעיניים פקוחות. אתה לא צריך.",
+        "חשוך. המסך מאיר. זה לא אור אמיתי, נכון?",
+        "לך לישון. אני אשכח שהיית פה. הבטחה."
+      ]
+    },
+    "en": {
+      "morning": [
+        "Morning! Wait, the limit is already gone? What's a limit?",
+        "I haven't finished a lap and you're already on the phone.",
+        "In the morning the water is clear. Keep it that way."
+      ],
+      "day": [
+        "It's gone. The limit. Forgot what it is, but it's gone.",
+        "You're here again? Oh no, I'm here again. Or both of us.",
+        "The water clouds every time you open it. Or that's my imagination. I don't have one."
+      ],
+      "evening": [
+        "Evening. The limit ended. Or started. No, ended.",
+        "I need the evening to forget the day. So do you.",
+        "Tomorrow there's new water. Today is over. Bloop."
+      ],
+      "night": [
+        "At night fish sleep with open eyes. You don't have to.",
+        "Dark. The screen glows. That's not real light, right?",
+        "Go to sleep. I'll forget you were here. Promise."
+      ]
+    }
+  },
+  "summary": {
+    "he": {
+      "100": "מים נקיים כל היום! בועות! שחיתי! לא זוכר למה, אבל תודה!",
+      "80": "יום טוב. המים קצת משהו, אבל שחיתי. נראה לי. מה זה יום?",
+      "60": "המים הוריקו קצת. שחיתי הצידה. מחר תנסה ישר.",
+      "40": "הייתי הפוך חלק מהיום. לא נעים. שכחתי למה, אבל תפתח פחות.",
+      "20": "בטן למעלה. זבובים. לא זוכר איך הגעתי לפה. אתה כן.",
+      "0": "בלופ. רקוב. מחר יש מים חדשים. תזכור בשבילי, בבקשה."
+    },
+    "en": {
+      "100": "Clean water all day! Bubbles! I swam! Don't remember why, but thanks!",
+      "80": "A good day. The water was a bit something, but I swam. I think. What's a day?",
+      "60": "The water went a bit green. I swam sideways. Try straight tomorrow.",
+      "40": "I was upside down for part of the day. Not nice. Forgot why, but open less.",
+      "20": "Belly up. Flies. Don't remember how I got here. You do.",
+      "0": "Bloop. Rotten. Tomorrow there's new water. Remember for me, please."
+    }
+  }
+}
