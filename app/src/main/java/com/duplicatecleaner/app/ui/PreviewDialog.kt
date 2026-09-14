@@ -24,7 +24,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.OpenInNew
+import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -107,7 +107,7 @@ fun PreviewDialog(
                     },
                     actions = {
                         IconButton(onClick = { onOpenExternal(focused) }) {
-                            Icon(Icons.Outlined.OpenInNew, contentDescription = stringResource(R.string.open_file))
+                            Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = stringResource(R.string.open_file))
                         }
                     },
                 )

@@ -21,7 +21,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.InsertDriveFile
+import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.Card
@@ -56,7 +56,7 @@ fun kindIcon(kind: MediaKind): ImageVector = when (kind) {
     MediaKind.IMAGE -> Icons.Outlined.Image
     MediaKind.VIDEO -> Icons.Outlined.Videocam
     MediaKind.AUDIO -> Icons.Outlined.AudioFile
-    MediaKind.OTHER -> Icons.Outlined.InsertDriveFile
+    MediaKind.OTHER -> Icons.AutoMirrored.Outlined.InsertDriveFile
 }
 
 /** What Coil should load for a visual preview, or null when only an icon makes sense. */

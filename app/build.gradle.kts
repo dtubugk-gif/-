@@ -18,7 +18,11 @@ android {
         versionCode = 2
         versionName = "2.0.0"
         vectorDrawables { useSupportLibrary = true }
-        resourceConfigurations += listOf("en", "iw")
+    }
+
+    androidResources {
+        // Ship only the languages the app actually has; drops library translations.
+        localeFilters += listOf("en", "iw")
     }
 
     signingConfigs {
