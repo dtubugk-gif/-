@@ -8,8 +8,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -127,14 +127,15 @@ fun SettingsScreen(
             SkeletonList(modifier = Modifier.padding(padding))
             return@Scaffold
         }
-        Column(
-            modifier =
-                Modifier
-                    .padding(padding)
-                    .nestedScroll(scrollBehavior.nestedScrollConnection)
-                    .verticalScroll(rememberScrollState())
-                    .padding(bottom = Spacing.xl),
+        LazyColumn(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            contentPadding =
+                PaddingValues(
+                    top = padding.calculateTopPadding(),
+                    bottom = padding.calculateBottomPadding() + Spacing.xl,
+                ),
         ) {
+            item {
             SectionLabel(stringResource(R.string.settings_section_pet))
             GroupCard {
                 SettingNavRow(
@@ -149,7 +150,8 @@ fun SettingsScreen(
                     onCheckedChange = viewModel::setSounds,
                 )
             }
-
+            }
+            item {
             SectionLabel(
                 stringResource(R.string.settings_section_tracking),
                 modifier = Modifier.padding(top = Spacing.md),
@@ -193,7 +195,8 @@ fun SettingsScreen(
                     onClick = onOpenScore,
                 )
             }
-
+            }
+            item {
             SectionLabel(
                 stringResource(R.string.settings_section_notifications),
                 modifier = Modifier.padding(top = Spacing.md),
@@ -228,7 +231,8 @@ fun SettingsScreen(
                     )
                 }
             }
-
+            }
+            item {
             SectionLabel(
                 stringResource(R.string.settings_section_appearance),
                 modifier = Modifier.padding(top = Spacing.md),
@@ -251,7 +255,8 @@ fun SettingsScreen(
                     onClick = { sheet = Sheet.LANGUAGE },
                 )
             }
-
+            }
+            item {
             SectionLabel(stringResource(R.string.settings_section_data), modifier = Modifier.padding(top = Spacing.md))
             GroupCard {
                 SettingNavRow(
@@ -270,7 +275,8 @@ fun SettingsScreen(
                     onClick = onOpenPrivacy,
                 )
             }
-
+            }
+            item {
             SectionLabel(
                 stringResource(R.string.settings_section_premium),
                 modifier = Modifier.padding(top = Spacing.md),
@@ -299,6 +305,8 @@ fun SettingsScreen(
                 color = LocalExtraColors.current.onSurfaceFaint,
                 modifier = Modifier.padding(horizontal = ScreenPadding),
             )
+        
+            }
         }
 
         when (sheet) {

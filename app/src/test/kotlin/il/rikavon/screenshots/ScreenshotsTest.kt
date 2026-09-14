@@ -21,9 +21,11 @@ import androidx.activity.compose.setContent
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.printToString
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.Configuration
@@ -142,13 +144,13 @@ class ScreenshotsTest {
             compose.onNodeWithText(string("nav_settings")).performClick()
             waitFor(string("settings_pet"))
             capture("08_settings")
-            swipeUp()
+            scrollTo(string("settings_score"))
             compose.onNodeWithText(string("settings_score")).performClick()
             waitFor(string("score_total_label"))
             capture("09_score_explainer")
             it.onActivity { activity -> activity.onBackPressedDispatcher.onBackPressed() }
             waitFor(string("settings_premium"))
-            repeat(PREMIUM_SWIPES) { swipeUp() }
+            scrollTo(string("settings_premium"))
             compose.onNodeWithText(string("settings_premium")).performClick()
             waitFor(string("premium_buy"))
             capture("10_premium")
@@ -174,13 +176,13 @@ class ScreenshotsTest {
             )
         }
         launchMain("Instagram").use {
-            swipeUp()
+            scrollTo(string("home_add_app"))
             compose.onNodeWithText(string("home_add_app")).performClick()
             waitFor("WhatsApp")
             capture("11_app_picker")
             it.onActivity { activity -> activity.onBackPressedDispatcher.onBackPressed() }
             waitFor(string("home_schedules_row"), substringOk = true)
-            swipeUp()
+            scrollTo(string("home_schedules_row"))
             compose.onNodeWithText(string("home_schedules_row"), substring = true).performClick()
             waitFor("Sleep")
             capture("12_schedules")
@@ -349,12 +351,14 @@ class ScreenshotsTest {
             }
         }
         scenario?.let { captureFrom(it, "debug_timeout_" + text.filter { c -> c.isLetterOrDigit() }.take(TIMEOUT_NAME_CHARS)) }
+        println("TIMEOUT waiting for '$text' codepoints=" + text.codePoints().toArray().joinToString())
+        println("TIMEOUT tree: " + runCatching { compose.onRoot().printToString() }.getOrElse { it.toString() })
         error("timed out waiting for '$text'")
     }
 
-    /** Scrolls the current screen up by one swipe; the fling settles under the manual clock. */
-    private fun swipeUp() {
-        compose.onRoot().performTouchInput { swipeUp() }
+    /** Scrolls the screen's lazy list until the node with [text] is composed (index-based, no animation). */
+    private fun scrollTo(text: String) {
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(text, substring = true))
         settle()
     }
 
@@ -418,7 +422,6 @@ class ScreenshotsTest {
         private const val PNG_QUALITY = 100
         private const val WAIT_TIMEOUT_MILLIS = 30_000L
         private const val TIMEOUT_NAME_CHARS = 12
-        private const val PREMIUM_SWIPES = 3
     }
 }
 
