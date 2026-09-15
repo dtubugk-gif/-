@@ -3,7 +3,9 @@ package il.rikavon.feature.blocker.profile
 import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.CrossProfileApps
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.UserHandle
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -79,6 +81,39 @@ class FocusProfileManager @Inject constructor(
         }
     }
 
+    /**
+     * Pre-installed apps that exist on the device but are not yet enabled inside the profile (a work profile
+     * starts with system apps switched off, and Play does not always offer them). YouTube on most phones.
+     * Well-known distracting packages plus anything the vendor tagged as video, social, game, news or audio.
+     */
+    fun preinstalledCandidates(): List<SystemAppCandidate> {
+        if (!insideProfile) return emptyList()
+        val pm = context.packageManager
+        val flags = PackageManager.MATCH_UNINSTALLED_PACKAGES
+        val discovered =
+            runCatching { pm.getInstalledApplications(flags) }
+                .getOrDefault(emptyList())
+                .filter { it.absentSystemApp() && it.category in DISTRACTING_CATEGORIES }
+                .map { it.packageName }
+        val known =
+            KNOWN_PREINSTALLED.filter { pkg ->
+                runCatching { pm.getApplicationInfo(pkg, flags).absentSystemApp() }.getOrDefault(false)
+            }
+        return (known + discovered)
+            .distinct()
+            .mapNotNull { pkg ->
+                runCatching { SystemAppCandidate(pkg, pm.getApplicationInfo(pkg, flags).loadLabel(pm).toString()) }
+                    .getOrNull()
+            }.sortedBy { it.label.lowercase() }
+    }
+
+    /** Switches a pre-installed app on inside the profile so it can be limited there. */
+    fun enableSystemApp(packageName: String): Boolean =
+        insideProfile && runCatching { dpm.enableSystemApp(admin, packageName) }.isSuccess
+
+    private fun ApplicationInfo.absentSystemApp(): Boolean =
+        flags and ApplicationInfo.FLAG_SYSTEM != 0 && flags and ApplicationInfo.FLAG_INSTALLED == 0
+
     /** Restores every package this process suspended (tracking switched off, service stopping). */
     fun releaseAll() {
         if (!insideProfile || applied.isEmpty()) return
@@ -97,6 +132,34 @@ class FocusProfileManager @Inject constructor(
         runCatching { crossProfileApps()?.targetUserProfiles?.firstOrNull() }.getOrNull()
 
     companion object {
+        private val DISTRACTING_CATEGORIES =
+            setOf(
+                ApplicationInfo.CATEGORY_VIDEO,
+                ApplicationInfo.CATEGORY_SOCIAL,
+                ApplicationInfo.CATEGORY_GAME,
+                ApplicationInfo.CATEGORY_NEWS,
+                ApplicationInfo.CATEGORY_AUDIO,
+            )
+
+        /** Distracting apps vendors ship pre-installed; only the ones actually on the device are offered. */
+        private val KNOWN_PREINSTALLED =
+            listOf(
+                "com.google.android.youtube",
+                "com.google.android.apps.youtube.music",
+                "com.android.chrome",
+                "com.sec.android.app.sbrowser",
+                "com.google.android.googlequicksearchbox",
+                "com.facebook.katana",
+                "com.instagram.android",
+                "com.zhiliaoapp.musically",
+                "com.twitter.android",
+                "com.snapchat.android",
+                "com.reddit.frontpage",
+                "com.netflix.mediaclient",
+                "com.spotify.music",
+                "com.linkedin.android",
+            )
+
         /** Runs inside the new profile when Android hands it over; safe to call more than once. */
         fun finishProvisioning(context: Context) {
             val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager

@@ -81,7 +81,11 @@
     <string name="settings_profile_unsupported_hint">המכשיר הזה לא מאפשר ליצור פרופיל</string>
     <string name="settings_profile_how">איך עובד פרופיל המיקוד</string>
     <string name="settings_profile_how_hint">ארבעה שלבים, פעם אחת</string>
-    <string name="settings_profile_how_body">1. יוצרים את הפרופיל. אנדרואיד פותח מרחב נפרד שמסומן בתיק.\n\n2. פותחים את רקבון בתוכו ומאשרים את ההרשאות.\n\n3. מתקינים את האפליקציות המסיחות מחנות Play בתוך הפרופיל וקובעים להן גבולות שם.\n\n4. מוחקים את העותקים האישיים. כשמגיעים לגבול האייקון מאפיר, ולחיצה עליו רק מודיעה שהאפליקציה חסומה.</string>
+    <string name="settings_profile_how_body">1. יוצרים את הפרופיל. אנדרואיד פותח מרחב נפרד שמסומן בתיק.\n\n2. פותחים את רקבון בתוכו ומאשרים את ההרשאות.\n\n3. מתקינים את האפליקציות המסיחות מחנות Play בתוך הפרופיל, או מדליקים אפליקציות מותקנות מראש כמו יוטיוב מתוך ההגדרות של רקבון שם, וקובעים להן גבולות.\n\n4. מוחקים את העותקים האישיים. כשמגיעים לגבול האייקון מאפיר, ולחיצה עליו רק מודיעה שהאפליקציה חסומה.\n\nאפליקציה חסומה היא לא האתר שלה: youtube.com עדיין נפתח בדפדפן, אלא אם מגבילים גם את הדפדפן.</string>
+    <string name="settings_profile_system">הדלקת אפליקציה מותקנת מראש</string>
+    <string name="settings_profile_system_hint">יוטיוב, כרום ואפליקציות אחרות שהגיעו עם הטלפון מתחילות כאן כבויות</string>
+    <string name="settings_profile_system_none">כל האפליקציות המותקנות מראש בטלפון כבר זמינות כאן</string>
+    <string name="settings_profile_system_sheet">הדלקה בפרופיל המיקוד</string>
     <string name="settings_profile_got_it">הבנתי</string>
     <string name="settings_section_notifications">התראות</string>
     <string name="settings_summary">סיכום יומי בערב</string>

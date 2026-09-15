@@ -120,7 +120,9 @@ BlockerService loop (2s/5s/15s, off when screen off) ◄────────
   same enforcement loop calls `FocusProfileManager.applySuspension`, which greys out blocked apps with
   `DevicePolicyManager.setPackagesSuspended` and restores them at midnight or when the limit is removed. A
   suspended app never launches; tapping its icon shows the system dialog with our support message. Personal
-  copies of apps cannot be suspended by anyone but the system.
+  copies of apps cannot be suspended by anyone but the system. A work profile starts with system apps
+  switched off, so pre-installed apps such as YouTube are offered for `enableSystemApp` from the profile's
+  settings (a curated list plus anything the vendor tagged video / social / game / news / audio).
 * **Midnight** – correctness never depends on the alarm. Every process start, boot, service tick and worker
   run compares the stored rollover date with the local date and finalises missed days (`DailyResetPolicy`).
   An exact alarm just makes the refresh prompt.

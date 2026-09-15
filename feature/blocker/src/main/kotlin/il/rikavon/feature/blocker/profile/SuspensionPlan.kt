@@ -16,6 +16,9 @@ object SuspensionPlan {
     }
 }
 
+/** A pre-installed app that can be switched on inside the focus profile. */
+data class SystemAppCandidate(val packageName: String, val label: String)
+
 /** What the settings screen needs to know about the focus profile from either side of it. */
 data class FocusProfileState(
     /** This copy of the app runs inside the focus profile and owns it. */

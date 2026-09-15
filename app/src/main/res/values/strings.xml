@@ -81,7 +81,11 @@
     <string name="settings_profile_unsupported_hint">This device does not allow creating one</string>
     <string name="settings_profile_how">How the focus profile works</string>
     <string name="settings_profile_how_hint">Four steps, once</string>
-    <string name="settings_profile_how_body">1. Create the profile. Android makes a separate space marked with a briefcase.\n\n2. Open Rikavon inside it and grant its permissions.\n\n3. Install the distracting apps from the Play Store inside the profile and set their limits there.\n\n4. Remove the personal copies. When a limit is reached the icon turns grey, and tapping it only says the app is blocked.</string>
+    <string name="settings_profile_how_body">1. Create the profile. Android makes a separate space marked with a briefcase.\n\n2. Open Rikavon inside it and grant its permissions.\n\n3. Install the distracting apps from the Play Store inside the profile, or switch on pre-installed ones such as YouTube from Rikavon\'s settings there, and set their limits.\n\n4. Remove the personal copies. When a limit is reached the icon turns grey, and tapping it only says the app is blocked.\n\nA blocked app is not its website: youtube.com still opens in a browser unless you limit the browser too.</string>
+    <string name="settings_profile_system">Switch on a pre-installed app</string>
+    <string name="settings_profile_system_hint">YouTube, Chrome and other apps that came with the phone start switched off here</string>
+    <string name="settings_profile_system_none">Every pre-installed app on this phone is already available here</string>
+    <string name="settings_profile_system_sheet">Switch on in the focus profile</string>
     <string name="settings_profile_got_it">Got it</string>
     <string name="settings_section_notifications">Notifications</string>
     <string name="settings_summary">Evening summary</string>

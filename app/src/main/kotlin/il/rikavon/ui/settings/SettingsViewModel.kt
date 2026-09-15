@@ -18,10 +18,12 @@ import il.rikavon.core.data.repo.SettingsRepository
 import il.rikavon.core.ui.anim.AnimationSpecs
 import il.rikavon.feature.blocker.profile.FocusProfileManager
 import il.rikavon.feature.blocker.profile.FocusProfileState
+import il.rikavon.feature.blocker.profile.SystemAppCandidate
 import il.rikavon.feature.blocker.service.ServiceStarter
 import il.rikavon.feature.mascot.model.MascotSkin
 import il.rikavon.feature.mascot.registry.SelectedMascot
 import il.rikavon.notifications.DailySummaryScheduler
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -48,6 +50,8 @@ data class SettingsUiState(
     val backupMessage: BackupMessage? = null,
     val versionName: String = "",
     val profile: FocusProfileState = FocusProfileState(),
+    /** Inside the focus profile: pre-installed apps that can still be switched on there. */
+    val systemApps: List<SystemAppCandidate> = emptyList(),
 )
 
 @HiltViewModel
@@ -63,6 +67,7 @@ class SettingsViewModel @Inject constructor(
 ) : ViewModel() {
     private val permissionState = MutableStateFlow(permissions.state())
     private val profileState = MutableStateFlow(focusProfile.state())
+    private val systemApps = MutableStateFlow<List<SystemAppCandidate>>(emptyList())
     private val countdown = MutableStateFlow<Int?>(null)
     private val backupMessage = MutableStateFlow<BackupMessage?>(null)
     private var pendingAfterCountdown: (suspend () -> Unit)? = null
@@ -78,22 +83,39 @@ class SettingsViewModel @Inject constructor(
         combine(
             settings.settings,
             selectedMascot.skin,
-            combine(permissionState, profileState) { perms, profile -> perms to profile },
+            combine(permissionState, profileState, systemApps) { perms, profile, apps -> Triple(perms, profile, apps) },
             countdown,
             backupMessage,
-        ) { prefs, skin, (perms, profile), c, message ->
-            SettingsUiState(prefs, skin, perms, Tier.of(prefs.premium), c, message, versionName, profile)
+        ) { prefs, skin, (perms, profile, apps), c, message ->
+            SettingsUiState(prefs, skin, perms, Tier.of(prefs.premium), c, message, versionName, profile, apps)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), SettingsUiState())
+
+    init {
+        refreshSystemApps()
+    }
 
     fun refreshPermissions() {
         permissionState.value = permissions.state()
         profileState.value = focusProfile.state()
+        refreshSystemApps()
     }
 
     fun provisioningIntent(): Intent = focusProfile.provisioningIntent()
 
     fun openProfile() {
         focusProfile.openInsideProfile()
+    }
+
+    /** Inside the focus profile: switches a pre-installed app on so it can be limited there. */
+    fun enableSystemApp(packageName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            focusProfile.enableSystemApp(packageName)
+            systemApps.value = focusProfile.preinstalledCandidates()
+        }
+    }
+
+    private fun refreshSystemApps() {
+        viewModelScope.launch(Dispatchers.IO) { systemApps.value = focusProfile.preinstalledCandidates() }
     }
 
     /** Turning strict mode off is itself delayed when strict mode is on. */

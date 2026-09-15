@@ -60,7 +60,7 @@ import il.rikavon.core.ui.theme.Spacing
 import il.rikavon.feature.mascot.ui.UiLanguage
 import java.time.LocalDate
 
-private enum class Sheet { REDUCE_MOTION, LANGUAGE }
+private enum class Sheet { REDUCE_MOTION, LANGUAGE, SYSTEM_APPS }
 
 /** The system page where the user toggles the instant-blocking accessibility service. */
 private fun Context.openAccessibilitySettings() {
@@ -248,11 +248,24 @@ fun SettingsScreen(
                             viewModel.refreshPermissions()
                         }
                     when {
-                        profile.insideProfile ->
+                        profile.insideProfile -> {
                             ListRow(
                                 title = stringResource(R.string.settings_profile_inside),
                                 subtitle = stringResource(R.string.settings_profile_inside_hint),
                             )
+                            val hasCandidates = state.systemApps.isNotEmpty()
+                            val systemHint =
+                                if (hasCandidates) {
+                                    R.string.settings_profile_system_hint
+                                } else {
+                                    R.string.settings_profile_system_none
+                                }
+                            SettingNavRow(
+                                title = stringResource(R.string.settings_profile_system),
+                                subtitle = stringResource(systemHint),
+                                onClick = { if (hasCandidates) sheet = Sheet.SYSTEM_APPS },
+                            )
+                        }
                         profile.hasProfile ->
                             SettingNavRow(
                                 title = stringResource(R.string.settings_profile_open),
@@ -409,6 +422,17 @@ fun SettingsScreen(
                     options = AppLanguage.entries.map { ChoiceOption(it, stringResource(it.label())) },
                     selected = prefs.language,
                     onSelect = viewModel::setLanguage,
+                    onDismiss = { sheet = null },
+                )
+            Sheet.SYSTEM_APPS ->
+                ChoiceSheet(
+                    title = stringResource(R.string.settings_profile_system_sheet),
+                    options = state.systemApps.map { ChoiceOption(it.packageName, it.label, it.packageName) },
+                    selected = "",
+                    onSelect = { packageName ->
+                        viewModel.enableSystemApp(packageName)
+                        sheet = null
+                    },
                     onDismiss = { sheet = null },
                 )
             null -> Unit
