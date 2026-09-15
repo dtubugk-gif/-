@@ -163,6 +163,8 @@
     <string name="score_section_today">Today</string>
     <string name="score_total_label">Total</string>
     <string name="score_part_value">%1$d of %2$d</string>
+    <string name="profile_name">Rikavon focus</string>
+    <string name="profile_support_message">Blocked by Rikavon: this app is over today\'s limit or inside a schedule you set. Try again later.</string>
     <string name="accessibility_service_label">Rikavon instant blocking</string>
     <string name="accessibility_service_summary">Closes a blocked app the moment it opens</string>
     <string name="accessibility_service_description">Closes an app the moment it opens when it is over the daily limit you set or inside one of your schedules. Rikavon only looks at which app came to the front; it never reads, stores or sends screen content.</string>

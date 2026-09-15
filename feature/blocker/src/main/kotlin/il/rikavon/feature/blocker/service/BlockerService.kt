@@ -15,6 +15,8 @@ import androidx.core.app.ServiceCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import il.rikavon.core.data.model.AppLimit
+import il.rikavon.core.data.model.Schedule
 import il.rikavon.core.data.permissions.PermissionChecker
 import il.rikavon.core.data.repo.DailySummaryRepository
 import il.rikavon.core.data.repo.DayRolloverUseCase
@@ -32,15 +34,18 @@ import il.rikavon.feature.blocker.engine.EnforcementEngine
 import il.rikavon.feature.blocker.engine.InstantBlockBus
 import il.rikavon.feature.blocker.engine.PollingPolicy
 import il.rikavon.feature.blocker.overlay.OverlayController
+import il.rikavon.feature.blocker.profile.FocusProfileManager
 import il.rikavon.feature.mascot.registry.MascotTexts
 import il.rikavon.feature.mascot.registry.SelectedMascot
 import il.rikavon.feature.mascot.sound.MascotVoice
 import il.rikavon.feature.mascot.ui.UiLanguage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 /**
@@ -84,6 +89,8 @@ class BlockerService : LifecycleService() {
     @Inject lateinit var installed: InstalledAppsSource
 
     @Inject lateinit var instant: InstantBlockBus
+
+    @Inject lateinit var profile: FocusProfileManager
 
     private val engine = EnforcementEngine()
     private val policy = PollingPolicy()
@@ -129,6 +136,7 @@ class BlockerService : LifecycleService() {
     override fun onDestroy() {
         runCatching { unregisterReceiver(screenReceiver) }
         instant.publish(emptySet())
+        profile.releaseAll()
         overlay.hide()
         super.onDestroy()
     }
@@ -143,6 +151,7 @@ class BlockerService : LifecycleService() {
             val current = settings.current()
             if (!current.trackingEnabled || !permissions.hasUsageAccess()) {
                 instant.publish(emptySet())
+                withContext(Dispatchers.IO) { profile.releaseAll() }
                 overlay.hide()
                 delay(PollingPolicy.NORMAL_MILLIS)
                 continue
@@ -164,6 +173,8 @@ class BlockerService : LifecycleService() {
 
             val blockable = engine.blockedPackages(snapshot, limitList, scheduleList, now)
             instant.publish(blockable)
+            // Inside the focus profile a block is a suspension: the icon greys out and the app cannot open.
+            withContext(Dispatchers.IO) { profile.applySuspension(tracked(limitList, scheduleList), blockable) }
             val interval =
                 policy.intervalMillis(
                     screenOn = screenOn.value && snapshot.screenOn,
@@ -175,6 +186,12 @@ class BlockerService : LifecycleService() {
             delay(interval)
         }
     }
+
+    private fun tracked(limitList: List<AppLimit>, scheduleList: List<Schedule>): Set<String> =
+        (
+            limitList.filter { it.enabled }.map { it.packageName } +
+                scheduleList.filter { it.enabled }.flatMap { it.packages }
+        ).toSet()
 
     /** The accessibility service already sent [packageName] home; put the block screen up right away. */
     private suspend fun blockNow(packageName: String) {

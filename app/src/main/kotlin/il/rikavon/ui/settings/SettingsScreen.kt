@@ -43,6 +43,7 @@ import il.rikavon.core.ui.components.ChoiceOption
 import il.rikavon.core.ui.components.ChoiceSheet
 import il.rikavon.core.ui.components.GroupCard
 import il.rikavon.core.ui.components.LinkButton
+import il.rikavon.core.ui.components.ListRow
 import il.rikavon.core.ui.components.RikavonLargeTopBar
 import il.rikavon.core.ui.components.RikavonTopBar
 import il.rikavon.core.ui.components.ScreenPadding
@@ -87,7 +88,28 @@ fun SettingsScreen(
     val language = UiLanguage.current()
     val snackbar = remember { SnackbarHostState() }
     var sheet by remember { mutableStateOf<Sheet?>(null) }
+    var profileHelp by remember { mutableStateOf(false) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refreshPermissions() }
+    if (profileHelp) {
+        AlertDialog(
+            onDismissRequest = { profileHelp = false },
+            title = {
+                Text(
+                    stringResource(R.string.settings_profile_how),
+                    style = MaterialTheme.typography.titleLarge,
+                )
+            },
+            text = {
+                Text(
+                    stringResource(R.string.settings_profile_how_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
+            confirmButton = {
+                LinkButton(text = stringResource(R.string.settings_profile_got_it), onClick = { profileHelp = false })
+            },
+        )
+    }
     val scrollBehavior = if (onBack == null) rememberLargeTopBarBehavior() else rememberPinnedTopBarBehavior()
 
     val exportLauncher =
@@ -211,6 +233,49 @@ fun SettingsScreen(
                         title = stringResource(R.string.settings_score),
                         subtitle = stringResource(R.string.settings_score_hint),
                         onClick = onOpenScore,
+                    )
+                }
+            }
+            item {
+                SectionLabel(
+                    stringResource(R.string.settings_section_profile),
+                    modifier = Modifier.padding(top = Spacing.md),
+                )
+                GroupCard {
+                    val profile = state.profile
+                    val provisioning =
+                        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                            viewModel.refreshPermissions()
+                        }
+                    when {
+                        profile.insideProfile ->
+                            ListRow(
+                                title = stringResource(R.string.settings_profile_inside),
+                                subtitle = stringResource(R.string.settings_profile_inside_hint),
+                            )
+                        profile.hasProfile ->
+                            SettingNavRow(
+                                title = stringResource(R.string.settings_profile_open),
+                                subtitle = stringResource(R.string.settings_profile_open_hint),
+                                onClick = viewModel::openProfile,
+                            )
+                        profile.canCreate ->
+                            SettingNavRow(
+                                title = stringResource(R.string.settings_profile_create),
+                                subtitle = stringResource(R.string.settings_profile_create_hint),
+                                onClick = { provisioning.launch(viewModel.provisioningIntent()) },
+                            )
+                        else ->
+                            ListRow(
+                                title = stringResource(R.string.settings_profile_unsupported),
+                                subtitle = stringResource(R.string.settings_profile_unsupported_hint),
+                                enabled = false,
+                            )
+                    }
+                    SettingNavRow(
+                        title = stringResource(R.string.settings_profile_how),
+                        subtitle = stringResource(R.string.settings_profile_how_hint),
+                        onClick = { profileHelp = true },
                     )
                 }
             }

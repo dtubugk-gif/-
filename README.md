@@ -114,6 +114,13 @@ BlockerService loop (2s/5s/15s, off when screen off) ◄────────
   `GLOBAL_ACTION_HOME` at once and asks the service for the overlay. This is the closest a third-party app
   can get to Family Link: Android reserves package suspension (greyed-out icons) for device owners and
   system apps. Without the service the 1 s poll takes over.
+* **Focus profile (optional)** – the Family Link behaviour itself, for apps the user installs inside a work
+  profile that Rikavon owns. `FocusProfileAdminReceiver` is the profile owner (no device policies),
+  `FocusProfileComplianceActivity` answers the Android 12+ provisioning handshake, and inside the profile the
+  same enforcement loop calls `FocusProfileManager.applySuspension`, which greys out blocked apps with
+  `DevicePolicyManager.setPackagesSuspended` and restores them at midnight or when the limit is removed. A
+  suspended app never launches; tapping its icon shows the system dialog with our support message. Personal
+  copies of apps cannot be suspended by anyone but the system.
 * **Midnight** – correctness never depends on the alarm. Every process start, boot, service tick and worker
   run compares the stored rollover date with the local date and finalises missed days (`DailyResetPolicy`).
   An exact alarm just makes the refresh prompt.
@@ -149,6 +156,7 @@ Everything lives in `core/ui/.../anim/AnimationSpecs.kt`. `MascotView` implement
 | `PACKAGE_USAGE_STATS` | minutes and opens per app | no tracking, no blocking (limited mode) |
 | `SYSTEM_ALERT_WINDOW` | the block screen | pet rots, nothing is blocked |
 | `BIND_ACCESSIBILITY_SERVICE` (optional, user-enabled) | a blocked app is sent home the instant its window appears | the 1 s poll catches it instead |
+| `BIND_DEVICE_ADMIN` (optional, profile owner of the focus profile) | grey out blocked apps installed inside the focus profile | overlay and instant path only |
 | `QUERY_ALL_PACKAGES` | the app picker lists launchable apps | the picker would be empty |
 | `FOREGROUND_SERVICE` + `_SPECIAL_USE` | keep the enforcement loop alive | Android kills the loop |
 | `POST_NOTIFICATIONS` (13+) | silent service notification, optional evening summary | service still runs, no summary |

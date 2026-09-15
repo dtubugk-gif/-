@@ -1,6 +1,7 @@
 package il.rikavon.ui.settings
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -15,6 +16,8 @@ import il.rikavon.core.data.permissions.PermissionState
 import il.rikavon.core.data.repo.BackupRepository
 import il.rikavon.core.data.repo.SettingsRepository
 import il.rikavon.core.ui.anim.AnimationSpecs
+import il.rikavon.feature.blocker.profile.FocusProfileManager
+import il.rikavon.feature.blocker.profile.FocusProfileState
 import il.rikavon.feature.blocker.service.ServiceStarter
 import il.rikavon.feature.mascot.model.MascotSkin
 import il.rikavon.feature.mascot.registry.SelectedMascot
@@ -44,6 +47,7 @@ data class SettingsUiState(
     val strictCountdown: Int? = null,
     val backupMessage: BackupMessage? = null,
     val versionName: String = "",
+    val profile: FocusProfileState = FocusProfileState(),
 )
 
 @HiltViewModel
@@ -54,9 +58,11 @@ class SettingsViewModel @Inject constructor(
     private val permissions: PermissionChecker,
     private val starter: ServiceStarter,
     private val summaryScheduler: DailySummaryScheduler,
+    private val focusProfile: FocusProfileManager,
     selectedMascot: SelectedMascot,
 ) : ViewModel() {
     private val permissionState = MutableStateFlow(permissions.state())
+    private val profileState = MutableStateFlow(focusProfile.state())
     private val countdown = MutableStateFlow<Int?>(null)
     private val backupMessage = MutableStateFlow<BackupMessage?>(null)
     private var pendingAfterCountdown: (suspend () -> Unit)? = null
@@ -72,15 +78,22 @@ class SettingsViewModel @Inject constructor(
         combine(
             settings.settings,
             selectedMascot.skin,
-            permissionState,
+            combine(permissionState, profileState) { perms, profile -> perms to profile },
             countdown,
             backupMessage,
-        ) { prefs, skin, perms, c, message ->
-            SettingsUiState(prefs, skin, perms, Tier.of(prefs.premium), c, message, versionName)
+        ) { prefs, skin, (perms, profile), c, message ->
+            SettingsUiState(prefs, skin, perms, Tier.of(prefs.premium), c, message, versionName, profile)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), SettingsUiState())
 
     fun refreshPermissions() {
         permissionState.value = permissions.state()
+        profileState.value = focusProfile.state()
+    }
+
+    fun provisioningIntent(): Intent = focusProfile.provisioningIntent()
+
+    fun openProfile() {
+        focusProfile.openInsideProfile()
     }
 
     /** Turning strict mode off is itself delayed when strict mode is on. */

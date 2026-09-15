@@ -63,6 +63,15 @@ Rationale for every category:
 > only to see which app came to the front and to send you home. It never reads screen content."
 > The core feature is not gated on it: with the service off the enforcement loop polls every second.
 
+### Device admin / profile owner (Play Console → App content → "Device admin")
+
+> Rikavon can optionally create a work profile ("focus profile") of which it is the profile owner, started
+> by the user from Settings through the system provisioning flow (`ACTION_PROVISION_MANAGED_PROFILE`). The
+> `DeviceAdminReceiver` requests no device policies. Ownership is used for exactly one thing: greying out
+> (suspending) the apps the user installed inside that profile while the user's own limit or schedule applies,
+> and restoring them afterwards. No data leaves the device, no other policy is applied, and the user can
+> remove the profile at any time from system settings.
+
 ### PACKAGE_USAGE_STATS
 
 > Required to measure minutes and open counts for the apps the user limits (UsageStatsManager). Requested via
