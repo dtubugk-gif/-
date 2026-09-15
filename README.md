@@ -104,9 +104,16 @@ BlockerService loop (2s/5s/15s, off when screen off) ◄────────
   opens. Opens are counted on `ACTIVITY_RESUMED`; a resume within 2 s of the same package's previous resume
   or pause is a "return", not an open; in-app activity switches never count.
 * **Enforcement** – `BlockerService` (foreground, `specialUse`) polls adaptively: 15 s normally, 5 s at 80 %
-  of a limit, 2 s at 95 % / while a tracked app is on screen / while any app is blockable, nothing while the
-  screen is off. The block overlay is a `ComposeView` in a `TYPE_APPLICATION_OVERLAY` window with its own
-  lifecycle owner. No AccessibilityService.
+  of a limit, 2 s at 95 % / while a tracked app is on screen, 1 s while any app is blockable and the instant
+  path is off, nothing while the screen is off. The block overlay is a `ComposeView` in a
+  `TYPE_APPLICATION_OVERLAY` window with its own lifecycle owner. A block is hard: the moment the overlay is
+  attached the blocked app is sent home (so nothing keeps playing behind it) and the overlay stays until the
+  user closes it.
+* **Instant path (optional)** – `BlockerAccessibilityService` subscribes to window-state events only, never
+  retrieves window content, and when a package in `InstantBlockBus.blocked` comes to the front it performs
+  `GLOBAL_ACTION_HOME` at once and asks the service for the overlay. This is the closest a third-party app
+  can get to Family Link: Android reserves package suspension (greyed-out icons) for device owners and
+  system apps. Without the service the 1 s poll takes over.
 * **Midnight** – correctness never depends on the alarm. Every process start, boot, service tick and worker
   run compares the stored rollover date with the local date and finalises missed days (`DailyResetPolicy`).
   An exact alarm just makes the refresh prompt.
@@ -141,6 +148,7 @@ Everything lives in `core/ui/.../anim/AnimationSpecs.kt`. `MascotView` implement
 |---|---|---|
 | `PACKAGE_USAGE_STATS` | minutes and opens per app | no tracking, no blocking (limited mode) |
 | `SYSTEM_ALERT_WINDOW` | the block screen | pet rots, nothing is blocked |
+| `BIND_ACCESSIBILITY_SERVICE` (optional, user-enabled) | a blocked app is sent home the instant its window appears | the 1 s poll catches it instead |
 | `QUERY_ALL_PACKAGES` | the app picker lists launchable apps | the picker would be empty |
 | `FOREGROUND_SERVICE` + `_SPECIAL_USE` | keep the enforcement loop alive | Android kills the loop |
 | `POST_NOTIFICATIONS` (13+) | silent service notification, optional evening summary | service still runs, no summary |

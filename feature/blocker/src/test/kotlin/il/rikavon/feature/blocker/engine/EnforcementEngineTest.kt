@@ -68,6 +68,22 @@ class EnforcementEngineTest {
     }
 
     @Test
+    fun `an explicit package is judged even when usage stats still name another app`() {
+        val decision =
+            engine.evaluate(
+                snapshot("launcher", "a" to 30),
+                listOf(limit("a", 30)),
+                emptyList(),
+                monday,
+                packageName = "a",
+            )
+        assertEquals(BlockReason.LIMIT_REACHED, decision?.reason)
+        assertNull(
+            engine.evaluate(snapshot("a", "a" to 30), listOf(limit("a", 30)), emptyList(), monday, packageName = "b"),
+        )
+    }
+
+    @Test
     fun `full block applies with zero usage`() {
         val decision = engine.evaluate(snapshot("a"), listOf(limit("a", 30, fullBlock = true)), emptyList(), monday)!!
         assertEquals(BlockReason.FULL_BLOCK, decision.reason)
@@ -162,7 +178,13 @@ class PollingPolicyTest {
 
     @Test
     fun `a tracked app on screen or a blockable app forces the fast tier`() {
-        assertEquals(PollingPolicy.FAST_MILLIS, policy.intervalMillis(true, true, false, 0f))
-        assertEquals(PollingPolicy.FAST_MILLIS, policy.intervalMillis(true, false, true, 0f))
+        assertEquals(PollingPolicy.FAST_MILLIS, policy.intervalMillis(true, true, false, 0f, instantPath = true))
+        assertEquals(PollingPolicy.FAST_MILLIS, policy.intervalMillis(true, false, true, 0f, instantPath = true))
+    }
+
+    @Test
+    fun `a blockable app without the accessibility service polls every second`() {
+        assertEquals(PollingPolicy.INSTANT_MILLIS, policy.intervalMillis(true, false, true, 0f))
+        assertEquals(PollingPolicy.FAST_MILLIS, policy.intervalMillis(true, false, true, 0f, instantPath = true))
     }
 }

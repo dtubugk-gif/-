@@ -16,13 +16,18 @@ data class BlockDecision(
 
 /** Pure decision logic: given what is on screen and what the user configured, should we block? */
 class EnforcementEngine {
+    /**
+     * Decision for [packageName] (by default whatever usage stats say is in front; the accessibility path
+     * passes the package it just saw, which is fresher than the stats).
+     */
     fun evaluate(
         snapshot: DayUsageSnapshot,
         limits: List<AppLimit>,
         schedules: List<Schedule>,
         now: ZonedDateTime,
+        packageName: String? = snapshot.foregroundPackage,
     ): BlockDecision? {
-        val foreground = snapshot.foregroundPackage ?: return null
+        val foreground = packageName ?: return null
         scheduleBlocking(foreground, schedules, now)?.let { return it }
         val limit = limits.firstOrNull { it.packageName == foreground && it.enabled } ?: return null
         val usage = snapshot.usageOf(foreground)

@@ -32,6 +32,8 @@
     <string name="onboarding_usage_body">כדי לדעת כמה זמן פתחתם כל אפליקציה, אנדרואיד דורש הרשאה מיוחדת. הנתונים נשארים בטלפון. בלי ההרשאה הזו אין מעקב ואין חסימה.</string>
     <string name="onboarding_overlay_title">הצגה מעל אפליקציות אחרות</string>
     <string name="onboarding_overlay_body">מסך החסימה מופיע מעל האפליקציה שעברה את הגבול. בלי ההרשאה הזו המחמד יירקב בשקט, אבל שום דבר לא ייחסם.</string>
+    <string name="onboarding_instant_title">חסימה מיידית</string>
+    <string name="onboarding_instant_body">אופציונלי. עם שירות הנגישות דולק, אפליקציה חסומה נסגרת ברגע שהיא נפתחת, כמו בבקרת הורים, במקום שנייה אחר כך. רקבון משתמש בשירות רק כדי לדעת איזו אפליקציה עלתה לחזית ולהחזיר אתכם למסך הבית. הוא לעולם לא קורא תוכן מהמסך. הפעילו את ״רקבון – חסימה מיידית״ תחת אפליקציות מותקנות.</string>
     <string name="onboarding_notifications_title">התראות</string>
     <string name="onboarding_notifications_body">התראה אחת שקטה כדי שהשירות ימשיך לעבוד, ואופציונלית סיכום ערב בקול של המחמד. בלי תזכורות טורדניות. אפשר לדלג.</string>
     <string name="onboarding_alarm_title">איפוס מדויק בחצות</string>
@@ -61,6 +63,9 @@
     <string name="settings_permissions">הרשאות</string>
     <string name="settings_permissions_ok">כל ההרשאות החיוניות ניתנו</string>
     <string name="settings_permissions_missing">חסרות הרשאות. לחצו להשלמה</string>
+    <string name="settings_instant">חסימה מיידית</string>
+    <string name="settings_instant_on">דולק. אפליקציות חסומות נסגרות ברגע שנפתחות</string>
+    <string name="settings_instant_off">כבוי. אפליקציות חסומות נסגרות תוך שנייה. לחצו להפעלה</string>
     <string name="settings_battery">אופטימיזציית סוללה</string>
     <string name="settings_battery_hint">הוראות ליצרן שלכם כדי שהשירות לא ייהרג</string>
     <string name="settings_score">איך מחושב ציון המיקוד</string>

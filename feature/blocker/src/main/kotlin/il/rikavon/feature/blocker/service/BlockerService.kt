@@ -29,6 +29,7 @@ import il.rikavon.feature.blocker.engine.BlockDecision
 import il.rikavon.feature.blocker.engine.BlockerEvent
 import il.rikavon.feature.blocker.engine.BlockerEvents
 import il.rikavon.feature.blocker.engine.EnforcementEngine
+import il.rikavon.feature.blocker.engine.InstantBlockBus
 import il.rikavon.feature.blocker.engine.PollingPolicy
 import il.rikavon.feature.blocker.overlay.OverlayController
 import il.rikavon.feature.mascot.registry.MascotTexts
@@ -45,6 +46,10 @@ import javax.inject.Inject
 /**
  * The enforcement loop. Foreground so the system keeps it alive; polls usage adaptively while the screen is
  * on, sleeps completely when it is off, and raises the block overlay the moment a limit or schedule applies.
+ *
+ * A block is hard: the blocked app is sent home the moment the block screen is up, so it stops running
+ * behind it, and the screen stays until the user closes it. With the optional accessibility service the
+ * app is sent home the instant its window appears and the screen is requested through [InstantBlockBus].
  */
 @AndroidEntryPoint
 class BlockerService : LifecycleService() {
@@ -77,6 +82,8 @@ class BlockerService : LifecycleService() {
     @Inject lateinit var midnightAlarm: MidnightAlarmScheduler
 
     @Inject lateinit var installed: InstalledAppsSource
+
+    @Inject lateinit var instant: InstantBlockBus
 
     private val engine = EnforcementEngine()
     private val policy = PollingPolicy()
@@ -111,6 +118,7 @@ class BlockerService : LifecycleService() {
         midnightAlarm.schedule()
         events.emit(BlockerEvent.ServiceStarted)
         lifecycleScope.launch { loop() }
+        lifecycleScope.launch { instant.requests.collect { blockNow(it) } }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -120,6 +128,7 @@ class BlockerService : LifecycleService() {
 
     override fun onDestroy() {
         runCatching { unregisterReceiver(screenReceiver) }
+        instant.publish(emptySet())
         overlay.hide()
         super.onDestroy()
     }
@@ -133,6 +142,7 @@ class BlockerService : LifecycleService() {
             }
             val current = settings.current()
             if (!current.trackingEnabled || !permissions.hasUsageAccess()) {
+                instant.publish(emptySet())
                 overlay.hide()
                 delay(PollingPolicy.NORMAL_MILLIS)
                 continue
@@ -153,23 +163,36 @@ class BlockerService : LifecycleService() {
             events.emit(BlockerEvent.UsageRefreshed)
 
             val blockable = engine.blockedPackages(snapshot, limitList, scheduleList, now)
+            instant.publish(blockable)
             val interval =
                 policy.intervalMillis(
                     screenOn = screenOn.value && snapshot.screenOn,
                     foregroundTracked = limitList.any { it.enabled && it.packageName == snapshot.foregroundPackage },
                     anyBlockable = blockable.isNotEmpty(),
                     maxUsageRatio = engine.maxUsageRatio(snapshot, limitList),
+                    instantPath = permissions.hasAccessibility(),
                 ) ?: PollingPolicy.NORMAL_MILLIS
             delay(interval)
         }
     }
 
-    private suspend fun handleDecision(decision: BlockDecision?) {
-        if (decision == null) {
-            overlay.hide()
-            return
-        }
-        val suppressed = decision.packageName == suppressedPackage && time.nowMillis() < suppressedUntil
+    /** The accessibility service already sent [packageName] home; put the block screen up right away. */
+    private suspend fun blockNow(packageName: String) {
+        if (!settings.current().trackingEnabled) return
+        val decision =
+            engine.evaluate(usage.refresh(), limits.all(), schedules.all(), time.now(), packageName = packageName)
+        handleDecision(decision, ignoreSuppression = true)
+    }
+
+    /**
+     * Shows the block screen for a decision. A null decision no longer hides it: the blocked app was sent
+     * home when the screen came up, so the launcher is what usage stats report next, and the screen must
+     * stay until the user closes it (or the screen turns off / tracking stops).
+     */
+    private suspend fun handleDecision(decision: BlockDecision?, ignoreSuppression: Boolean = false) {
+        if (decision == null) return
+        val suppressed =
+            !ignoreSuppression && decision.packageName == suppressedPackage && time.nowMillis() < suppressedUntil
         if (suppressed || overlay.isShowing(decision.packageName) || !permissions.state().overlay) return
 
         val skin = selectedMascot.current() ?: return
@@ -188,6 +211,9 @@ class BlockerService : LifecycleService() {
                 message = message,
                 appearance = overlay.appearance(prefs.reduceMotion),
                 onClose = { dismissAndGoHome(decision.packageName) },
+                // Hard block: the app leaves the foreground the moment the screen covers it, so nothing keeps
+                // playing behind the overlay and reopening it starts the block again.
+                onShown = ::goHome,
             ),
         )
     }
@@ -196,6 +222,11 @@ class BlockerService : LifecycleService() {
         suppressedPackage = packageName
         suppressedUntil = time.nowMillis() + SUPPRESS_AFTER_CLOSE_MILLIS
         overlay.hide()
+        goHome()
+    }
+
+    /** Allowed from the service because the app holds SYSTEM_ALERT_WINDOW and has a window on screen. */
+    private fun goHome() {
         val home =
             Intent(Intent.ACTION_MAIN)
                 .addCategory(Intent.CATEGORY_HOME)

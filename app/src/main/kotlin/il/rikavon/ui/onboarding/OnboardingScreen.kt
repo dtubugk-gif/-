@@ -85,6 +85,7 @@ enum class OnboardingStep(val permission: AppPermission?) {
     WELCOME(null),
     USAGE(AppPermission.USAGE_ACCESS),
     OVERLAY(AppPermission.OVERLAY),
+    INSTANT(AppPermission.ACCESSIBILITY),
     NOTIFICATIONS(AppPermission.NOTIFICATIONS),
     EXACT_ALARM(AppPermission.EXACT_ALARM),
     BATTERY(AppPermission.BATTERY_OPTIMIZATION),
@@ -345,6 +346,7 @@ private fun OnboardingStep.titleRes(): Int =
         OnboardingStep.WELCOME -> R.string.onboarding_welcome_title
         OnboardingStep.USAGE -> R.string.onboarding_usage_title
         OnboardingStep.OVERLAY -> R.string.onboarding_overlay_title
+        OnboardingStep.INSTANT -> R.string.onboarding_instant_title
         OnboardingStep.NOTIFICATIONS -> R.string.onboarding_notifications_title
         OnboardingStep.EXACT_ALARM -> R.string.onboarding_alarm_title
         OnboardingStep.BATTERY -> R.string.onboarding_battery_title
@@ -356,6 +358,7 @@ private fun OnboardingStep.bodyRes(): Int =
         OnboardingStep.WELCOME -> R.string.onboarding_welcome_body
         OnboardingStep.USAGE -> R.string.onboarding_usage_body
         OnboardingStep.OVERLAY -> R.string.onboarding_overlay_body
+        OnboardingStep.INSTANT -> R.string.onboarding_instant_body
         OnboardingStep.NOTIFICATIONS -> R.string.onboarding_notifications_body
         OnboardingStep.EXACT_ALARM -> R.string.onboarding_alarm_body
         OnboardingStep.BATTERY -> R.string.onboarding_battery_body
@@ -366,6 +369,7 @@ internal fun OnboardingStep.settingsIntent(packageName: String): Intent =
     when (this) {
         OnboardingStep.USAGE -> Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
         OnboardingStep.OVERLAY -> Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
+        OnboardingStep.INSTANT -> Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
         OnboardingStep.EXACT_ALARM ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName"))

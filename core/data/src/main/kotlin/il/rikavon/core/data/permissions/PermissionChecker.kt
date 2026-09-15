@@ -1,5 +1,6 @@
 package il.rikavon.core.data.permissions
 
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.AlarmManager
 import android.app.AppOpsManager
 import android.content.Context
@@ -8,12 +9,13 @@ import android.os.Build
 import android.os.PowerManager
 import android.os.Process
 import android.provider.Settings
+import android.view.accessibility.AccessibilityManager
 import androidx.core.app.NotificationManagerCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-enum class AppPermission { USAGE_ACCESS, OVERLAY, NOTIFICATIONS, EXACT_ALARM, BATTERY_OPTIMIZATION }
+enum class AppPermission { USAGE_ACCESS, OVERLAY, ACCESSIBILITY, NOTIFICATIONS, EXACT_ALARM, BATTERY_OPTIMIZATION }
 
 data class PermissionState(
     val usageAccess: Boolean,
@@ -21,6 +23,8 @@ data class PermissionState(
     val notifications: Boolean,
     val exactAlarm: Boolean,
     val ignoresBatteryOptimization: Boolean,
+    /** The optional accessibility service that closes a blocked app the instant it opens. */
+    val accessibility: Boolean = false,
 ) {
     /** Tracking and blocking need these two; everything else degrades gracefully. */
     val coreGranted: Boolean get() = usageAccess && overlay
@@ -29,6 +33,7 @@ data class PermissionState(
         when (permission) {
             AppPermission.USAGE_ACCESS -> usageAccess
             AppPermission.OVERLAY -> overlay
+            AppPermission.ACCESSIBILITY -> accessibility
             AppPermission.NOTIFICATIONS -> notifications
             AppPermission.EXACT_ALARM -> exactAlarm
             AppPermission.BATTERY_OPTIMIZATION -> ignoresBatteryOptimization
@@ -46,7 +51,16 @@ class PermissionChecker @Inject constructor(
             notifications = hasNotifications(),
             exactAlarm = canScheduleExactAlarms(),
             ignoresBatteryOptimization = ignoresBatteryOptimizations(),
+            accessibility = hasAccessibility(),
         )
+
+    /** True when the user enabled this app's accessibility service in system settings. */
+    fun hasAccessibility(): Boolean {
+        val manager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager ?: return false
+        return manager
+            .getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
+            .any { it.resolveInfo?.serviceInfo?.packageName == context.packageName }
+    }
 
     fun hasUsageAccess(): Boolean {
         val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager

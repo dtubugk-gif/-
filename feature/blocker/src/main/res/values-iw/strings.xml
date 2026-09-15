@@ -163,4 +163,7 @@
     <string name="score_section_today">היום</string>
     <string name="score_total_label">סה״כ</string>
     <string name="score_part_value">%1$d מתוך %2$d</string>
+    <string name="accessibility_service_label">רקבון – חסימה מיידית</string>
+    <string name="accessibility_service_summary">סוגר אפליקציה חסומה ברגע שהיא נפתחת</string>
+    <string name="accessibility_service_description">סוגר אפליקציה ברגע שהיא נפתחת כשהיא מעבר לגבול היומי שקבעתם או בתוך לוח זמנים שלכם. רקבון בודק רק איזו אפליקציה עלתה לחזית, ולעולם לא קורא, שומר או שולח תוכן מהמסך.</string>
 </resources>

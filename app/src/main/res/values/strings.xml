@@ -32,6 +32,8 @@
     <string name="onboarding_usage_body">To know how long you spent in each app, Android requires a special permission. The data stays on the phone. Without it there is no tracking and no blocking.</string>
     <string name="onboarding_overlay_title">Display over other apps</string>
     <string name="onboarding_overlay_body">The block screen appears on top of the app that crossed its limit. Without this, the pet rots quietly but nothing gets blocked.</string>
+    <string name="onboarding_instant_title">Instant blocking</string>
+    <string name="onboarding_instant_body">Optional. With the accessibility service on, a blocked app is closed the moment it opens, like a parental control, instead of a second later. Rikavon uses the service only to see which app came to the front and to send you home. It never reads screen content. Enable “Rikavon instant blocking” under Installed apps.</string>
     <string name="onboarding_notifications_title">Notifications</string>
     <string name="onboarding_notifications_body">One silent notification so the service keeps running, and an optional evening summary in your pet\'s voice. No nagging. You can skip.</string>
     <string name="onboarding_alarm_title">Exact midnight reset</string>
@@ -61,6 +63,9 @@
     <string name="settings_permissions">Permissions</string>
     <string name="settings_permissions_ok">All essential permissions granted</string>
     <string name="settings_permissions_missing">Permissions missing. Tap to complete</string>
+    <string name="settings_instant">Instant blocking</string>
+    <string name="settings_instant_on">On. Blocked apps close the moment they open</string>
+    <string name="settings_instant_off">Off. Blocked apps close within a second. Tap to enable</string>
     <string name="settings_battery">Battery optimisation</string>
     <string name="settings_battery_hint">Steps for your manufacturer so the service is not killed</string>
     <string name="settings_score">How the focus score works</string>

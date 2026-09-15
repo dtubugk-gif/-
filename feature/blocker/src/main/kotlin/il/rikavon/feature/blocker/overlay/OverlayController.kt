@@ -49,6 +49,8 @@ class OverlayController @Inject constructor(
         val message: String,
         val appearance: Appearance,
         val onClose: () -> Unit,
+        /** Runs once the window is attached, so the caller can send the blocked app home behind it. */
+        val onShown: () -> Unit = {},
     )
 
     fun isShowing(packageName: String): Boolean = shownPackage == packageName && view != null
@@ -112,6 +114,7 @@ class OverlayController @Inject constructor(
                 shownPackage = request.decision.packageName
                 lifecycleOwner.moveTo(Lifecycle.State.RESUMED)
                 request.skin.soundAsset?.let { sounds.play(it, BLOCK_SOUND_VOLUME) }
+                request.onShown()
             }
     }
 

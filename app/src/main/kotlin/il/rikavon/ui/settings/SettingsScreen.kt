@@ -1,5 +1,7 @@
 package il.rikavon.ui.settings
 
+import android.content.Context
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -57,6 +60,12 @@ import il.rikavon.feature.mascot.ui.UiLanguage
 import java.time.LocalDate
 
 private enum class Sheet { REDUCE_MOTION, LANGUAGE }
+
+/** The system page where the user toggles the instant-blocking accessibility service. */
+private fun Context.openAccessibilitySettings() {
+    val intent = Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    runCatching { startActivity(intent) }
+}
 
 /**
  * Settings: large collapsing title, one rounded group per section, single-choice settings open a bottom
@@ -182,6 +191,16 @@ fun SettingsScreen(
                         title = stringResource(R.string.settings_permissions),
                         subtitle = stringResource(permissionsRes),
                         onClick = onOpenOnboarding,
+                    )
+                    val context = LocalContext.current
+                    val instantOn = state.permissions?.accessibility == true
+                    SettingNavRow(
+                        title = stringResource(R.string.settings_instant),
+                        subtitle =
+                            stringResource(
+                                if (instantOn) R.string.settings_instant_on else R.string.settings_instant_off,
+                            ),
+                        onClick = { context.openAccessibilitySettings() },
                     )
                     SettingNavRow(
                         title = stringResource(R.string.settings_battery),

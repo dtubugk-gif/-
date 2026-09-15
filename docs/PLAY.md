@@ -45,11 +45,23 @@ Rationale for every category:
 ### SYSTEM_ALERT_WINDOW (display over other apps)
 
 > When an app the user chose to limit exceeds its daily limit or falls inside a schedule the user configured,
-> Rikavon shows a full-screen block reminder on top of that app. The overlay is the only enforcement mechanism
-> (the app deliberately does not use an AccessibilityService). It appears only for apps the user explicitly
-> selected, only after the user's own limit is reached, and has a single close button. The permission is
-> requested during onboarding with a plain-language explanation and can be declined; the app then runs in a
-> "limited mode" that tracks without blocking.
+> Rikavon shows a full-screen block reminder on top of that app and sends the app to the background. It
+> appears only for apps the user explicitly selected, only after the user's own limit is reached, and has a
+> single close button. The permission is requested during onboarding with a plain-language explanation and
+> can be declined; the app then runs in a "limited mode" that tracks without blocking.
+
+### AccessibilityService (Play Console → App content → "Accessibility API usage")
+
+> Rikavon offers an optional "instant blocking" mode powered by an AccessibilityService that the user
+> enables manually in system settings after an in-app disclosure page (onboarding step "Instant blocking",
+> also reachable from Settings). Purpose: close an app the moment it opens when it is over the daily limit
+> the user set for it or inside a schedule the user configured, like a parental control would. The service
+> subscribes to `TYPE_WINDOW_STATE_CHANGED` only, has `canRetrieveWindowContent="false"`, is marked
+> `isAccessibilityTool="false"`, and uses exactly two things: the package name of the window that came to
+> the front and `GLOBAL_ACTION_HOME`. No screen content is read, stored or transmitted; there is no INTERNET
+> permission. Prominent disclosure text (shown before the settings page opens): "Rikavon uses the service
+> only to see which app came to the front and to send you home. It never reads screen content."
+> The core feature is not gated on it: with the service off the enforcement loop polls every second.
 
 ### PACKAGE_USAGE_STATS
 

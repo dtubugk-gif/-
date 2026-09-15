@@ -116,6 +116,11 @@ class ScreenshotsTest {
             click(string("onboarding_next"))
             waitFor(string("onboarding_usage_title"))
             capture("02_onboarding_usage")
+            click(string("onboarding_next"))
+            waitFor(string("onboarding_overlay_title"))
+            click(string("onboarding_next"))
+            waitFor(string("onboarding_instant_title"))
+            capture("19_onboarding_instant")
         }
     }
 
