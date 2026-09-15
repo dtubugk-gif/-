@@ -88,6 +88,7 @@ fun SchedulesScreen(
                     body = stringResource(R.string.schedules_empty_body),
                     icon = Icons.Filled.DateRange,
                     action = { PrimaryButton(text = stringResource(R.string.schedules_create), onClick = create) },
+                    onClick = create,
                 )
             }
         } else {

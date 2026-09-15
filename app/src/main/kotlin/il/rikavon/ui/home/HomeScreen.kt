@@ -155,6 +155,7 @@ fun HomeScreen(
                         body = stringResource(R.string.home_empty_body),
                         icon = Icons.Filled.Add,
                         action = { PrimaryButton(text = stringResource(R.string.home_add_app), onClick = onOpenApps) },
+                        onClick = onOpenApps,
                     )
                 }
             } else {

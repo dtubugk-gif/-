@@ -113,6 +113,7 @@ fun StatsScreen(
                         body = stringResource(R.string.stats_empty_body),
                         icon = Icons.Filled.Info,
                         action = { PrimaryButton(text = stringResource(R.string.stats_add_app), onClick = onOpenApps) },
+                        onClick = onOpenApps,
                     )
                 }
                 return@LazyColumn

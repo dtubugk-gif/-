@@ -23,6 +23,7 @@ import androidx.compose.ui.test.filter
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onRoot
@@ -121,7 +122,12 @@ class ScreenshotsTest {
     @Test
     fun homeEmpty() {
         seedBase()
-        launchMain(string("home_empty_title")).use { capture("03_home_empty") }
+        launchMain(string("home_empty_title")).use {
+            capture("03_home_empty")
+            // The big plus circle is the obvious target on a fresh install; it must open the picker.
+            clickDescribed(string("home_empty_title"))
+            waitFor("WhatsApp")
+        }
     }
 
     @Test
@@ -401,6 +407,16 @@ class ScreenshotsTest {
     private fun click(text: String, substring: Boolean = false) {
         compose
             .onAllNodesWithText(text, substring = substring)
+            .filter(hasClickAction())
+            .onFirst()
+            .performSemanticsAction(SemanticsActions.OnClick)
+        settle()
+    }
+
+    /** Same as [click] for nodes identified by content description (icon-only buttons). */
+    private fun clickDescribed(description: String) {
+        compose
+            .onAllNodesWithContentDescription(description)
             .filter(hasClickAction())
             .onFirst()
             .performSemanticsAction(SemanticsActions.OnClick)

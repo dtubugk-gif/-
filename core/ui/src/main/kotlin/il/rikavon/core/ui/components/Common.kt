@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -338,19 +339,36 @@ fun EmptyState(
     icon: ImageVector? = null,
     illustration: (@Composable () -> Unit)? = null,
     action: (@Composable () -> Unit)? = null,
+    onClick: (() -> Unit)? = null,
 ) {
     Column(
-        modifier = modifier.fillMaxWidth().padding(horizontal = Spacing.xl, vertical = Spacing.xxl),
+        modifier = modifier.fillMaxWidth().padding(horizontal = Spacing.xl, vertical = Spacing.xl),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         if (illustration != null) {
             illustration()
         } else if (icon != null) {
+            // A big round icon reads as a button, so when the state has an action the icon triggers it too.
+            val interaction = remember { MutableInteractionSource() }
+            val tappable =
+                if (onClick == null) {
+                    Modifier
+                } else {
+                    Modifier
+                        .pressScale(interaction)
+                        .clickable(
+                            interactionSource = interaction,
+                            indication = null,
+                            role = Role.Button,
+                            onClick = onClick,
+                        ).semantics { contentDescription = title }
+                }
             Box(
                 modifier =
                     Modifier
                         .popIn()
                         .size(EMPTY_ICON_BOX)
+                        .then(tappable)
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
