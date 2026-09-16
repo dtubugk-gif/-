@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -97,6 +98,7 @@ fun HomeScreen(
     onOpenAchievements: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenOnboarding: () -> Unit,
+    onCallPet: () -> Unit,
     bottomBar: @Composable () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -113,7 +115,14 @@ fun HomeScreen(
                     bottom = padding.calculateBottomPadding() + Spacing.lg,
                 ),
         ) {
-            item { Header(state = state, onOpenAchievements = onOpenAchievements, onOpenSettings = onOpenSettings) }
+            item {
+                Header(
+                    state = state,
+                    onOpenAchievements = onOpenAchievements,
+                    onCallPet = onCallPet,
+                    onOpenSettings = onOpenSettings,
+                )
+            }
             if (state.skin == null) {
                 item {
                     SkeletonBlock(
@@ -196,7 +205,12 @@ fun HomeScreen(
 }
 
 @Composable
-private fun Header(state: HomeUiState, onOpenAchievements: () -> Unit, onOpenSettings: () -> Unit) {
+private fun Header(
+    state: HomeUiState,
+    onOpenAchievements: () -> Unit,
+    onCallPet: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
     val extras = LocalExtraColors.current
     val pattern = stringResource(R.string.home_date_pattern)
     val locale = Locale.getDefault()
@@ -252,6 +266,11 @@ private fun Header(state: HomeUiState, onOpenAchievements: () -> Unit, onOpenSet
                     maxLines = 1,
                 )
             }
+            SquareIconButton(
+                icon = Icons.Filled.Call,
+                contentDescription = stringResource(R.string.talk_call_pet),
+                onClick = onCallPet,
+            )
             SquareIconButton(
                 icon = Icons.Filled.Settings,
                 contentDescription = stringResource(R.string.home_settings),

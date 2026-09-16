@@ -76,6 +76,7 @@ class PetCallActivity : ComponentActivity() {
                     onDecline = ::hangUp,
                     onPromise = ::promiseAndGoHome,
                     onHangUp = ::hangUp,
+                    onTalkBack = ::talkBack,
                 )
             }
         }
@@ -127,6 +128,19 @@ class PetCallActivity : ComponentActivity() {
         stopRinging()
         notifier.cancelCall()
         voice.stop()
+        finish()
+    }
+
+    /** Ends the call and opens the conversation screen, where the user can answer with their own voice. */
+    private fun talkBack() {
+        stopRinging()
+        notifier.cancelCall()
+        voice.stop()
+        packageManager
+            .getLaunchIntentForPackage(packageName)
+            ?.putExtra(DeepLinks.EXTRA_OPEN, DeepLinks.OPEN_TALK)
+            ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            ?.let { launch -> runCatching { startActivity(launch) } }
         finish()
     }
 

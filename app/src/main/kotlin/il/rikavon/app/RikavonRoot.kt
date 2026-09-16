@@ -10,6 +10,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -36,6 +37,7 @@ import il.rikavon.core.ui.components.BottomTab
 import il.rikavon.core.ui.components.RikavonBottomBar
 import il.rikavon.core.ui.theme.RikavonColors
 import il.rikavon.core.ui.theme.RikavonTheme
+import il.rikavon.feature.blocker.contact.DeepLinks
 import il.rikavon.feature.blocker.ui.apps.AppPickerScreen
 import il.rikavon.feature.blocker.ui.limits.LimitEditorScreen
 import il.rikavon.feature.blocker.ui.limits.LimitEditorViewModel
@@ -56,6 +58,8 @@ import il.rikavon.ui.onboarding.OnboardingScreen
 import il.rikavon.ui.premium.PremiumScreen
 import il.rikavon.ui.privacy.PrivacyScreen
 import il.rikavon.ui.settings.SettingsScreen
+import il.rikavon.ui.talk.TalkScreen
+import il.rikavon.ui.talk.TalkViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -77,6 +81,7 @@ object Routes {
     const val BATTERY = "battery"
     const val PRIVACY = "privacy"
     const val PREMIUM = "premium"
+    const val TALK = "talk/{${TalkViewModel.ARG_DIALING}}"
 
     /** The four bottom-bar destinations, in bar order. */
     val TOP_LEVEL = listOf(HOME, GALLERY, STATS, SETTINGS)
@@ -84,6 +89,9 @@ object Routes {
     fun limit(packageName: String) = "limit/$packageName"
 
     fun schedule(id: Long) = "schedule/$id"
+
+    /** The conversation screen; [dialing] opens it as an outgoing call the pet picks up after a moment. */
+    fun talk(dialing: Boolean) = "talk/$dialing"
 }
 
 data class RootUiState(
@@ -106,7 +114,11 @@ class RootViewModel @Inject constructor(
 }
 
 @Composable
-fun RikavonRoot(viewModel: RootViewModel = hiltViewModel()) {
+fun RikavonRoot(
+    pendingOpen: String? = null,
+    onOpened: () -> Unit = {},
+    viewModel: RootViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val prefs = state.settings ?: return
     val systemReduced = rememberSystemReducedMotion()
@@ -128,14 +140,28 @@ fun RikavonRoot(viewModel: RootViewModel = hiltViewModel()) {
         RikavonNavHost(
             startDestination = if (prefs.onboardingDone) Routes.HOME else Routes.ONBOARDING,
             reduced = reduced,
+            pendingOpen = pendingOpen,
+            onOpened = onOpened,
         )
     }
 }
 
 @Composable
-private fun RikavonNavHost(startDestination: String, reduced: Boolean) {
+private fun RikavonNavHost(
+    startDestination: String,
+    reduced: Boolean,
+    pendingOpen: String? = null,
+    onOpened: () -> Unit = {},
+) {
     val navController = rememberNavController()
     val duration = AnimationSpecs.SCREEN_TRANSITION_MILLIS
+    // The call screen's "Talk back" lands here through the launch intent.
+    LaunchedEffect(pendingOpen) {
+        if (pendingOpen == DeepLinks.OPEN_TALK) {
+            navController.navigate(Routes.talk(dialing = false))
+            onOpened()
+        }
+    }
     val bottomBar: @Composable () -> Unit = { TopLevelBar(navController) }
     SharedTransitionLayout {
         CompositionLocalProvider(LocalSharedTransitionScope provides this) {
@@ -201,9 +227,16 @@ private fun RikavonNavHost(startDestination: String, reduced: Boolean) {
                             onOpenAchievements = { navController.navigate(Routes.ACHIEVEMENTS) },
                             onOpenSettings = { navController.navigateTopLevel(Routes.SETTINGS) },
                             onOpenOnboarding = { navController.navigate(Routes.ONBOARDING) },
+                            onCallPet = { navController.navigate(Routes.talk(dialing = true)) },
                             bottomBar = bottomBar,
                         )
                     }
+                }
+                composable(
+                    route = Routes.TALK,
+                    arguments = listOf(navArgument(TalkViewModel.ARG_DIALING) { type = NavType.BoolType }),
+                ) {
+                    TalkScreen(onBack = { navController.popBackStack() })
                 }
                 composable(Routes.APPS) {
                     AppPickerScreen(

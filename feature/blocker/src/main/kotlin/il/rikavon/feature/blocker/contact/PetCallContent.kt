@@ -68,12 +68,13 @@ fun PetCallContent(
     onDecline: () -> Unit,
     onPromise: () -> Unit,
     onHangUp: () -> Unit,
+    onTalkBack: () -> Unit = {},
 ) {
     val scheme = schemeFromAccent(Color(skin.themeColorArgb), skin.surfaceTintArgb?.let { Color(it) })
     RikavonTheme(scheme = scheme, reducedMotion = reducedMotion) {
         Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
             if (answered) {
-                Answered(skin, petName, lines, reducedMotion, onPromise, onHangUp)
+                Answered(skin, petName, lines, reducedMotion, onPromise, onHangUp, onTalkBack)
             } else {
                 Ringing(skin, petName, appLabel, reducedMotion, onAnswer, onDecline)
             }
@@ -163,6 +164,7 @@ private fun Answered(
     reducedMotion: Boolean,
     onPromise: () -> Unit,
     onHangUp: () -> Unit,
+    onTalkBack: () -> Unit,
 ) {
     var shown by remember { mutableIntStateOf(if (reducedMotion) lines.size else 0) }
     LaunchedEffect(lines) {
@@ -200,7 +202,15 @@ private fun Answered(
             enabled = shown == lines.size,
             modifier = Modifier.fillMaxWidth(),
         )
-        LinkButton(text = stringResource(R.string.call_hang_up), onClick = onHangUp)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            LinkButton(
+                text = stringResource(R.string.call_talk_back),
+                onClick = onTalkBack,
+                enabled =
+                    shown == lines.size,
+            )
+            LinkButton(text = stringResource(R.string.call_hang_up), onClick = onHangUp)
+        }
     }
 }
 

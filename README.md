@@ -123,7 +123,16 @@ BlockerService loop (2s/5s/15s, off when screen off) ◄────────
   call-style notifications with a full-screen intent answered in `PetCallActivity`, which rings with
   vibration, shows the pet, then speaks its four lines (text-to-speech) as they appear, ending with
   "I'll stop" (goes home) or "Hang up". Two switches in Settings; Android 14+ asks once for full-screen
-  notifications.
+  notifications. "Talk back" on an answered call opens the conversation screen.
+* **Talking to the pet** – the phone button on Home places an outgoing call: it rings for a moment, the pet
+  picks up and greets you out loud. `TalkScreen` then holds a two-way spoken conversation in Hebrew or
+  English: `SpeechListener` wraps the device's `SpeechRecognizer` (partial results shown live), typed input
+  works the same way, and every reply is spoken by `MascotVoice` in the pet's voice profile while the mascot
+  bobs. Replies come from `ScriptedConversation`, an offline engine: `TalkScript` maps what you said to an
+  intent (greeting, "give me more time", a promise, an insult, "why am I blocked", the score, thanks, love,
+  goodbye) and answers in the pet's personality with today's numbers filled in (score, stage, the app closest
+  to its limit and its minutes left). Nothing leaves the device and nothing is recorded; `ConversationEngine`
+  is the seam for a smarter backend later.
 * **Focus profile (optional)** – the Family Link behaviour itself, for apps the user installs inside a work
   profile that Rikavon owns. `FocusProfileAdminReceiver` is the profile owner (no device policies),
   `FocusProfileComplianceActivity` answers the Android 12+ provisioning handshake, and inside the profile the
@@ -174,6 +183,7 @@ Everything lives in `core/ui/.../anim/AnimationSpecs.kt`. `MascotView` implement
 | `POST_NOTIFICATIONS` (13+) | silent service notification, optional evening summary, the pet's messages and calls | service still runs, no summary, no messages |
 | `USE_FULL_SCREEN_INTENT` (user grant on 14+) | the pet's call takes over the screen like a real one | the call is a heads-up notification instead |
 | `VIBRATE` | the call rings | silent ring |
+| `RECORD_AUDIO` (asked on the first mic tap) | the device's speech recogniser hears what you say to the pet; nothing is stored | type to the pet instead |
 | `SCHEDULE_EXACT_ALARM` | refresh at exactly 00:00 | reset happens on the next tick instead |
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Doze exemption for the service | more OEM kills; the worker revives it |
 | `RECEIVE_BOOT_COMPLETED` | restart after reboot | service starts on next app open |
@@ -240,8 +250,14 @@ blubs, "mrrow", two beeps, "meh").
 
 The six shipped mascots are the design-canvas SVGs (`tools/mascots/mascot_art.py`, verbatim) converted to
 Lottie by `tools/mascots/svg_lottie.py` (paths, gradients, transforms → shape layers) and animated per stage
-by the generator: three face variants (healthy / mid / rotten), mould, flies and stink from the rot-cycle
-sheet; colours slide from `#dda94a` toward `#6f6428` as the score drops. Deterministic output:
+by the generator: three face variants (healthy / mid / rotten) shared from the rot-cycle sheet, and then
+**each mascot decays its own way**. The potato sprouts, moulds, leaks and draws flies; the brain goes
+grey-violet, its gyri smooth out, the lobes sag and it bruises (never any flies); the cat's fur goes to ash,
+the ears flatten, the coat mats into clumps and loose hair drifts off; the plant's leaves droop and dry to
+straw, the soil moulds, the pot cracks and leaves fall; the goldfish's water goes green then brown, the fish
+floats belly-up and bobs under scum and rising algae; the robot rusts, its antenna bends, the screen cracks,
+one eye dies and it sparks and smokes. Each has its own rot palette and its own rotten idle (twitch, wobble,
+shiver, sway, bob, glitch). Deterministic output:
 
 ```bash
 python3 tools/mascots/generate_lottie.py   # 36 Lottie files, 200×200 @ 30 fps
@@ -251,8 +267,9 @@ python3 tools/mascots/generate_sounds.py   # reaction + score sounds (WAV)
 Shape lists in Lottie render top-down (index 0 on top) while SVG paints bottom-up, so the generator reverses
 every list of drawables (`lottie_order`); faces, mould and flies sit above the body exactly as on the canvas.
 
-Idle loops: healthy 3.2 s breathing, mid 2.4 s shallow breathing, rotten 2.4 s stepped twitch (the rotten
-files are 9.6 s long so the two fly orbits and the stink lines loop seamlessly). Hand-drawn replacements are
+Idle loops: healthy 3.2 s breathing, mid 2.4 s shallow breathing, rotten 2.4 s of the mascot's signature
+motion (the rotten files are 9.6 s long so fly orbits, drips, wisps and falling leaves loop seamlessly).
+Hand-drawn replacements are
 specified in [docs/LOTTIE_ASSETS.md](docs/LOTTIE_ASSETS.md); drop them into the folder with the same names and
 nothing else changes.
 

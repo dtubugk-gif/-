@@ -72,6 +72,14 @@ Rationale for every category:
 > the system settings page from its own Settings, and falls back to a heads-up notification when the grant
 > is missing. Never used for promotion or re-engagement.
 
+### RECORD_AUDIO
+
+> Used for one feature the user starts by hand: talking to their pet. Tapping the microphone on the
+> conversation screen asks for the runtime permission and hands the audio to the device's own
+> `SpeechRecognizer`; the app receives only the recognised text, never the audio, and stores neither. There is
+> no INTERNET permission, so nothing can leave the app. Typing works without the permission, and the
+> microphone button is disabled on devices without a recogniser.
+
 ### Device admin / profile owner (Play Console → App content → "Device admin")
 
 > Rikavon can optionally create a work profile ("focus profile") of which it is the profile owner, started

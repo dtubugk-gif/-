@@ -18,7 +18,19 @@ import android.os.Looper
 import android.os.PowerManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.filter
 import androidx.compose.ui.test.hasClickAction
@@ -30,6 +42,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.printToString
+import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.Configuration
@@ -48,13 +61,20 @@ import il.rikavon.core.data.repo.LimitsRepository
 import il.rikavon.core.data.repo.ScheduleRepository
 import il.rikavon.core.data.repo.SettingsRepository
 import il.rikavon.core.data.repo.UsageRepository
+import il.rikavon.core.ui.theme.RikavonTheme
+import il.rikavon.core.ui.theme.schemeFromAccent
 import il.rikavon.feature.blocker.contact.PetCallContent
 import il.rikavon.feature.blocker.engine.BlockDecision
 import il.rikavon.feature.blocker.overlay.BlockOverlayContent
 import il.rikavon.feature.blocker.overlay.BreathingOverlayContent
 import il.rikavon.feature.mascot.model.HourBucket
 import il.rikavon.feature.mascot.model.MascotSkin
+import il.rikavon.feature.mascot.model.MascotStage
 import il.rikavon.feature.mascot.registry.MascotRegistry
+import il.rikavon.feature.mascot.ui.MascotView
+import il.rikavon.ui.talk.TalkContent
+import il.rikavon.ui.talk.TalkMessage
+import il.rikavon.ui.talk.TalkUiState
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Rule
@@ -311,7 +331,89 @@ class ScreenshotsTest {
             onDecline = {},
             onPromise = {},
             onHangUp = {},
+            onTalkBack = {},
         )
+    }
+
+    @Test
+    fun talk() {
+        val skin = runBlocking { registry.load() }.first { it.id == "potato" }
+        val state =
+            TalkUiState(
+                skin = skin,
+                petName = "Potato",
+                messages =
+                    listOf(
+                        TalkMessage(fromPet = true, text = "Hi. Potato here. What do you want?"),
+                        TalkMessage(fromPet = false, text = "Just five more minutes of Instagram, please"),
+                        TalkMessage(fromPet = true, text = "Five minutes. Sure. That's what you said last time. No."),
+                    ),
+                listening = true,
+                partial = "ok fine, I'll",
+                language = "en",
+            )
+        ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
+            scenario.onActivity { activity -> activity.setContent { talkScreen(state) } }
+            settle(LONG_SETTLE)
+            captureFrom(scenario, "23_talk")
+            scenario.onActivity { activity -> activity.setContent { talkScreen(state.copy(dialing = true)) } }
+            settle(LONG_SETTLE)
+            captureFrom(scenario, "24_talk_dialing")
+        }
+    }
+
+    /** The talk screen lives inside the app's nav host, so it is themed here the way `RikavonRoot` themes it. */
+    @Composable
+    private fun talkScreen(state: TalkUiState) {
+        val skin = checkNotNull(state.skin)
+        val scheme = schemeFromAccent(Color(skin.themeColorArgb), skin.surfaceTintArgb?.let { Color(it) })
+        RikavonTheme(scheme = scheme) {
+            TalkContent(state = state, onBack = {}, onMic = {}, onSend = {}, onLanguage = {})
+        }
+    }
+
+    /** Every mascot at every stage on one sheet: the proof that each one decays its own way. */
+    @Test
+    @Config(qualifiers = SHEET)
+    fun rotSheet() {
+        val skins = runBlocking { registry.load() }
+        ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
+            scenario.onActivity { activity -> activity.setContent { rotSheet(skins) } }
+            settle(LONG_SETTLE)
+            captureFrom(scenario, "25_rot_sheet")
+        }
+    }
+
+    @Composable
+    private fun rotSheet(skins: List<MascotSkin>) {
+        RikavonTheme {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
+                        .padding(SHEET_PADDING),
+                verticalArrangement = Arrangement.spacedBy(SHEET_GAP),
+            ) {
+                skins.forEach { skin ->
+                    Text(
+                        text = skin.id.replaceFirstChar { it.uppercase() },
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        MascotStage.entries.forEach { stage ->
+                            MascotView(
+                                skin = skin,
+                                stage = stage,
+                                interactive = false,
+                                modifier = Modifier.size(SHEET_CELL),
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // ---- Hebrew -------------------------------------------------------------------------------
@@ -562,3 +664,7 @@ class ScreenshotsTest {
 private const val SDK = 34
 private const val PHONE_EN = "en-rUS-w360dp-h800dp-xhdpi"
 private const val PHONE_HE = "iw-rIL-w360dp-h800dp-xhdpi"
+private const val SHEET = "en-rUS-w640dp-h900dp-xhdpi"
+private val SHEET_PADDING = 16.dp
+private val SHEET_GAP = 6.dp
+private val SHEET_CELL = 96.dp

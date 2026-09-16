@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import dagger.hilt.android.qualifiers.ApplicationContext
 import il.rikavon.feature.mascot.model.VoiceProfile
 import java.util.Locale
@@ -22,6 +23,10 @@ class MascotVoice @Inject constructor(
     private var engine: TextToSpeech? = null
     private var ready = false
     private var pending: (() -> Unit)? = null
+
+    /** Told when the pet starts and stops talking (from the engine's thread). One observer at a time. */
+    @Volatile
+    var onSpeakingChanged: ((Boolean) -> Unit)? = null
 
     /** Speaks [text] in [languageTag] ("he" / "en") with the character of [profile]; interrupts the previous line. */
     fun speak(text: String, profile: VoiceProfile, languageTag: String) {
@@ -75,6 +80,22 @@ class MascotVoice @Inject constructor(
             TextToSpeech(context) { status ->
                 ready = status == TextToSpeech.SUCCESS
                 if (ready) {
+                    engine?.setOnUtteranceProgressListener(
+                        object : UtteranceProgressListener() {
+                            override fun onStart(utteranceId: String?) {
+                                onSpeakingChanged?.invoke(true)
+                            }
+
+                            override fun onDone(utteranceId: String?) {
+                                onSpeakingChanged?.invoke(false)
+                            }
+
+                            @Deprecated("Deprecated in Java")
+                            override fun onError(utteranceId: String?) {
+                                onSpeakingChanged?.invoke(false)
+                            }
+                        },
+                    )
                     engine?.setAudioAttributes(
                         AudioAttributes
                             .Builder()

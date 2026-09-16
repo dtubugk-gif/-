@@ -186,6 +186,7 @@
     <string name="call_decline">דחייה</string>
     <string name="call_promise">אפסיק</string>
     <string name="call_hang_up">ניתוק</string>
+    <string name="call_talk_back">לענות בקול</string>
     <string name="profile_name">רקבון – מיקוד</string>
     <string name="profile_support_message">נחסם על ידי רקבון: האפליקציה מעבר לגבול היומי או בתוך לוח זמנים שקבעתם. נסו שוב מאוחר יותר.</string>
     <string name="accessibility_service_label">רקבון – חסימה מיידית</string>
