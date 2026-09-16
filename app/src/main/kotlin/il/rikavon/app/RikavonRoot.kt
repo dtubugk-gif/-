@@ -47,6 +47,7 @@ import il.rikavon.feature.blocker.ui.schedules.ScheduleEditorScreen
 import il.rikavon.feature.blocker.ui.schedules.ScheduleEditorViewModel
 import il.rikavon.feature.blocker.ui.schedules.SchedulesScreen
 import il.rikavon.feature.blocker.ui.score.ScoreExplainerScreen
+import il.rikavon.feature.blocker.ui.sites.BlockedSitesScreen
 import il.rikavon.feature.blocker.ui.stats.StatsScreen
 import il.rikavon.feature.mascot.model.MascotSkin
 import il.rikavon.feature.mascot.registry.SelectedMascot
@@ -83,6 +84,7 @@ object Routes {
     const val PRIVACY = "privacy"
     const val PREMIUM = "premium"
     const val TALK = "talk"
+    const val SITES = "sites"
 
     /** The four bottom-bar destinations, in bar order. */
     val TOP_LEVEL = listOf(HOME, GALLERY, STATS, SETTINGS)
@@ -282,6 +284,7 @@ private fun RikavonNavHost(
                         onOpenOnboarding = { navController.navigate(Routes.ONBOARDING) },
                         onOpenBattery = { navController.navigate(Routes.BATTERY) },
                         onOpenPrivacy = { navController.navigate(Routes.PRIVACY) },
+                        onOpenSites = { navController.navigate(Routes.SITES) },
                         onOpenPremium = { navController.navigate(Routes.PREMIUM) },
                         onOpenScore = { navController.navigate(Routes.SCORE) },
                         bottomBar = bottomBar,
@@ -289,6 +292,7 @@ private fun RikavonNavHost(
                 }
                 composable(Routes.BATTERY) { BatteryGuideScreen(onBack = { navController.popBackStack() }) }
                 composable(Routes.PRIVACY) { PrivacyScreen(onBack = { navController.popBackStack() }) }
+                composable(Routes.SITES) { BlockedSitesScreen(onBack = { navController.popBackStack() }) }
                 composable(Routes.PREMIUM) { PremiumScreen(onBack = { navController.popBackStack() }) }
             }
         }

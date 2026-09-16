@@ -109,11 +109,28 @@ BlockerService loop (2s/5s/15s, off when screen off) ◄────────
   `TYPE_APPLICATION_OVERLAY` window with its own lifecycle owner. A block is hard: the moment the overlay is
   attached the blocked app is sent home (so nothing keeps playing behind it) and the overlay stays until the
   user closes it.
-* **Instant path (optional)** – `BlockerAccessibilityService` subscribes to window-state events only, never
-  retrieves window content, and when a package in `InstantBlockBus.blocked` comes to the front it performs
-  `GLOBAL_ACTION_HOME` at once and asks the service for the overlay. This is the closest a third-party app
-  can get to Family Link: Android reserves package suspension (greyed-out icons) for device owners and
-  system apps. Without the service the 1 s poll takes over.
+* **Instant path (optional)** – `BlockerAccessibilityService` gets window-state events and, when a package
+  in `InstantBlockBus.blocked` comes to the front, performs `GLOBAL_ACTION_HOME` at once and asks the service
+  for the overlay. This is the closest a third-party app can get to Family Link: Android reserves package
+  suspension (greyed-out icons) for device owners and system apps. Without the service the 1 s poll takes
+  over. The same service is the only place content is ever looked at, and only when the user has blocked
+  websites or feeds: in a known browser it reads the one address-bar view and matches the host against the
+  block list; in YouTube / Instagram it checks for the Shorts / Reels player views by id. A hit backs out
+  (BACK) and shows the block card. Nothing is read in any other app, nothing is stored.
+* **Block now, opens per day, one sitting** – three more knobs on a limit. "Block now" writes a
+  `PauseRepository` entry (15 min, 1 h, 3 h, until tomorrow) that the engine honours ahead of the daily
+  limit. `maxOpens` blocks the open after the last allowed one until midnight. `sessionMinutes` blocks a
+  sitting that runs past it for a ten-minute break, written down as a `BREAK` pause so reopening does not
+  reset it. Tightening is instant; loosening goes through the settings lock.
+* **Websites and feeds** – `BlockedSitesRepository` holds bare domains (a domain covers its subdomains);
+  `FeedBlockRepository` holds YouTube Shorts / Instagram Reels with an expiry the user picks (1 h, 3 h, until
+  tomorrow, until switched off). Both are opt-in and need the instant path.
+* **Nudge inside apps** – `UsageReminderPolicy`: every N minutes (10 / 15 / 30) of one sitting in a limited
+  app, one message from the pet. A sitting starts at the app's last counted open.
+* **Settings lock** – an optional PIN (`PinVerifier`, salted SHA-256, never exported) that `PinGate` asks for
+  before anything that gives more room: loosening a limit, lifting a block, switching tracking, strict mode,
+  calls or the breathing pause off, and removing the lock itself. Then the strict-mode delay, if that is on.
+  A speed bump for one's own weaker moments, not a security boundary.
 * **Breathing pause** – saving a changed limit arms `BreathingGateRepository` for that package; the next time
   it comes to the front (poll or accessibility event) `BreathingOverlayContent` sits over it for ten seconds
   (circle swelling with a four-second breath, "breathe in / out", countdown) before the way in opens.

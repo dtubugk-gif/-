@@ -9,6 +9,11 @@
     <string name="block_reason_limit_line">Your %1$d minutes of %2$s are up.</string>
     <string name="block_reason_full_line">%1$s is fully blocked.</string>
     <string name="block_reason_schedule_line">%1$s is blocked by a schedule.</string>
+    <string name="block_reason_paused_line">You blocked %1$s yourself. Good call.</string>
+    <string name="block_reason_opens_line">You\'ve opened %1$s enough times today. Enough.</string>
+    <string name="block_reason_session_line">One long sitting in %1$s. Ten minutes of air.</string>
+    <string name="block_reason_website_line">%1$s is on your block list.</string>
+    <string name="block_reason_feed_line">%1$s. Not today.</string>
     <string name="block_flavor_morning">Morning. The phone can wait, the coffee can\'t.</string>
     <string name="block_flavor_day">Everyone is on lunch break anyway. Eat something.</string>
     <string name="block_flavor_evening">The evening is long. Some things don\'t move by scrolling.</string>
@@ -176,6 +181,9 @@
     <string name="contact_calls_channel_description">An incoming call when you keep going anyway</string>
     <string name="contact_message_near">%1$s: %2$d minutes left. Put it down before I have to call.</string>
     <string name="contact_message_limit">%1$s is done for today.</string>
+    <string name="contact_message_nudge">%1$d minutes in %2$s. Just saying.</string>
+    <string name="feed_youtube_shorts">YouTube Shorts</string>
+    <string name="feed_instagram_reels">Instagram Reels</string>
     <string name="contact_call_intro">It\'s %1$s.</string>
     <string name="contact_call_near">%1$s again. %2$d minutes left, and we both know how this ends.</string>
     <string name="contact_call_blocked">%1$s is blocked for today. And yet, here we are.</string>
@@ -204,6 +212,57 @@
     <string name="profile_name">Rikavon focus</string>
     <string name="profile_support_message">Blocked by Rikavon: this app is over today\'s limit or inside a schedule you set. Try again later.</string>
     <string name="accessibility_service_label">Rikavon instant blocking</string>
-    <string name="accessibility_service_summary">Closes a blocked app the moment it opens</string>
-    <string name="accessibility_service_description">Closes an app the moment it opens when it is over the daily limit you set or inside one of your schedules. Rikavon only looks at which app came to the front; it never reads, stores or sends screen content.</string>
+    <string name="accessibility_service_summary">Closes blocked apps, websites and feeds the moment they open</string>
+    <string name="accessibility_service_description">Closes a blocked app the moment it opens, and, only if you block websites or feeds, reads the address bar of known browsers and looks for the Shorts / Reels player in YouTube and Instagram to back out of them. Nothing else on your screen is read, and nothing is stored or sent anywhere.</string>
+
+    <!-- Block now, opens per day, one sitting -->
+    <string name="limit_section_block_now">Block now</string>
+    <string name="limit_block_now_hint">Right away, for as long as you pick. The daily limit stays as it is.</string>
+    <string name="limit_pause_15">15 min</string>
+    <string name="limit_pause_60">1 hour</string>
+    <string name="limit_pause_180">3 hours</string>
+    <string name="limit_pause_tomorrow">Tomorrow</string>
+    <string name="limit_paused_until">Blocked until %1$s</string>
+    <string name="limit_paused_break">On a break until %1$s</string>
+    <string name="limit_pause_lift">Lift the block</string>
+    <string name="limit_opens">Opens per day</string>
+    <string name="limit_opens_hint">The open after the last allowed one is blocked until midnight</string>
+    <string name="limit_opens_value">%1$d opens</string>
+    <string name="limit_session">One sitting</string>
+    <string name="limit_session_hint">After this long in one go, a ten-minute break</string>
+    <string name="limit_session_value">%1$d min at a time</string>
+    <string name="limit_off">Off</string>
+
+    <!-- The settings lock -->
+    <string name="pin_enter_title">Settings are locked</string>
+    <string name="pin_enter_body">Enter your PIN to continue.</string>
+    <string name="pin_wrong">Wrong PIN</string>
+    <string name="pin_set_title">Choose a PIN</string>
+    <string name="pin_set_body">4 to 8 digits. Write it down somewhere: there is no reset.</string>
+    <string name="pin_confirm_title">Once more</string>
+    <string name="pin_confirm_body">Type the same PIN again.</string>
+    <string name="pin_mismatch">The two don\'t match</string>
+    <string name="pin_ok">OK</string>
+    <string name="pin_cancel">Cancel</string>
+
+    <!-- Websites & feeds -->
+    <string name="sites_title">Websites &amp; feeds</string>
+    <string name="sites_needs_accessibility">Blocking websites and feeds needs the instant path (the accessibility service). It reads only the address bar of known browsers and looks for the Shorts / Reels player.</string>
+    <string name="sites_open_accessibility">Turn it on</string>
+    <string name="sites_section_feeds">Feeds inside apps</string>
+    <string name="sites_feed_off">Off</string>
+    <string name="sites_feed_until">Blocked until %1$s</string>
+    <string name="sites_feed_forever">Blocked until you turn it off</string>
+    <string name="sites_duration_title">Block %1$s for</string>
+    <string name="sites_duration_1h">1 hour</string>
+    <string name="sites_duration_3h">3 hours</string>
+    <string name="sites_duration_tomorrow">Until tomorrow</string>
+    <string name="sites_duration_forever">Until I turn it off</string>
+    <string name="sites_duration_off">Turn off</string>
+    <string name="sites_section_websites">Websites</string>
+    <string name="sites_add_hint">instagram.com</string>
+    <string name="sites_add">Add</string>
+    <string name="sites_invalid">That doesn\'t look like a website</string>
+    <string name="sites_remove">Remove %1$s</string>
+    <string name="sites_empty">No websites blocked yet. Add a domain and every page on it is out, in any browser on the list.</string>
 </resources>

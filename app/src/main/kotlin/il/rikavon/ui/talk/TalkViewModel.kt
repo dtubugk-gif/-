@@ -121,8 +121,7 @@ class TalkViewModel @Inject constructor(
     /** The hint said the voice is off; one tap turns sounds and the voice back on. */
     fun enableVoice() {
         viewModelScope.launch {
-            settings.setSoundsEnabled(true)
-            settings.setVoiceEnabled(true)
+            settings.setAudio(soundsEnabled = true, voiceEnabled = true)
             _state.update { it.copy(voiceOff = false) }
         }
     }

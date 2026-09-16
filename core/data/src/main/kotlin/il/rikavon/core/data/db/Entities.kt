@@ -1,5 +1,6 @@
 package il.rikavon.core.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -13,6 +14,8 @@ data class AppLimitEntity(
     val fullBlock: Boolean,
     val enabled: Boolean,
     val createdAt: Long,
+    @ColumnInfo(defaultValue = "0") val maxOpens: Int = 0,
+    @ColumnInfo(defaultValue = "0") val sessionMinutes: Int = 0,
 )
 
 @Entity(tableName = "schedules")

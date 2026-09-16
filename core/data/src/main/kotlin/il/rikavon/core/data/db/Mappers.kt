@@ -12,9 +12,11 @@ import il.rikavon.core.data.model.ScheduleType
 import java.time.DayOfWeek
 import java.time.LocalDate
 
-internal fun AppLimitEntity.toModel() = AppLimit(packageName, limitMinutes, fullBlock, enabled, createdAt)
+internal fun AppLimitEntity.toModel() =
+    AppLimit(packageName, limitMinutes, fullBlock, enabled, createdAt, maxOpens, sessionMinutes)
 
-internal fun AppLimit.toEntity() = AppLimitEntity(packageName, limitMinutes, fullBlock, enabled, createdAt)
+internal fun AppLimit.toEntity() =
+    AppLimitEntity(packageName, limitMinutes, fullBlock, enabled, createdAt, maxOpens, sessionMinutes)
 
 internal fun DailyUsageEntity.toModel() = DailyAppUsage(LocalDate.parse(date), packageName, minutes, opens)
 

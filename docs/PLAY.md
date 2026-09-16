@@ -55,13 +55,20 @@ Rationale for every category:
 > Rikavon offers an optional "instant blocking" mode powered by an AccessibilityService that the user
 > enables manually in system settings after an in-app disclosure page (onboarding step "Instant blocking",
 > also reachable from Settings). Purpose: close an app the moment it opens when it is over the daily limit
-> the user set for it or inside a schedule the user configured, like a parental control would. The service
-> subscribes to `TYPE_WINDOW_STATE_CHANGED` only, has `canRetrieveWindowContent="false"`, is marked
-> `isAccessibilityTool="false"`, and uses exactly two things: the package name of the window that came to
-> the front and `GLOBAL_ACTION_HOME`. No screen content is read, stored or transmitted; there is no INTERNET
-> permission. Prominent disclosure text (shown before the settings page opens): "Rikavon uses the service
-> only to see which app came to the front and to send you home. It never reads screen content."
-> The core feature is not gated on it: with the service off the enforcement loop polls every second.
+> the user set for it or inside a schedule the user configured, like a parental control would; and, only
+> when the user has added websites or feeds to their block list, back out of a blocked website in the
+> browser and of the Shorts / Reels feed in YouTube / Instagram. The service subscribes to
+> `TYPE_WINDOW_STATE_CHANGED` and `TYPE_WINDOW_CONTENT_CHANGED`, is marked `isAccessibilityTool="false"`,
+> and reads content in exactly two narrow cases: the single address-bar view of a known browser (a fixed list
+> of package names and view ids), matched against the user's own domain list; and the presence, by view id,
+> of the Shorts / Reels player in YouTube / Instagram. It never reads any other view, never reads any other
+> app, and stores or transmits nothing; there is no INTERNET permission. Actions used: `GLOBAL_ACTION_HOME`
+> for a blocked app, `GLOBAL_ACTION_BACK` for a blocked page or feed. Prominent disclosure text (shown
+> before the settings page opens): "Rikavon uses the service to see which app came to the front and send
+> you home, and, only if you block websites or feeds, to read the address bar of known browsers and spot the
+> Shorts / Reels player. It never reads anything else on your screen and never stores or sends it."
+> The core feature is not gated on it: with the service off the enforcement loop polls every second;
+> website and feed blocking are unavailable without it and say so.
 
 ### USE_FULL_SCREEN_INTENT
 

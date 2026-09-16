@@ -39,8 +39,6 @@ class PetContactNotifier @Inject constructor(
     private val manager: NotificationManager get() = context.getSystemService(NotificationManager::class.java)
 
     fun message(skin: MascotSkin, stage: MascotStage, contact: PetContact.Message, appLabel: String, language: String) {
-        if (!permissions.hasNotifications()) return
-        ensureChannels()
         val body =
             when (contact.kind) {
                 MessageKind.NEAR_LIMIT ->
@@ -50,7 +48,25 @@ class PetContactNotifier @Inject constructor(
                         contact.minutesLeft,
                     )
                 MessageKind.AT_LIMIT -> context.getString(R.string.contact_message_limit, appLabel)
-            } + "\n" + texts.stageText(skin, stage, language)
+            }
+        post(skin, stage, contact.packageName, body, language)
+    }
+
+    /** The nudge inside an app: "20 minutes in Instagram. Just saying." */
+    fun nudge(skin: MascotSkin, stage: MascotStage, contact: PetContact.Nudge, appLabel: String, language: String) {
+        post(
+            skin,
+            stage,
+            contact.packageName,
+            context.getString(R.string.contact_message_nudge, contact.minutes, appLabel),
+            language,
+        )
+    }
+
+    private fun post(skin: MascotSkin, stage: MascotStage, packageName: String, line: String, language: String) {
+        if (!permissions.hasNotifications()) return
+        ensureChannels()
+        val body = line + "\n" + texts.stageText(skin, stage, language)
         val notification =
             NotificationCompat
                 .Builder(context, MESSAGES_CHANNEL_ID)
@@ -64,7 +80,7 @@ class PetContactNotifier @Inject constructor(
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
                 .build()
-        runCatching { manager.notify(MESSAGE_ID_BASE + (contact.packageName.hashCode() and ID_MASK), notification) }
+        runCatching { manager.notify(MESSAGE_ID_BASE + (packageName.hashCode() and ID_MASK), notification) }
     }
 
     /**

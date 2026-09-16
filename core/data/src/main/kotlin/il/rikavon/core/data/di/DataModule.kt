@@ -45,6 +45,7 @@ object DataModule {
     ): RikavonDatabase =
         Room
             .databaseBuilder(context, RikavonDatabase::class.java, RikavonDatabase.NAME)
+            .addMigrations(RikavonDatabase.MIGRATION_1_2)
             .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
             .build()
 

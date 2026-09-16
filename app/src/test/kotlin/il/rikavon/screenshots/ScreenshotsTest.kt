@@ -184,6 +184,12 @@ class ScreenshotsTest {
             click(string("nav_settings"))
             waitFor(string("settings_pet"))
             capture("08_settings")
+            scrollTo(string("settings_sites"))
+            click(string("settings_sites"))
+            waitFor(string("sites_section_websites"))
+            capture("27_sites_and_feeds")
+            it.onActivity { activity -> activity.onBackPressedDispatcher.onBackPressed() }
+            waitFor(string("settings_pet"))
             scrollTo(string("settings_score"))
             click(string("settings_score"))
             waitFor(string("score_total_label"))

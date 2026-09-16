@@ -6,6 +6,8 @@ import il.rikavon.core.data.model.BlockReason
 import il.rikavon.core.data.model.DayUsageSnapshot
 import il.rikavon.core.data.model.Schedule
 import il.rikavon.core.data.model.ScheduleType
+import il.rikavon.core.data.repo.Pause
+import il.rikavon.core.data.repo.PauseReason
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -137,6 +139,50 @@ class EnforcementEngineTest {
     }
 
     @Test
+    fun `a pause blocks until it ends, and a break reads as a session block`() {
+        val nowMillis = monday.toInstant().toEpochMilli()
+        val manual = mapOf("a" to Pause("a", nowMillis + 60_000L, PauseReason.MANUAL))
+        val decision = engine.evaluate(snapshot("a"), emptyList(), emptyList(), monday, pauses = manual)!!
+        assertEquals(BlockReason.PAUSED, decision.reason)
+        assertEquals(nowMillis + 60_000L, decision.retryAtMillis)
+        val rest = mapOf("a" to Pause("a", nowMillis + 60_000L, PauseReason.BREAK))
+        assertEquals(
+            BlockReason.SESSION,
+            engine.evaluate(snapshot("a"), emptyList(), emptyList(), monday, pauses = rest)?.reason,
+        )
+        val expired = mapOf("a" to Pause("a", nowMillis - 1L, PauseReason.MANUAL))
+        assertNull(engine.evaluate(snapshot("a"), emptyList(), emptyList(), monday, pauses = expired))
+    }
+
+    @Test
+    fun `the open past the daily open count is the one that gets blocked`() {
+        val capped = limit("a", 60).copy(maxOpens = 3)
+        val under = snapshot("a", "a" to 1).withOpens("a", 3)
+        assertNull(engine.evaluate(under, listOf(capped), emptyList(), monday))
+        val over = snapshot("a", "a" to 1).withOpens("a", 4)
+        assertEquals(BlockReason.OPENS_REACHED, engine.evaluate(over, listOf(capped), emptyList(), monday)?.reason)
+        assertTrue("a" in engine.blockedPackages(over, listOf(capped), emptyList(), monday))
+    }
+
+    @Test
+    fun `a sitting past the session length blocks for a break`() {
+        val nowMillis = monday.toInstant().toEpochMilli()
+        val capped = limit("a", 240).copy(sessionMinutes = 20)
+        val fresh = snapshot("a", "a" to 5).withOpenAt("a", nowMillis - 19 * 60_000L)
+        assertNull(engine.evaluate(fresh, listOf(capped), emptyList(), monday))
+        val long = snapshot("a", "a" to 25).withOpenAt("a", nowMillis - 20 * 60_000L)
+        val decision = engine.evaluate(long, listOf(capped), emptyList(), monday)!!
+        assertEquals(BlockReason.SESSION, decision.reason)
+        assertEquals(nowMillis + AppLimit.BREAK_MINUTES * 60_000L, decision.retryAtMillis)
+    }
+
+    private fun DayUsageSnapshot.withOpens(pkg: String, opens: Int) =
+        copy(perApp = perApp + (pkg to usageOf(pkg).copy(opens = opens)))
+
+    private fun DayUsageSnapshot.withOpenAt(pkg: String, at: Long) =
+        copy(perApp = perApp + (pkg to usageOf(pkg).copy(openTimestamps = listOf(at))))
+
+    @Test
     fun `blocked packages include limit and schedule hits`() {
         val blocked =
             engine.blockedPackages(
@@ -144,8 +190,9 @@ class EnforcementEngineTest {
                 listOf(limit("a", 30), limit("b", 30), limit("c", 1, fullBlock = true)),
                 listOf(schedule(9 * 60, 17 * 60, packages = setOf("d"))),
                 monday,
+                pauses = mapOf("e" to Pause("e", monday.toInstant().toEpochMilli() + 1_000L, PauseReason.MANUAL)),
             )
-        assertEquals(setOf("a", "c", "d"), blocked)
+        assertEquals(setOf("a", "c", "d", "e"), blocked)
     }
 
     @Test

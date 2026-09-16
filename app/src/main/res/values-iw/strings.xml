@@ -33,7 +33,7 @@
     <string name="onboarding_overlay_title">הצגה מעל אפליקציות אחרות</string>
     <string name="onboarding_overlay_body">מסך החסימה מופיע מעל האפליקציה שעברה את הגבול. בלי ההרשאה הזו המחמד יירקב בשקט, אבל שום דבר לא ייחסם.</string>
     <string name="onboarding_instant_title">חסימה מיידית</string>
-    <string name="onboarding_instant_body">אופציונלי. עם שירות הנגישות דולק, אפליקציה חסומה נסגרת ברגע שהיא נפתחת, כמו בבקרת הורים, במקום שנייה אחר כך. רקבון משתמש בשירות רק כדי לדעת איזו אפליקציה עלתה לחזית ולהחזיר אתכם למסך הבית. הוא לעולם לא קורא תוכן מהמסך. הפעילו את ״רקבון – חסימה מיידית״ תחת אפליקציות מותקנות.</string>
+    <string name="onboarding_instant_body">אופציונלי. עם שירות הנגישות דולק, אפליקציה חסומה נסגרת ברגע שהיא נפתחת, כמו בבקרת הורים, במקום שנייה אחר כך. רקבון משתמשת בשירות כדי לראות איזו אפליקציה עלתה לחזית ולשלוח אתכם הביתה, ורק אם חסמתם אתרים או פידים, כדי לקרוא את שורת הכתובת בדפדפנים מוכרים ולזהות את נגן ה-Shorts / Reels. היא לעולם לא קוראת שום דבר אחר על המסך ולא שומרת או שולחת אותו. הפעילו את “חסימה מיידית של רקבון” תחת אפליקציות מותקנות.</string>
     <string name="onboarding_notifications_title">התראות</string>
     <string name="onboarding_notifications_body">התראה אחת שקטה כדי שהשירות ימשיך לעבוד, ואופציונלית סיכום ערב בקול של המחמד. בלי תזכורות טורדניות. אפשר לדלג.</string>
     <string name="onboarding_alarm_title">איפוס מדויק בחצות</string>
@@ -221,4 +221,15 @@
     <string name="language_hebrew">עברית</string>
     <string name="settings_voice">קול</string>
     <string name="settings_voice_hint">המחמד מקריא את השורות שלו בקול (הקראת טקסט של המכשיר)</string>
+
+    <!-- Nudge, PIN, websites -->
+    <string name="settings_reminder">דחיפה בתוך אפליקציות</string>
+    <string name="settings_reminder_hint">כל כך וכך דקות ברצף אחד באפליקציה מוגבלת, הודעה מהמחמד</string>
+    <string name="settings_reminder_off">כבוי</string>
+    <string name="settings_reminder_min">%1$d דק׳</string>
+    <string name="settings_pin">לנעול הגדרות עם קוד</string>
+    <string name="settings_pin_off_hint">הקלת גבול או כיבוי האכיפה ידרשו אותו</string>
+    <string name="settings_pin_on_hint">פעיל. הקישו כדי להסיר את הנעילה.</string>
+    <string name="settings_sites">אתרים ופידים</string>
+    <string name="settings_sites_hint">חסימת אתרים בדפדפן, Shorts ביוטיוב, Reels באינסטגרם</string>
 </resources>

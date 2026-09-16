@@ -18,6 +18,11 @@ sealed interface PetContact {
 
     data class Call(override val packageName: String, val reason: CallReason, override val minutesLeft: Int) :
         PetContact
+
+    /** [minutes] into one sitting in a limited app: the pet says something. */
+    data class Nudge(override val packageName: String, val minutes: Int) : PetContact {
+        override val minutesLeft: Int get() = 0
+    }
 }
 
 /**

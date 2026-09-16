@@ -16,13 +16,18 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import il.rikavon.core.data.model.AppLimit
+import il.rikavon.core.data.model.BlockReason
 import il.rikavon.core.data.model.Schedule
 import il.rikavon.core.data.model.Settings
 import il.rikavon.core.data.permissions.PermissionChecker
+import il.rikavon.core.data.repo.BlockedSitesRepository
 import il.rikavon.core.data.repo.BreathingGateRepository
 import il.rikavon.core.data.repo.DailySummaryRepository
 import il.rikavon.core.data.repo.DayRolloverUseCase
+import il.rikavon.core.data.repo.FeedBlockRepository
 import il.rikavon.core.data.repo.LimitsRepository
+import il.rikavon.core.data.repo.PauseReason
+import il.rikavon.core.data.repo.PauseRepository
 import il.rikavon.core.data.repo.ScheduleRepository
 import il.rikavon.core.data.repo.SettingsRepository
 import il.rikavon.core.data.repo.UsageRepository
@@ -34,10 +39,12 @@ import il.rikavon.feature.blocker.contact.CallReason
 import il.rikavon.feature.blocker.contact.PetContact
 import il.rikavon.feature.blocker.contact.PetContactNotifier
 import il.rikavon.feature.blocker.contact.PetContactPolicy
+import il.rikavon.feature.blocker.contact.UsageReminderPolicy
 import il.rikavon.feature.blocker.engine.BlockDecision
 import il.rikavon.feature.blocker.engine.BlockerEvent
 import il.rikavon.feature.blocker.engine.BlockerEvents
 import il.rikavon.feature.blocker.engine.EnforcementEngine
+import il.rikavon.feature.blocker.engine.FeedRules
 import il.rikavon.feature.blocker.engine.FocusScoreProvider
 import il.rikavon.feature.blocker.engine.InstantBlockBus
 import il.rikavon.feature.blocker.engine.InstantRequest
@@ -108,9 +115,16 @@ class BlockerService : LifecycleService() {
 
     @Inject lateinit var score: FocusScoreProvider
 
+    @Inject lateinit var pauses: PauseRepository
+
+    @Inject lateinit var sites: BlockedSitesRepository
+
+    @Inject lateinit var feeds: FeedBlockRepository
+
     private val engine = EnforcementEngine()
     private val policy = PollingPolicy()
     private val contactPolicy = PetContactPolicy()
+    private val reminderPolicy = UsageReminderPolicy()
     private val screenOn = MutableStateFlow(true)
     private var suppressedPackage: String? = null
     private var suppressedUntil = 0L
@@ -148,6 +162,13 @@ class BlockerService : LifecycleService() {
                 when (request) {
                     is InstantRequest.Block -> blockNow(request.packageName)
                     is InstantRequest.Gate -> showBreathing(request.packageName)
+                    is InstantRequest.Site -> blockContent(request.packageName, BlockReason.WEBSITE, request.domain)
+                    is InstantRequest.Feed ->
+                        blockContent(
+                            request.packageName,
+                            BlockReason.FEED,
+                            getString(FeedRules.labelRes(request.feature)),
+                        )
                 }
             }
         }
@@ -191,19 +212,24 @@ class BlockerService : LifecycleService() {
             val limitList = limits.all()
             val scheduleList = schedules.all()
             val now = time.now()
-            val decision = engine.evaluate(snapshot, limitList, scheduleList, now)
+            val nowMillis = now.toInstant().toEpochMilli()
+            val pauseMap = pauses.current(nowMillis)
+            val decision = engine.evaluate(snapshot, limitList, scheduleList, now, pauses = pauseMap)
             handleDecision(decision)
             usage.persistToday()
             events.emit(BlockerEvent.UsageRefreshed)
 
-            val blockable = engine.blockedPackages(snapshot, limitList, scheduleList, now)
+            val blockable = engine.blockedPackages(snapshot, limitList, scheduleList, now, pauses = pauseMap)
             val gated = if (current.breathingGateEnabled) gate.current() else emptySet()
-            instant.publish(blockable, gated)
+            instant.publish(blockable, gated, sites.current(), feeds.current(nowMillis))
             // Inside the focus profile a block is a suspension: the icon greys out and the app cannot open.
             withContext(Dispatchers.IO) { profile.applySuspension(tracked(limitList, scheduleList), blockable) }
             maybeGate(snapshot.foregroundPackage, decision, gated)
             if (current.petMessagesEnabled || current.petCallsEnabled) {
                 contactPolicy.evaluate(snapshot, limitList).forEach { reachOut(it, current) }
+                reminderPolicy
+                    .evaluate(snapshot, limitList, current.reminderMinutes, nowMillis)
+                    ?.let { reachOut(it, current) }
             }
             val interval =
                 policy.intervalMillis(
@@ -268,6 +294,7 @@ class BlockerService : LifecycleService() {
         when (item) {
             is PetContact.Message -> if (prefs.petMessagesEnabled) contact.message(skin, stage, item, label, language)
             is PetContact.Call -> if (prefs.petCallsEnabled) contact.call(skin, stage, item, label, language)
+            is PetContact.Nudge -> if (prefs.petMessagesEnabled) contact.nudge(skin, stage, item, label, language)
         }
     }
 
@@ -284,11 +311,44 @@ class BlockerService : LifecycleService() {
         contact.call(skin, score.currentStage(), call, installed.label(packageName), language)
     }
 
+    /**
+     * The accessibility service just backed out of a blocked website or feed in [packageName]; the block
+     * screen says why, over the app. No call and no trip home: the page or feed is gone, the app may stay.
+     */
+    private suspend fun blockContent(packageName: String, reason: BlockReason, label: String) {
+        if (!settings.current().trackingEnabled || !permissions.state().overlay) return
+        if (overlay.isShowing(packageName)) return
+        val skin = selectedMascot.current() ?: return
+        val prefs = settings.current()
+        val language = UiLanguage.fromLocale(resources.configuration.locales)
+        summaries.recordBlock(packageName, reason)
+        events.emit(BlockerEvent.Blocked(packageName))
+        overlay.show(
+            OverlayController.Request(
+                decision = BlockDecision(packageName, reason, retryAtMillis = 0L, scheduleId = null),
+                skin = skin,
+                appLabel = label,
+                limitMinutes = 0,
+                message = texts.blockMessage(skin, time.localTime().hour, language),
+                appearance = overlay.appearance(prefs.reduceMotion),
+                onClose = { overlay.hide() },
+            ),
+        )
+    }
+
     /** The accessibility service already sent [packageName] home; put the block screen up right away. */
     private suspend fun blockNow(packageName: String) {
         if (!settings.current().trackingEnabled) return
+        val now = time.now()
         val decision =
-            engine.evaluate(usage.refresh(), limits.all(), schedules.all(), time.now(), packageName = packageName)
+            engine.evaluate(
+                usage.refresh(),
+                limits.all(),
+                schedules.all(),
+                now,
+                packageName = packageName,
+                pauses = pauses.current(now.toInstant().toEpochMilli()),
+            )
         handleDecision(decision, ignoreSuppression = true)
     }
 
@@ -309,6 +369,11 @@ class BlockerService : LifecycleService() {
         val message = texts.blockMessage(skin, time.localTime().hour, language)
         summaries.recordBlock(decision.packageName, decision.reason)
         events.emit(BlockerEvent.Blocked(decision.packageName))
+        // A session that ran long becomes a break: reopening during it must stay blocked even though the
+        // reopen starts a new sitting, so the break is written down as a pause.
+        if (decision.reason == BlockReason.SESSION) {
+            pauses.pause(decision.packageName, decision.retryAtMillis, PauseReason.BREAK)
+        }
         if (prefs.petCallsEnabled) {
             ringForBlock(decision.packageName, skin, language)
             goHome()

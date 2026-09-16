@@ -9,6 +9,11 @@
     <string name="block_reason_limit_line">נגמרו %1$d הדקות של %2$s.</string>
     <string name="block_reason_full_line">%1$s חסומה לגמרי.</string>
     <string name="block_reason_schedule_line">%1$s נחסמה לפי לוח הזמנים.</string>
+    <string name="block_reason_paused_line">חסמתם את %1$s בעצמכם. החלטה טובה.</string>
+    <string name="block_reason_opens_line">פתחתם את %1$s מספיק פעמים להיום. די.</string>
+    <string name="block_reason_session_line">רצף ארוך אחד ב%1$s. עשר דקות אוויר.</string>
+    <string name="block_reason_website_line">%1$s ברשימת החסימה שלכם.</string>
+    <string name="block_reason_feed_line">%1$s. לא היום.</string>
     <string name="block_flavor_morning">בוקר. הטלפון יחכה, הקפה לא.</string>
     <string name="block_flavor_day">גם ככה כולם בהפסקת צהריים. תאכל משהו.</string>
     <string name="block_flavor_evening">הערב עוד ארוך. יש דברים שלא זזים בגלילה.</string>
@@ -176,6 +181,9 @@
     <string name="contact_calls_channel_description">שיחה נכנסת כשממשיכים בכל זאת</string>
     <string name="contact_message_near">%1$s: נשארו %2$d דקות. תניחו את זה לפני שאצטרך להתקשר.</string>
     <string name="contact_message_limit">%1$s נגמרה להיום.</string>
+    <string name="contact_message_nudge">%1$d דקות ב%2$s. סתם אומר.</string>
+    <string name="feed_youtube_shorts">YouTube Shorts</string>
+    <string name="feed_instagram_reels">Instagram Reels</string>
     <string name="contact_call_intro">זה %1$s.</string>
     <string name="contact_call_near">%1$s שוב. נשארו %2$d דקות, ושנינו יודעים איך זה נגמר.</string>
     <string name="contact_call_blocked">%1$s חסומה להיום. ובכל זאת, הנה אנחנו.</string>
@@ -204,6 +212,57 @@
     <string name="profile_name">רקבון – מיקוד</string>
     <string name="profile_support_message">נחסם על ידי רקבון: האפליקציה מעבר לגבול היומי או בתוך לוח זמנים שקבעתם. נסו שוב מאוחר יותר.</string>
     <string name="accessibility_service_label">רקבון – חסימה מיידית</string>
-    <string name="accessibility_service_summary">סוגר אפליקציה חסומה ברגע שהיא נפתחת</string>
-    <string name="accessibility_service_description">סוגר אפליקציה ברגע שהיא נפתחת כשהיא מעבר לגבול היומי שקבעתם או בתוך לוח זמנים שלכם. רקבון בודק רק איזו אפליקציה עלתה לחזית, ולעולם לא קורא, שומר או שולח תוכן מהמסך.</string>
+    <string name="accessibility_service_summary">סוגר אפליקציות, אתרים ופידים חסומים ברגע שהם נפתחים</string>
+    <string name="accessibility_service_description">סוגר אפליקציה חסומה ברגע שהיא נפתחת, ורק אם חסמתם אתרים או פידים, קורא את שורת הכתובת בדפדפנים מוכרים ומזהה את נגן ה-Shorts / Reels ביוטיוב ובאינסטגרם כדי לצאת מהם. שום דבר אחר על המסך לא נקרא, ושום דבר לא נשמר או נשלח לשום מקום.</string>
+
+    <!-- Block now, opens per day, one sitting -->
+    <string name="limit_section_block_now">לחסום עכשיו</string>
+    <string name="limit_block_now_hint">מיד, לכמה זמן שתבחרו. הגבול היומי נשאר כמו שהוא.</string>
+    <string name="limit_pause_15">15 דק׳</string>
+    <string name="limit_pause_60">שעה</string>
+    <string name="limit_pause_180">3 שעות</string>
+    <string name="limit_pause_tomorrow">עד מחר</string>
+    <string name="limit_paused_until">חסומה עד %1$s</string>
+    <string name="limit_paused_break">בהפסקה עד %1$s</string>
+    <string name="limit_pause_lift">להסיר את החסימה</string>
+    <string name="limit_opens">פתיחות ביום</string>
+    <string name="limit_opens_hint">הפתיחה שאחרי האחרונה המותרת נחסמת עד חצות</string>
+    <string name="limit_opens_value">%1$d פתיחות</string>
+    <string name="limit_session">רצף אחד</string>
+    <string name="limit_session_hint">אחרי כל כך הרבה זמן ברצף, הפסקה של עשר דקות</string>
+    <string name="limit_session_value">%1$d דק׳ ברצף</string>
+    <string name="limit_off">כבוי</string>
+
+    <!-- The settings lock -->
+    <string name="pin_enter_title">ההגדרות נעולות</string>
+    <string name="pin_enter_body">הזינו את הקוד כדי להמשיך.</string>
+    <string name="pin_wrong">קוד שגוי</string>
+    <string name="pin_set_title">בחרו קוד</string>
+    <string name="pin_set_body">4 עד 8 ספרות. תרשמו אותו איפשהו: אין איפוס.</string>
+    <string name="pin_confirm_title">עוד פעם</string>
+    <string name="pin_confirm_body">הקלידו את אותו הקוד שוב.</string>
+    <string name="pin_mismatch">הקודים לא זהים</string>
+    <string name="pin_ok">אישור</string>
+    <string name="pin_cancel">ביטול</string>
+
+    <!-- Websites & feeds -->
+    <string name="sites_title">אתרים ופידים</string>
+    <string name="sites_needs_accessibility">חסימת אתרים ופידים צריכה את המסלול המיידי (שירות הנגישות). הוא קורא רק את שורת הכתובת בדפדפנים מוכרים ומחפש את נגן ה-Shorts / Reels.</string>
+    <string name="sites_open_accessibility">להפעיל</string>
+    <string name="sites_section_feeds">פידים בתוך אפליקציות</string>
+    <string name="sites_feed_off">כבוי</string>
+    <string name="sites_feed_until">חסום עד %1$s</string>
+    <string name="sites_feed_forever">חסום עד שתכבו</string>
+    <string name="sites_duration_title">לחסום את %1$s ל</string>
+    <string name="sites_duration_1h">שעה</string>
+    <string name="sites_duration_3h">3 שעות</string>
+    <string name="sites_duration_tomorrow">עד מחר</string>
+    <string name="sites_duration_forever">עד שאכבה</string>
+    <string name="sites_duration_off">לכבות</string>
+    <string name="sites_section_websites">אתרים</string>
+    <string name="sites_add_hint">instagram.com</string>
+    <string name="sites_add">הוספה</string>
+    <string name="sites_invalid">זה לא נראה כמו אתר</string>
+    <string name="sites_remove">להסיר את %1$s</string>
+    <string name="sites_empty">עדיין לא נחסמו אתרים. הוסיפו דומיין וכל עמוד בו נחסם, בכל דפדפן ברשימה.</string>
 </resources>

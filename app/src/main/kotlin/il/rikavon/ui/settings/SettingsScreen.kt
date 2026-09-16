@@ -40,16 +40,19 @@ import il.rikavon.R
 import il.rikavon.core.data.domain.Tier
 import il.rikavon.core.data.model.AppLanguage
 import il.rikavon.core.data.model.ReduceMotionMode
+import il.rikavon.core.data.model.Settings
 import il.rikavon.core.data.repo.BackupRepository
 import il.rikavon.core.ui.components.ChoiceOption
 import il.rikavon.core.ui.components.ChoiceSheet
 import il.rikavon.core.ui.components.GroupCard
 import il.rikavon.core.ui.components.LinkButton
 import il.rikavon.core.ui.components.ListRow
+import il.rikavon.core.ui.components.PinDialog
 import il.rikavon.core.ui.components.RikavonLargeTopBar
 import il.rikavon.core.ui.components.RikavonTopBar
 import il.rikavon.core.ui.components.ScreenPadding
 import il.rikavon.core.ui.components.SectionLabel
+import il.rikavon.core.ui.components.SegmentPills
 import il.rikavon.core.ui.components.SettingNavRow
 import il.rikavon.core.ui.components.SettingSwitchRow
 import il.rikavon.core.ui.components.SkeletonList
@@ -59,8 +62,10 @@ import il.rikavon.core.ui.components.rikavonSliderColors
 import il.rikavon.core.ui.theme.LocalExtraColors
 import il.rikavon.core.ui.theme.Sizes
 import il.rikavon.core.ui.theme.Spacing
+import il.rikavon.feature.blocker.ui.common.PinSetup
 import il.rikavon.feature.mascot.ui.UiLanguage
 import java.time.LocalDate
+import il.rikavon.feature.blocker.R as BlockerR
 
 private enum class Sheet { REDUCE_MOTION, LANGUAGE, SYSTEM_APPS }
 
@@ -91,12 +96,14 @@ fun SettingsScreen(
     onOpenOnboarding: () -> Unit,
     onOpenBattery: () -> Unit,
     onOpenPrivacy: () -> Unit,
+    onOpenSites: () -> Unit,
     onOpenPremium: () -> Unit,
     onOpenScore: () -> Unit,
     bottomBar: @Composable () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val lock by viewModel.lock.state.collectAsStateWithLifecycle()
     val language = UiLanguage.current()
     val snackbar = remember { SnackbarHostState() }
     var sheet by remember { mutableStateOf<Sheet?>(null) }
@@ -224,6 +231,14 @@ fun SettingsScreen(
                         checked = prefs.breathingGateEnabled,
                         onCheckedChange = viewModel::setBreathingGate,
                     )
+                    SettingNavRow(
+                        title = stringResource(R.string.settings_pin),
+                        subtitle =
+                            stringResource(
+                                if (prefs.locked) R.string.settings_pin_on_hint else R.string.settings_pin_off_hint,
+                            ),
+                        onClick = { if (prefs.locked) viewModel.lock.removePin() else viewModel.lock.startSetup() },
+                    )
                     val permissionsOk = state.permissions?.coreGranted == true
                     val permissionsRes =
                         if (permissionsOk) R.string.settings_permissions_ok else R.string.settings_permissions_missing
@@ -241,6 +256,11 @@ fun SettingsScreen(
                                 if (instantOn) R.string.settings_instant_on else R.string.settings_instant_off,
                             ),
                         onClick = { context.openAccessibilitySettings() },
+                    )
+                    SettingNavRow(
+                        title = stringResource(R.string.settings_sites),
+                        subtitle = stringResource(R.string.settings_sites_hint),
+                        onClick = onOpenSites,
                     )
                     SettingNavRow(
                         title = stringResource(R.string.settings_battery),
@@ -265,6 +285,29 @@ fun SettingsScreen(
                         subtitle = stringResource(R.string.settings_pet_messages_hint),
                         checked = prefs.petMessagesEnabled,
                         onCheckedChange = viewModel::setPetMessages,
+                    )
+                    ListRow(
+                        title = stringResource(R.string.settings_reminder),
+                        subtitle = stringResource(R.string.settings_reminder_hint),
+                    )
+                    SegmentPills(
+                        options = Settings.REMINDER_OPTIONS,
+                        selected = prefs.reminderMinutes,
+                        onSelect = viewModel::setReminder,
+                        label = {
+                            if (it == 0) {
+                                stringResource(R.string.settings_reminder_off)
+                            } else {
+                                stringResource(R.string.settings_reminder_min, it)
+                            }
+                        },
+                        modifier =
+                            Modifier
+                                .padding(
+                                    start = ScreenPadding,
+                                    end = ScreenPadding,
+                                    bottom = Spacing.md,
+                                ).fillMaxWidth(),
                     )
                     SettingSwitchRow(
                         title = stringResource(R.string.settings_pet_calls),
@@ -486,9 +529,32 @@ fun SettingsScreen(
         }
     }
 
+    if (lock.asking || lock.setup != null) {
+        val (titleRes, bodyRes) =
+            when (lock.setup) {
+                PinSetup.CHOOSE -> BlockerR.string.pin_set_title to BlockerR.string.pin_set_body
+                PinSetup.CONFIRM -> BlockerR.string.pin_confirm_title to BlockerR.string.pin_confirm_body
+                null -> BlockerR.string.pin_enter_title to BlockerR.string.pin_enter_body
+            }
+        val errorRes =
+            when (lock.setup) {
+                PinSetup.CHOOSE -> BlockerR.string.pin_set_body
+                PinSetup.CONFIRM -> BlockerR.string.pin_mismatch
+                null -> BlockerR.string.pin_wrong
+            }
+        PinDialog(
+            title = stringResource(titleRes),
+            body = stringResource(bodyRes),
+            confirmText = stringResource(BlockerR.string.pin_ok),
+            cancelText = stringResource(BlockerR.string.pin_cancel),
+            error = if (lock.wrong) stringResource(errorRes) else null,
+            onSubmit = viewModel.lock::submit,
+            onDismiss = viewModel.lock::cancel,
+        )
+    }
     state.strictCountdown?.let { seconds ->
         AlertDialog(
-            onDismissRequest = viewModel::cancelCountdown,
+            onDismissRequest = viewModel.countdown::cancel,
             title = {
                 Text(
                     stringResource(R.string.settings_strict_dialog_title),
@@ -505,7 +571,7 @@ fun SettingsScreen(
             dismissButton = {
                 LinkButton(
                     text = stringResource(R.string.settings_strict_dialog_cancel),
-                    onClick = viewModel::cancelCountdown,
+                    onClick = viewModel.countdown::cancel,
                 )
             },
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,

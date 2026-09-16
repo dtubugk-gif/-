@@ -54,6 +54,7 @@ data class SettingsDto(
     val petMessagesEnabled: Boolean = true,
     val petCallsEnabled: Boolean = true,
     val breathingGateEnabled: Boolean = true,
+    val reminderMinutes: Int = 0,
 )
 
 @Serializable
@@ -63,6 +64,8 @@ data class LimitDto(
     val fullBlock: Boolean,
     val enabled: Boolean,
     val createdAt: Long,
+    val maxOpens: Int = 0,
+    val sessionMinutes: Int = 0,
 )
 
 @Serializable
@@ -151,10 +154,19 @@ class BackupRepository @Inject constructor(
                     petMessagesEnabled = s.petMessagesEnabled,
                     petCallsEnabled = s.petCallsEnabled,
                     breathingGateEnabled = s.breathingGateEnabled,
+                    reminderMinutes = s.reminderMinutes,
                 ),
             limits =
                 limits.all().map {
-                    LimitDto(it.packageName, it.limitMinutes, it.fullBlock, it.enabled, it.createdAt)
+                    LimitDto(
+                        it.packageName,
+                        it.limitMinutes,
+                        it.fullBlock,
+                        it.enabled,
+                        it.createdAt,
+                        it.maxOpens,
+                        it.sessionMinutes,
+                    )
                 },
             schedules =
                 schedules.all().map {
@@ -224,6 +236,7 @@ class BackupRepository @Inject constructor(
                 petMessagesEnabled = dto.petMessagesEnabled,
                 petCallsEnabled = dto.petCallsEnabled,
                 breathingGateEnabled = dto.breathingGateEnabled,
+                reminderMinutes = dto.reminderMinutes,
             ),
         )
         limits.replaceAll(
@@ -234,6 +247,8 @@ class BackupRepository @Inject constructor(
                     fullBlock = it.fullBlock,
                     enabled = it.enabled,
                     createdAt = it.createdAt,
+                    maxOpens = it.maxOpens.coerceIn(0, AppLimit.MAX_OPENS),
+                    sessionMinutes = it.sessionMinutes.coerceIn(0, AppLimit.MAX_SESSION_MINUTES),
                 )
             },
         )

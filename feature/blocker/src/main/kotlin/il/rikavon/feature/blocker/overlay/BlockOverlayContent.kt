@@ -85,6 +85,11 @@ fun BlockOverlayContent(
                 BlockReason.LIMIT_REACHED -> stringResource(R.string.block_reason_limit_line, limitMinutes, appLabel)
                 BlockReason.FULL_BLOCK -> stringResource(R.string.block_reason_full_line, appLabel)
                 BlockReason.SCHEDULE -> stringResource(R.string.block_reason_schedule_line, appLabel)
+                BlockReason.PAUSED -> stringResource(R.string.block_reason_paused_line, appLabel)
+                BlockReason.OPENS_REACHED -> stringResource(R.string.block_reason_opens_line, appLabel)
+                BlockReason.SESSION -> stringResource(R.string.block_reason_session_line, appLabel)
+                BlockReason.WEBSITE -> stringResource(R.string.block_reason_website_line, appLabel)
+                BlockReason.FEED -> stringResource(R.string.block_reason_feed_line, appLabel)
             }
         val flavor =
             stringResource(
@@ -183,7 +188,7 @@ fun BlockOverlayContent(
                             textAlign = TextAlign.Center,
                         )
                         Spacer(Modifier.height(Spacing.xl))
-                        RetryTimer(decision = decision)
+                        if (decision.retryAtMillis > 0L) RetryTimer(decision = decision)
                         Spacer(Modifier.height(Spacing.lg))
                         PrimaryButton(
                             text = stringResource(R.string.block_close),

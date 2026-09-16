@@ -2,6 +2,8 @@ package il.rikavon.core.data.db
 
 import androidx.room.Database
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [
@@ -12,7 +14,7 @@ import androidx.room.RoomDatabase
         AchievementEntity::class,
         BlockEventEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class RikavonDatabase : RoomDatabase() {
@@ -30,5 +32,14 @@ abstract class RikavonDatabase : RoomDatabase() {
 
     companion object {
         const val NAME = "rikavon.db"
+
+        /** Open-count and session limits on app_limits, both off by default. */
+        val MIGRATION_1_2 =
+            object : Migration(1, 2) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE app_limits ADD COLUMN maxOpens INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("ALTER TABLE app_limits ADD COLUMN sessionMinutes INTEGER NOT NULL DEFAULT 0")
+                }
+            }
     }
 }

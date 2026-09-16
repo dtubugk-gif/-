@@ -10,11 +10,24 @@ data class AppLimit(
     val fullBlock: Boolean,
     val enabled: Boolean,
     val createdAt: Long,
+    /** Opens allowed per day; 0 means no open limit. */
+    val maxOpens: Int = 0,
+    /** Longest single sitting in minutes before a forced break; 0 means no session limit. */
+    val sessionMinutes: Int = 0,
 ) {
     companion object {
         const val MIN_MINUTES = 5
         const val MAX_MINUTES = 240
         const val DEFAULT_MINUTES = 30
+        const val MIN_OPENS = 1
+        const val MAX_OPENS = 60
+        const val DEFAULT_OPENS = 10
+        const val MIN_SESSION_MINUTES = 5
+        const val MAX_SESSION_MINUTES = 120
+        const val DEFAULT_SESSION_MINUTES = 20
+
+        /** How long the break after a session limit lasts. */
+        const val BREAK_MINUTES = 10
     }
 }
 
@@ -112,7 +125,32 @@ data class InstalledApp(val packageName: String, val label: String, val isSystem
 
 data class BlockEvent(val timestamp: Long, val packageName: String, val reason: BlockReason)
 
-enum class BlockReason { LIMIT_REACHED, FULL_BLOCK, SCHEDULE }
+enum class BlockReason {
+    LIMIT_REACHED,
+    FULL_BLOCK,
+    SCHEDULE,
+
+    /** The user hit "block now" for a while. */
+    PAUSED,
+
+    /** The app was opened more times than its daily open count allows. */
+    OPENS_REACHED,
+
+    /** One sitting ran past the session length; this is the break. */
+    SESSION,
+
+    /** A website on the block list came up in the browser. */
+    WEBSITE,
+
+    /** A blocked feed inside an app (Shorts, Reels) came up. */
+    FEED,
+}
+
+/** The short-video feeds that can be blocked inside their app without blocking the app. */
+enum class FeedFeature(val packageName: String) {
+    YOUTUBE_SHORTS("com.google.android.youtube"),
+    INSTAGRAM_REELS("com.instagram.android"),
+}
 
 /** English is the default UI language; [HEBREW] switches to the RTL resources; [SYSTEM] follows the device. */
 enum class AppLanguage(val tag: String) {
@@ -153,10 +191,18 @@ data class Settings(
     val petCallsEnabled: Boolean,
     /** After a limit changes, the next open of that app waits behind a ten-second breathing pause. */
     val breathingGateEnabled: Boolean,
+    /** Inside a limited app the pet nudges every this many minutes of one sitting; 0 is off. */
+    val reminderMinutes: Int,
+    /** Salted hash of the settings PIN; null when settings are not locked. Never exported. */
+    val pinHash: String?,
 ) {
+    /** Settings are locked behind a PIN. */
+    val locked: Boolean get() = pinHash != null
+
     companion object {
         const val DEFAULT_MASCOT_ID = "potato"
         const val DEFAULT_SUMMARY_HOUR = 21
+        val REMINDER_OPTIONS = listOf(0, 10, 15, 30)
         val DEFAULT =
             Settings(
                 selectedMascotId = DEFAULT_MASCOT_ID,
@@ -178,6 +224,8 @@ data class Settings(
                 petMessagesEnabled = true,
                 petCallsEnabled = true,
                 breathingGateEnabled = true,
+                reminderMinutes = 0,
+                pinHash = null,
             )
     }
 }
