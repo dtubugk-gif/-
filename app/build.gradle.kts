@@ -95,6 +95,7 @@ android {
                 // Robolectric native graphics: real Skia rendering so screenshot tests draw actual pixels.
                 test.systemProperty("robolectric.graphicsMode", "NATIVE")
                 test.systemProperty("rikavon.screenshots.dir", rootProject.file("docs/screenshots").absolutePath)
+                test.systemProperty("rikavon.play.dir", rootProject.file("docs/play").absolutePath)
                 // Screenshot tests are slow (Robolectric boots a device image); run them only on demand.
                 if (!project.hasProperty("screenshots")) test.exclude("**/screenshots/**")
             }

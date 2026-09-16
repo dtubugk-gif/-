@@ -1,21 +1,6 @@
 package il.rikavon.screenshots
 
-import android.Manifest
-import android.app.Application
-import android.app.usage.UsageEvents
-import android.app.usage.UsageStatsManager
-import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
-import android.content.pm.ActivityInfo
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageInfo
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.os.Build
-import android.os.Looper
-import android.os.PowerManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -31,17 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.test.filter
-import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
-import androidx.compose.ui.test.onAllNodesWithContentDescription
-import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onFirst
-import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.performSemanticsAction
-import androidx.compose.ui.test.printToString
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -53,7 +28,6 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import il.rikavon.MainActivity
 import il.rikavon.core.data.model.AppLanguage
-import il.rikavon.core.data.model.AppLimit
 import il.rikavon.core.data.model.BlockReason
 import il.rikavon.core.data.model.Schedule
 import il.rikavon.core.data.model.ScheduleType
@@ -84,13 +58,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
-import org.robolectric.shadows.ShadowSettings
-import org.robolectric.shadows.ShadowUsageStatsManager
-import java.io.File
-import java.io.FileOutputStream
 import java.time.DayOfWeek
 import javax.inject.Inject
 
@@ -128,8 +97,8 @@ class ScreenshotsTest {
             context,
             Configuration.Builder().setExecutor(SynchronousExecutor()).build(),
         )
-        grantEverything()
-        FAKE_APPS.forEach { (pkg, label) -> installFakeApp(pkg, label) }
+        seeds.grantEverything()
+        seeds.installFakeApps()
         compose.mainClock.autoAdvance = false
     }
 
@@ -456,231 +425,57 @@ class ScreenshotsTest {
         launchMain(string("onboarding_next")).use { capture("18_onboarding_he") }
     }
 
-    // ---- Seeding ------------------------------------------------------------------------------
-
-    private fun seedBase() =
-        runBlocking {
-            settings.setLanguage(AppLanguage.SYSTEM)
-            settings.setOnboardingDone(true)
-            settings.setStreak(current = STREAK, best = BEST_STREAK)
-        }
-
-    private fun seedLimitsAndUsage() =
-        runBlocking {
-            limits.save(AppLimit(INSTAGRAM, INSTAGRAM_LIMIT, fullBlock = false, enabled = true, createdAt = 0L))
-            limits.save(AppLimit(TIKTOK, TIKTOK_LIMIT, fullBlock = false, enabled = true, createdAt = 0L))
-            limits.save(AppLimit(YOUTUBE, YOUTUBE_LIMIT, fullBlock = false, enabled = true, createdAt = 0L))
-            val stats = shadowOf(context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager)
-            val now = System.currentTimeMillis()
-
-            fun session(pkg: String, startAgoMinutes: Long, minutes: Long) {
-                val start = now - startAgoMinutes * MINUTE_MILLIS
-                stats.addEvent(event(pkg, start, UsageEvents.Event.ACTIVITY_RESUMED))
-                stats.addEvent(event(pkg, start + minutes * MINUTE_MILLIS, UsageEvents.Event.ACTIVITY_PAUSED))
-            }
-            session(INSTAGRAM, startAgoMinutes = 200, minutes = 30)
-            session(INSTAGRAM, startAgoMinutes = 120, minutes = 18)
-            session(TIKTOK, startAgoMinutes = 300, minutes = 40)
-            session(TIKTOK, startAgoMinutes = 90, minutes = 30)
-            session(YOUTUBE, startAgoMinutes = 60, minutes = 12)
-            usage.refresh()
-        }
-
-    private fun event(pkg: String, timestamp: Long, type: Int): UsageEvents.Event =
-        ShadowUsageStatsManager.EventBuilder
-            .buildEvent()
-            .setPackage(pkg)
-            .setTimeStamp(timestamp)
-            .setEventType(type)
-            .build()
-
-    private fun grantEverything() {
-        val app = context as Application
-        ShadowSettings.setCanDrawOverlays(true)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            shadowOf(app).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
-        }
-        shadowOf(context.getSystemService(Context.POWER_SERVICE) as PowerManager)
-            .setIgnoringBatteryOptimizations(context.packageName, true)
-    }
-
-    private fun installFakeApp(pkg: String, label: String) {
-        val pm = shadowOf(context.packageManager)
-        val appInfo =
-            ApplicationInfo().apply {
-                packageName = pkg
-                name = label
-                nonLocalizedLabel = label
-                flags = 0
-            }
-        pm.installPackage(
-            PackageInfo().apply {
-                packageName = pkg
-                applicationInfo = appInfo
-            },
-        )
-        val activity =
-            ActivityInfo().apply {
-                packageName = pkg
-                name = "$pkg.MainActivity"
-                applicationInfo = appInfo
-                nonLocalizedLabel = label
-            }
-        val component = ComponentName(pkg, activity.name)
-        pm.addOrUpdateActivity(activity)
-        pm.addIntentFilterForActivity(
-            component,
-            IntentFilter(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LAUNCHER) },
-        )
-    }
-
     // ---- Harness ------------------------------------------------------------------------------
+
+    private val harness by lazy { ShotHarness(compose, context, ShotHarness.screenshotsDir()) }
+    private val seeds by lazy { ShotSeeds(context, settings, limits, usage) }
 
     private var scenario: ActivityScenario<MainActivity>? = null
 
+    private fun seedBase() = seeds.base()
+
+    private fun seedLimitsAndUsage() = seeds.limitsAndUsage()
+
     private fun launchMain(waitText: String): ActivityScenario<MainActivity> {
-        val launched = ActivityScenario.launch(MainActivity::class.java)
+        val launched = harness.launch(MainActivity::class.java)
         scenario = launched
         waitFor(waitText)
         settle(LONG_SETTLE)
         return launched
     }
 
-    /** Polls until a node with [text] exists (background loads, navigation), then lets animations settle. */
-    private fun waitFor(text: String, timeoutMillis: Long = WAIT_TIMEOUT_MILLIS, substringOk: Boolean = true) {
-        val deadline = System.currentTimeMillis() + timeoutMillis
-        while (System.currentTimeMillis() < deadline) {
-            Thread.sleep(REAL_SLEEP_MILLIS)
-            shadowOf(Looper.getMainLooper()).idle()
-            compose.mainClock.advanceTimeByFrame()
-            if (exists(text, substringOk)) {
-                settle()
-                return
-            }
-        }
-        scenario?.let {
-            val ascii = text.filter { c -> c in 'a'..'z' || c in 'A'..'Z' || c.isDigit() }.take(TIMEOUT_NAME_CHARS)
-            captureFrom(it, "debug_timeout_" + ascii.ifEmpty { text.hashCode().toUInt().toString(radix = 16) })
-        }
-        println("TIMEOUT waiting for '$text' codepoints=" + text.codePoints().toArray().joinToString())
-        println("TIMEOUT tree: " + runCatching { compose.onRoot().printToString() }.getOrElse { it.toString() })
-        error("timed out waiting for '$text'")
-    }
+    private fun waitFor(text: String) = harness.waitFor(text)
 
-    /**
-     * Scrolls the screen's lazy list one item at a time until a node with [text] is composed. The clock is
-     * paused, so each step gets a few frames for the list to lay out before the next look-up;
-     * `performScrollToNode` would spin forever here because it never lets a frame through.
-     */
-    private fun scrollTo(text: String) {
-        val list = compose.onNode(hasScrollAction())
-        var index = 0
-        while (!exists(text)) {
-            check(index < MAX_SCROLL_ITEMS) { "could not scroll to '$text'" }
-            val target = index++
-            runCatching { list.performSemanticsAction(SemanticsActions.ScrollToIndex) { it(target) } }
-            settle(SCROLL_STEP_MILLIS)
-        }
-        settle()
-    }
+    private fun scrollTo(text: String) = harness.scrollTo(text)
 
-    /** True when at least one node shows [text]; a substring may legitimately match several nodes. */
-    private fun exists(text: String, substring: Boolean = true): Boolean =
-        runCatching {
-            compose.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().isNotEmpty()
-        }.getOrDefault(false)
+    private fun click(text: String, substring: Boolean = false) = harness.click(text, substring)
 
-    /**
-     * Invokes the click action of the first clickable node showing [text]. Goes through semantics rather
-     * than touch injection so rows that are composed just below the viewport (lazy-list prefetch) still work.
-     */
-    private fun click(text: String, substring: Boolean = false) {
-        compose
-            .onAllNodesWithText(text, substring = substring)
-            .filter(hasClickAction())
-            .onFirst()
-            .performSemanticsAction(SemanticsActions.OnClick)
-        settle()
-    }
+    private fun clickDescribed(description: String) = harness.clickDescribed(description)
 
-    /** Same as [click] for nodes identified by content description (icon-only buttons). */
-    private fun clickDescribed(description: String) {
-        compose
-            .onAllNodesWithContentDescription(description)
-            .filter(hasClickAction())
-            .onFirst()
-            .performSemanticsAction(SemanticsActions.OnClick)
-        settle()
-    }
-
-    /** Lets background work land, idles the main looper and advances the Compose clock frame by frame. */
-    private fun settle(millis: Long = SETTLE_MILLIS) {
-        val frames = (millis / FRAME_MILLIS).toInt()
-        repeat(frames) {
-            Thread.sleep(REAL_SLEEP_MILLIS)
-            shadowOf(Looper.getMainLooper()).idle()
-            compose.mainClock.advanceTimeByFrame()
-        }
-        shadowOf(Looper.getMainLooper()).idle()
-    }
+    private fun settle(millis: Long = ShotHarness.SETTLE_MILLIS) = harness.settle(millis)
 
     private fun capture(name: String) = captureFrom(checkNotNull(scenario), name)
 
-    private fun <A : android.app.Activity> captureFrom(scenario: ActivityScenario<A>, name: String) {
-        settle()
-        scenario.onActivity { activity ->
-            val view = activity.window.decorView
-            check(view.width > 0 && view.height > 0) { "decor view has no size" }
-            val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
-            view.draw(Canvas(bitmap))
-            val dir = File(System.getProperty("rikavon.screenshots.dir") ?: "build/screenshots").apply { mkdirs() }
-            FileOutputStream(File(dir, "$name.png")).use { bitmap.compress(Bitmap.CompressFormat.PNG, PNG_QUALITY, it) }
-        }
-    }
+    private fun <A : android.app.Activity> captureFrom(scenario: ActivityScenario<A>, name: String) =
+        harness.save(harness.draw(scenario), ShotHarness.screenshotsDir(), name)
 
-    private fun string(name: String, vararg args: Any): String {
-        val id = context.resources.getIdentifier(name, "string", context.packageName)
-        check(id != 0) { "missing string $name" }
-        return context.getString(id, *args)
-    }
+    private fun string(name: String, vararg args: Any): String = harness.string(name, *args)
 
     companion object {
-        private const val INSTAGRAM = "com.instagram.android"
-        private const val TIKTOK = "com.zhiliaoapp.musically"
-        private const val YOUTUBE = "com.google.android.youtube"
-        private val FAKE_APPS =
-            listOf(
-                INSTAGRAM to "Instagram",
-                TIKTOK to "TikTok",
-                YOUTUBE to "YouTube",
-                "com.whatsapp" to "WhatsApp",
-                "com.twitter.android" to "X",
-                "com.reddit.frontpage" to "Reddit",
-            )
-        private const val INSTAGRAM_LIMIT = 60
-        private const val TIKTOK_LIMIT = 60
-        private const val YOUTUBE_LIMIT = 90
-        private const val STREAK = 4
-        private const val BEST_STREAK = 9
+        private const val INSTAGRAM = ShotSeeds.INSTAGRAM
+        private const val TIKTOK = ShotSeeds.TIKTOK
+        private const val TIKTOK_LIMIT = ShotSeeds.TIKTOK_LIMIT
+        private const val STREAK = ShotSeeds.STREAK
+        private const val LONG_SETTLE = ShotHarness.LONG_SETTLE
         private const val SLEEP_START = 23 * 60
         private const val SLEEP_END = 7 * 60
         private const val RETRY_MILLIS = 14 * 60_000L + 32_000L
-        private const val MINUTE_MILLIS = 60_000L
-        private const val SETTLE_MILLIS = 1_600L
-        private const val LONG_SETTLE = 3_200L
-        private const val FRAME_MILLIS = 16L
-        private const val REAL_SLEEP_MILLIS = 4L
-        private const val PNG_QUALITY = 100
-        private const val WAIT_TIMEOUT_MILLIS = 30_000L
-        private const val TIMEOUT_NAME_CHARS = 12
-        private const val MAX_SCROLL_ITEMS = 40
-        private const val SCROLL_STEP_MILLIS = 400L
         private const val BREATHE_SECONDS = 10
         private const val CALL_SECONDS = 42
     }
 }
 
-private const val SDK = 34
+private const val SDK = ShotHarness.SDK
 private const val PHONE_EN = "en-rUS-w360dp-h800dp-xhdpi"
 private const val PHONE_HE = "iw-rIL-w360dp-h800dp-xhdpi"
 private const val SHEET = "en-rUS-w640dp-h900dp-xhdpi"

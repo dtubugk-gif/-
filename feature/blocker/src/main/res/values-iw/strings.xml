@@ -43,6 +43,8 @@
     <string name="limit_minutes_label">דקות ביום</string>
     <string name="limit_full_block">חסימה מלאה</string>
     <string name="limit_full_block_hint">האפליקציה נחסמת מיד בכל פתיחה</string>
+    <string name="limit_call_on_open">המחמד מתקשר בכל פתיחה</string>
+    <string name="limit_call_on_open_hint">ברגע שהאפליקציה נפתחת, המחמד מתקשר ומתחנן. לא משנה מה הגבול אומר.</string>
     <string name="limit_enabled">הגבול פעיל</string>
     <string name="limit_enabled_hint">כיבוי משאיר את האפליקציה ברשימה בלי אכיפה</string>
     <string name="limit_today_used">%1$s מתוך %2$s</string>
@@ -182,11 +184,14 @@
     <string name="contact_message_near">%1$s: נשארו %2$d דקות. תניחו את זה לפני שאצטרך להתקשר.</string>
     <string name="contact_message_limit">%1$s נגמרה להיום.</string>
     <string name="contact_message_nudge">%1$d דקות ב%2$s. סתם אומר.</string>
+    <string name="contact_message_stop">התקשרתי. בבקשה תפסיקו עם %1$s. בשבילי.</string>
     <string name="feed_youtube_shorts">YouTube Shorts</string>
     <string name="feed_instagram_reels">Instagram Reels</string>
     <string name="contact_call_intro">זה %1$s.</string>
     <string name="contact_call_near">%1$s שוב. נשארו %2$d דקות, ושנינו יודעים איך זה נגמר.</string>
     <string name="contact_call_blocked">%1$s חסומה להיום. ובכל זאת, הנה אנחנו.</string>
+    <string name="contact_call_plead_no">לא. לא לא לא. בבקשה.</string>
+    <string name="contact_call_plead_rot">אני לא רוצה להירקב. תשחררו את %1$s.</string>
     <string name="contact_call_outro">להניח את הטלפון. או לדבר איתי, אני מקשיב.</string>
     <string name="call_incoming">שיחה נכנסת</string>
     <string name="call_about">בעניין %1$s</string>

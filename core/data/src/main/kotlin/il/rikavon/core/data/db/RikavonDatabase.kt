@@ -14,7 +14,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         AchievementEntity::class,
         BlockEventEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class RikavonDatabase : RoomDatabase() {
@@ -39,6 +39,14 @@ abstract class RikavonDatabase : RoomDatabase() {
                 override fun migrate(db: SupportSQLiteDatabase) {
                     db.execSQL("ALTER TABLE app_limits ADD COLUMN maxOpens INTEGER NOT NULL DEFAULT 0")
                     db.execSQL("ALTER TABLE app_limits ADD COLUMN sessionMinutes INTEGER NOT NULL DEFAULT 0")
+                }
+            }
+
+        /** The "calls on every open" switch on app_limits, off by default. */
+        val MIGRATION_2_3 =
+            object : Migration(2, 3) {
+                override fun migrate(db: SupportSQLiteDatabase) {
+                    db.execSQL("ALTER TABLE app_limits ADD COLUMN callOnOpen INTEGER NOT NULL DEFAULT 0")
                 }
             }
     }

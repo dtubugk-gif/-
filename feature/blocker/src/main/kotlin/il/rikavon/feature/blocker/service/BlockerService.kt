@@ -17,6 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import il.rikavon.core.data.model.AppLimit
 import il.rikavon.core.data.model.BlockReason
+import il.rikavon.core.data.model.DayUsageSnapshot
 import il.rikavon.core.data.model.Schedule
 import il.rikavon.core.data.model.Settings
 import il.rikavon.core.data.permissions.PermissionChecker
@@ -129,6 +130,8 @@ class BlockerService : LifecycleService() {
     private var suppressedPackage: String? = null
     private var suppressedUntil = 0L
     private val lastCallAt = mutableMapOf<String, Long>()
+    private val lastPleadAt = mutableMapOf<String, Long>()
+    private val lastOpens = mutableMapOf<String, Int>()
 
     private val screenReceiver =
         object : BroadcastReceiver() {
@@ -169,6 +172,7 @@ class BlockerService : LifecycleService() {
                             BlockReason.FEED,
                             getString(FeedRules.labelRes(request.feature)),
                         )
+                    is InstantRequest.Plead -> plead(request.packageName)
                 }
             }
         }
@@ -221,7 +225,9 @@ class BlockerService : LifecycleService() {
 
             val blockable = engine.blockedPackages(snapshot, limitList, scheduleList, now, pauses = pauseMap)
             val gated = if (current.breathingGateEnabled) gate.current() else emptySet()
-            instant.publish(blockable, gated, sites.current(), feeds.current(nowMillis))
+            val pleading = limitList.filter { it.enabled && it.callOnOpen }.map { it.packageName }.toSet() - blockable
+            instant.publish(blockable, gated, sites.current(), feeds.current(nowMillis), pleading)
+            noticeOpens(snapshot, pleading)
             // Inside the focus profile a block is a suspension: the icon greys out and the app cannot open.
             withContext(Dispatchers.IO) { profile.applySuspension(tracked(limitList, scheduleList), blockable) }
             maybeGate(snapshot.foregroundPackage, decision, gated)
@@ -283,6 +289,37 @@ class BlockerService : LifecycleService() {
                 },
             ),
         )
+    }
+
+    /** The polling path's "it just opened": a begged-about app's open count went up while it is in front. */
+    private suspend fun noticeOpens(snapshot: DayUsageSnapshot, pleading: Set<String>) {
+        for (packageName in pleading) {
+            val opens = snapshot.usageOf(packageName).opens
+            val before = lastOpens[packageName]
+            lastOpens[packageName] = opens
+            if (before != null && opens > before && snapshot.foregroundPackage == packageName) plead(packageName)
+        }
+    }
+
+    /**
+     * The pet begs: "calls on every open" rings the moment that app opens, whatever the limit says, at most
+     * once a minute per app (coming back from the call itself counts as an open, and must not ring again).
+     */
+    private suspend fun plead(packageName: String) {
+        val prefs = settings.current()
+        if (!prefs.trackingEnabled || !prefs.petCallsEnabled) return
+        val now = time.nowMillis()
+        if (now - (lastPleadAt[packageName] ?: 0L) < PLEAD_COOLDOWN_MILLIS) return
+        lastPleadAt[packageName] = now
+        val skin = selectedMascot.current() ?: return
+        val language = UiLanguage.fromLocale(resources.configuration.locales)
+        val used =
+            usage.today.value
+                .usageOf(packageName)
+                .minutes
+        val left = limits.byPackage(packageName)?.let { (it.limitMinutes - used).coerceAtLeast(0) } ?: 0
+        val call = PetContact.Call(packageName, CallReason.PLEAD, minutesLeft = left)
+        contact.call(skin, score.currentStage(), call, installed.label(packageName), language)
     }
 
     /** Delivers one of the pet's messages or calls, honouring the two switches. */
@@ -461,6 +498,7 @@ class BlockerService : LifecycleService() {
         private const val NOTIFICATION_ID = 1001
         private const val SUPPRESS_AFTER_CLOSE_MILLIS = 4_000L
         private const val CALL_COOLDOWN_MILLIS = 15_000L
+        private const val PLEAD_COOLDOWN_MILLIS = 60_000L
 
         fun start(context: Context) {
             val intent = Intent(context, BlockerService::class.java)

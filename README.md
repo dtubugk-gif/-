@@ -145,6 +145,11 @@ BlockerService loop (2s/5s/15s, off when screen off) ◄────────
   the voice-call audio mode with an earpiece / speaker switch and screen-off proximity. The screen is the
   phone app's: a pulsing avatar, a live caption of both sides, and round mute / speaker / keyboard / end
   buttons. Two switches in Settings; Android 14+ asks once for full-screen notifications.
+* **The pet begs on open (per app)** – `callOnOpen` on a limit: the moment that app comes to the front (the
+  instant path, or the poll seeing its open count rise) the pet rings with a plea, "No. No no no. Please. I
+  don't want to rot. Let go of it.", whatever the limit says, at most once a minute per app. A promise ends
+  the call and goes home; hanging up leaves the app open. Every call also leaves a message in the shade
+  asking to stop, so a declined or missed call still says what it wanted.
 * **You call the pet** – the phone button on Home dials the pet (`PetCallActivity.outgoing`): it rings for a
   moment, the pet picks up and greets you, and the same spoken conversation runs. The keyboard button drops
   to `TalkScreen`, the typed side of the same engine, for a quiet room or a phone with no recogniser.
@@ -306,4 +311,4 @@ nothing else changes.
 
 Zero network, zero analytics, zero third-party SDKs. Data lives in Room/DataStore inside the app sandbox,
 history is pruned after 90 days, backup is a JSON file the user writes through the system file picker.
-Play-facing text: [docs/PLAY.md](docs/PLAY.md).
+Play-facing text, the publishing checklist and the generated store graphics (`docs/play/`): [docs/PLAY.md](docs/PLAY.md).

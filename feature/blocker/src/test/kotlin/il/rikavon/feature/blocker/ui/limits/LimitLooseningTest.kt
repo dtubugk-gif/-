@@ -17,6 +17,7 @@ class LimitLooseningTest {
         assertTrue(LimitLoosening.isLooser(base, base.copy(sessionMinutes = 0)))
         assertTrue(LimitLoosening.isLooser(base, base.copy(enabled = false)))
         assertTrue(LimitLoosening.isLooser(base.copy(fullBlock = true), base))
+        assertTrue(LimitLoosening.isLooser(base.copy(callOnOpen = true), base))
     }
 
     @Test

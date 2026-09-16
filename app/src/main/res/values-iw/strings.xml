@@ -6,7 +6,7 @@
     <string name="home_greeting_noon">צהריים טובים.</string>
     <string name="home_greeting_evening">ערב טוב.</string>
     <string name="home_greeting_night">לילה טוב.</string>
-    <string name="home_date_pattern">EEEE · d \'ב\'MMMM</string>
+    <string name="home_date_pattern">EEE, d \'ב\'MMM</string>
     <string name="home_streak_pill">רצף: %1$d ימים</string>
     <string name="home_score_label">ציון מיקוד</string>
     <string name="home_today">היום</string>

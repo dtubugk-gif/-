@@ -13,10 +13,10 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 
 internal fun AppLimitEntity.toModel() =
-    AppLimit(packageName, limitMinutes, fullBlock, enabled, createdAt, maxOpens, sessionMinutes)
+    AppLimit(packageName, limitMinutes, fullBlock, enabled, createdAt, maxOpens, sessionMinutes, callOnOpen)
 
 internal fun AppLimit.toEntity() =
-    AppLimitEntity(packageName, limitMinutes, fullBlock, enabled, createdAt, maxOpens, sessionMinutes)
+    AppLimitEntity(packageName, limitMinutes, fullBlock, enabled, createdAt, maxOpens, sessionMinutes, callOnOpen)
 
 internal fun DailyUsageEntity.toModel() = DailyAppUsage(LocalDate.parse(date), packageName, minutes, opens)
 

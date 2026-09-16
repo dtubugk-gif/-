@@ -66,6 +66,7 @@ data class LimitDto(
     val createdAt: Long,
     val maxOpens: Int = 0,
     val sessionMinutes: Int = 0,
+    val callOnOpen: Boolean = false,
 )
 
 @Serializable
@@ -166,6 +167,7 @@ class BackupRepository @Inject constructor(
                         it.createdAt,
                         it.maxOpens,
                         it.sessionMinutes,
+                        it.callOnOpen,
                     )
                 },
             schedules =
@@ -249,6 +251,7 @@ class BackupRepository @Inject constructor(
                     createdAt = it.createdAt,
                     maxOpens = it.maxOpens.coerceIn(0, AppLimit.MAX_OPENS),
                     sessionMinutes = it.sessionMinutes.coerceIn(0, AppLimit.MAX_SESSION_MINUTES),
+                    callOnOpen = it.callOnOpen,
                 )
             },
         )

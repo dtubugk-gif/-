@@ -6,7 +6,7 @@ import java.time.LocalDate
 
 enum class MessageKind { NEAR_LIMIT, AT_LIMIT }
 
-enum class CallReason { NEAR_LIMIT, BLOCKED }
+enum class CallReason { NEAR_LIMIT, BLOCKED, PLEAD }
 
 /** One thing the pet wants to say, and how loudly. */
 sealed interface PetContact {

@@ -43,6 +43,8 @@
     <string name="limit_minutes_label">Minutes per day</string>
     <string name="limit_full_block">Full block</string>
     <string name="limit_full_block_hint">The app is blocked immediately on every open</string>
+    <string name="limit_call_on_open">The pet calls on every open</string>
+    <string name="limit_call_on_open_hint">The moment this app opens, the pet calls and begs. Whatever the limit says.</string>
     <string name="limit_enabled">Limit active</string>
     <string name="limit_enabled_hint">Turning off keeps the app listed without enforcement</string>
     <string name="limit_today_used">%1$s of %2$s</string>
@@ -182,11 +184,14 @@
     <string name="contact_message_near">%1$s: %2$d minutes left. Put it down before I have to call.</string>
     <string name="contact_message_limit">%1$s is done for today.</string>
     <string name="contact_message_nudge">%1$d minutes in %2$s. Just saying.</string>
+    <string name="contact_message_stop">I called. Please stop with %1$s. For me.</string>
     <string name="feed_youtube_shorts">YouTube Shorts</string>
     <string name="feed_instagram_reels">Instagram Reels</string>
     <string name="contact_call_intro">It\'s %1$s.</string>
     <string name="contact_call_near">%1$s again. %2$d minutes left, and we both know how this ends.</string>
     <string name="contact_call_blocked">%1$s is blocked for today. And yet, here we are.</string>
+    <string name="contact_call_plead_no">No. No no no. Please.</string>
+    <string name="contact_call_plead_rot">I don\'t want to rot. Let go of %1$s.</string>
     <string name="contact_call_outro">Put the phone down. Or talk to me, I\'m listening.</string>
     <string name="call_incoming">Incoming call</string>
     <string name="call_about">about %1$s</string>

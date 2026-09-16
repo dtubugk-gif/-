@@ -95,6 +95,8 @@ class PetContactNotifier @Inject constructor(
         runCatching { context.startActivity(ringing) }
         if (!permissions.hasNotifications()) return
         ensureChannels()
+        // The call goes away when it stops ringing; the message stays in the shade and says what it wanted.
+        post(skin, stage, contact.packageName, context.getString(R.string.contact_message_stop, appLabel), language)
         val answered = callActivity(petName, appLabel, lines, answered = true)
         val fullScreen = PendingIntent.getActivity(context, REQUEST_RING, ringing, PENDING_FLAGS)
         val answer = PendingIntent.getActivity(context, REQUEST_ANSWER, answered, PENDING_FLAGS)
@@ -147,14 +149,22 @@ class PetContactNotifier @Inject constructor(
     ): List<String> {
         val reason =
             when (contact.reason) {
-                CallReason.NEAR_LIMIT -> context.getString(R.string.contact_call_near, appLabel, contact.minutesLeft)
-                CallReason.BLOCKED -> context.getString(R.string.contact_call_blocked, appLabel)
+                CallReason.NEAR_LIMIT ->
+                    listOf(
+                        context.getString(R.string.contact_call_near, appLabel, contact.minutesLeft),
+                    )
+                CallReason.BLOCKED -> listOf(context.getString(R.string.contact_call_blocked, appLabel))
+                CallReason.PLEAD ->
+                    listOf(
+                        context.getString(R.string.contact_call_plead_no),
+                        context.getString(R.string.contact_call_plead_rot, appLabel),
+                    )
             }
-        return listOf(
-            context.getString(R.string.contact_call_intro, petName),
-            reason,
-            texts.stageText(skin, stage, language),
-            context.getString(R.string.contact_call_outro),
+        return (
+            listOf(context.getString(R.string.contact_call_intro, petName)) +
+                reason +
+                texts.stageText(skin, stage, language) +
+                context.getString(R.string.contact_call_outro)
         ).filter { it.isNotBlank() }
     }
 

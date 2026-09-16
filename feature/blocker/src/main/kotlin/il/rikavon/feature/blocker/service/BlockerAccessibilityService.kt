@@ -18,7 +18,7 @@ import javax.inject.Inject
  *
  * Window-state events: the moment a window from another app comes to the front, a blocked app is sent home
  * before it has drawn more than a frame and the block screen is requested; an app whose limit just changed
- * gets the breathing pause instead.
+ * gets the breathing pause instead; an app the pet begs about gets the call the moment it opens.
  *
  * Content-changed events, only when the user has blocked websites or feeds: in a known browser the one
  * address-bar view is read and matched against the block list; in YouTube / Instagram the presence of the
@@ -32,6 +32,9 @@ class BlockerAccessibilityService : AccessibilityService() {
     private lateinit var policy: InstantBlockPolicy
     private val lastBackOut = mutableMapOf<String, Long>()
     private val lastScan = mutableMapOf<String, Long>()
+
+    /** The last package (other than this app) whose window was in front: a change is an "open". */
+    private var frontPackage: String? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -55,12 +58,18 @@ class BlockerAccessibilityService : AccessibilityService() {
         val target = current.packageName?.toString() ?: return
         when (current.eventType) {
             AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                val opened = target != packageName && target != frontPackage
+                if (target != packageName) frontPackage = target
                 when {
                     policy.shouldSendHome(target, bus.blocked.value) -> {
                         performGlobalAction(GLOBAL_ACTION_HOME)
                         bus.request(InstantRequest.Block(target))
                     }
                     policy.shouldSendHome(target, bus.gated.value) -> bus.request(InstantRequest.Gate(target))
+                    opened && target in bus.pleading.value -> {
+                        bus.request(InstantRequest.Plead(target))
+                        inspectContent(target)
+                    }
                     else -> inspectContent(target)
                 }
             }
