@@ -30,6 +30,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import il.rikavon.core.data.model.AppLimit
 import il.rikavon.core.data.model.AppUsage
+import il.rikavon.core.data.repo.BreathingGateRepository
 import il.rikavon.core.data.repo.LimitsRepository
 import il.rikavon.core.data.repo.SettingsRepository
 import il.rikavon.core.data.repo.UsageRepository
@@ -81,9 +82,11 @@ class LimitEditorViewModel @Inject constructor(
     private val limits: LimitsRepository,
     private val installed: InstalledAppsSource,
     usage: UsageRepository,
-    settings: SettingsRepository,
+    private val settings: SettingsRepository,
+    private val gate: BreathingGateRepository,
 ) : ViewModel() {
     val packageName: String = checkNotNull(savedState[ARG_PACKAGE])
+    private var existing: AppLimit? = null
     private val draft =
         MutableStateFlow(LimitEditorUiState(packageName = packageName, label = installed.label(packageName)))
     private val countdown = MutableStateFlow<Int?>(null)
@@ -101,7 +104,7 @@ class LimitEditorViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val existing = limits.byPackage(packageName)
+            val existing = limits.byPackage(packageName).also { this@LimitEditorViewModel.existing = it }
             draft.value =
                 draft.value.copy(
                     minutes = existing?.limitMinutes ?: AppLimit.DEFAULT_MINUTES,
@@ -132,10 +135,18 @@ class LimitEditorViewModel @Inject constructor(
         startCountdown { draft.value = draft.value.copy(enabled = false) }
     }
 
+    /** Saves; a changed (or new) limit also arms the breathing pause for that app's next open. */
     fun save(onDone: () -> Unit) {
         viewModelScope.launch {
             val d = draft.value
+            val before = existing
+            val changed =
+                before == null ||
+                    before.limitMinutes != d.minutes ||
+                    before.fullBlock != d.fullBlock ||
+                    before.enabled != d.enabled
             limits.save(AppLimit(packageName, d.minutes, d.fullBlock, d.enabled, createdAt = 0L))
+            if (changed && settings.current().breathingGateEnabled) gate.mark(packageName)
             onDone()
         }
     }

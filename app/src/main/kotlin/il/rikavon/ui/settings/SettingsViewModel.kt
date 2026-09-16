@@ -161,6 +161,12 @@ class SettingsViewModel @Inject constructor(
 
     fun setVoice(enabled: Boolean) = viewModelScope.launch { settings.setVoiceEnabled(enabled) }
 
+    fun setPetMessages(enabled: Boolean) = viewModelScope.launch { settings.setPetMessagesEnabled(enabled) }
+
+    fun setPetCalls(enabled: Boolean) = viewModelScope.launch { settings.setPetCallsEnabled(enabled) }
+
+    fun setBreathingGate(enabled: Boolean) = viewModelScope.launch { settings.setBreathingGateEnabled(enabled) }
+
     fun setReduceMotion(mode: ReduceMotionMode) = viewModelScope.launch { settings.setReduceMotion(mode) }
 
     fun setLanguage(language: AppLanguage) = viewModelScope.launch { settings.setLanguage(language) }

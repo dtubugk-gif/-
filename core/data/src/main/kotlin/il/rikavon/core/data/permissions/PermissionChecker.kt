@@ -3,6 +3,7 @@ package il.rikavon.core.data.permissions
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.AlarmManager
 import android.app.AppOpsManager
+import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
@@ -25,6 +26,8 @@ data class PermissionState(
     val ignoresBatteryOptimization: Boolean,
     /** The optional accessibility service that closes a blocked app the instant it opens. */
     val accessibility: Boolean = false,
+    /** Android 14+: whether the pet's calls may take over the screen like a real incoming call. */
+    val fullScreenIntent: Boolean = true,
 ) {
     /** Tracking and blocking need these two; everything else degrades gracefully. */
     val coreGranted: Boolean get() = usageAccess && overlay
@@ -52,7 +55,15 @@ class PermissionChecker @Inject constructor(
             exactAlarm = canScheduleExactAlarms(),
             ignoresBatteryOptimization = ignoresBatteryOptimizations(),
             accessibility = hasAccessibility(),
+            fullScreenIntent = canUseFullScreenIntent(),
         )
+
+    /** Full-screen intents need a user grant on Android 14+; older versions allow them with the permission. */
+    fun canUseFullScreenIntent(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return true
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return false
+        return manager.canUseFullScreenIntent()
+    }
 
     /** True when the user enabled this app's accessibility service in system settings. */
     fun hasAccessibility(): Boolean {

@@ -18,6 +18,7 @@ import android.os.Looper
 import android.os.PowerManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.filter
 import androidx.compose.ui.test.hasClickAction
@@ -47,9 +48,12 @@ import il.rikavon.core.data.repo.LimitsRepository
 import il.rikavon.core.data.repo.ScheduleRepository
 import il.rikavon.core.data.repo.SettingsRepository
 import il.rikavon.core.data.repo.UsageRepository
+import il.rikavon.feature.blocker.contact.PetCallContent
 import il.rikavon.feature.blocker.engine.BlockDecision
 import il.rikavon.feature.blocker.overlay.BlockOverlayContent
+import il.rikavon.feature.blocker.overlay.BreathingOverlayContent
 import il.rikavon.feature.mascot.model.HourBucket
+import il.rikavon.feature.mascot.model.MascotSkin
 import il.rikavon.feature.mascot.registry.MascotRegistry
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
@@ -247,6 +251,67 @@ class ScreenshotsTest {
             settle(LONG_SETTLE)
             captureFrom(scenario, "15_block_screen")
         }
+    }
+
+    @Test
+    fun breathingGate() {
+        val skin = runBlocking { registry.load() }.first { it.id == "potato" }
+        ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.setContent {
+                    BreathingOverlayContent(
+                        skin = skin,
+                        appLabel = "Instagram",
+                        seconds = BREATHE_SECONDS,
+                        reducedMotion = false,
+                        onEnter = {},
+                        onLeave = {},
+                    )
+                }
+            }
+            settle(LONG_SETTLE)
+            captureFrom(scenario, "20_breathing_gate")
+        }
+    }
+
+    @Test
+    fun petCall() {
+        val skin = runBlocking { registry.load() }.first { it.id == "potato" }
+        val lines =
+            listOf(
+                "It's Potato.",
+                "Instagram again. 3 minutes left, and we both know how this ends.",
+                "Sprouting. Not on purpose.",
+                "Put the phone down. Breathe. I will stop calling.",
+            )
+        ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.setContent { callScreen(skin, lines, answered = false) }
+            }
+            settle(LONG_SETTLE)
+            captureFrom(scenario, "21_pet_call_ringing")
+            scenario.onActivity { activity ->
+                activity.setContent { callScreen(skin, lines, answered = true) }
+            }
+            settle(LONG_SETTLE)
+            captureFrom(scenario, "22_pet_call_answered")
+        }
+    }
+
+    @Composable
+    private fun callScreen(skin: MascotSkin, lines: List<String>, answered: Boolean) {
+        PetCallContent(
+            skin = skin,
+            petName = "Potato",
+            appLabel = "Instagram",
+            lines = lines,
+            answered = answered,
+            reducedMotion = answered,
+            onAnswer = {},
+            onDecline = {},
+            onPromise = {},
+            onHangUp = {},
+        )
     }
 
     // ---- Hebrew -------------------------------------------------------------------------------
@@ -490,6 +555,7 @@ class ScreenshotsTest {
         private const val TIMEOUT_NAME_CHARS = 12
         private const val MAX_SCROLL_ITEMS = 40
         private const val SCROLL_STEP_MILLIS = 400L
+        private const val BREATHE_SECONDS = 10
     }
 }
 

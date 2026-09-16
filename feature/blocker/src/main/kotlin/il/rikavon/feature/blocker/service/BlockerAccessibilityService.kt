@@ -6,13 +6,15 @@ import android.view.accessibility.AccessibilityEvent
 import dagger.hilt.android.AndroidEntryPoint
 import il.rikavon.feature.blocker.engine.InstantBlockBus
 import il.rikavon.feature.blocker.engine.InstantBlockPolicy
+import il.rikavon.feature.blocker.engine.InstantRequest
 import javax.inject.Inject
 
 /**
  * The instant path. Android tells this service the moment a window from another app comes to the front;
- * if that app is blocked right now it is sent home before it has drawn more than a frame, and the block
- * screen is requested from the enforcement service. Only window-state events are subscribed and window
- * content is never retrieved. Optional: without it the polling loop still blocks, a second or two later.
+ * if that app is blocked right now it is sent home before it has drawn more than a frame and the block
+ * screen is requested from the enforcement service; if its limit was just changed, the breathing pause is
+ * requested instead. Only window-state events are subscribed and window content is never retrieved.
+ * Optional: without it the polling loop still does both, a second later.
  */
 @AndroidEntryPoint
 class BlockerAccessibilityService : AccessibilityService() {
@@ -38,9 +40,14 @@ class BlockerAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val current = event ?: return
         if (current.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
-        if (!policy.shouldSendHome(current.packageName, bus.blocked.value)) return
-        performGlobalAction(GLOBAL_ACTION_HOME)
-        bus.request(current.packageName.toString())
+        val target = current.packageName?.toString() ?: return
+        when {
+            policy.shouldSendHome(target, bus.blocked.value) -> {
+                performGlobalAction(GLOBAL_ACTION_HOME)
+                bus.request(InstantRequest.Block(target))
+            }
+            policy.shouldSendHome(target, bus.gated.value) -> bus.request(InstantRequest.Gate(target))
+        }
     }
 
     override fun onInterrupt() = Unit

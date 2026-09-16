@@ -35,6 +35,9 @@ class SettingsRepository @Inject constructor(private val store: DataStore<Prefer
         val FREE_NOTICE = booleanPreferencesKey("free_notice_shown")
         val SOUNDS = booleanPreferencesKey("sounds_enabled")
         val VOICE = booleanPreferencesKey("voice_enabled")
+        val PET_MESSAGES = booleanPreferencesKey("pet_messages_enabled")
+        val PET_CALLS = booleanPreferencesKey("pet_calls_enabled")
+        val BREATHING_GATE = booleanPreferencesKey("breathing_gate_enabled")
     }
 
     val settings: Flow<Settings> = store.data.map { it.toSettings() }
@@ -77,6 +80,12 @@ class SettingsRepository @Inject constructor(private val store: DataStore<Prefer
 
     suspend fun setVoiceEnabled(enabled: Boolean) = edit { it[Keys.VOICE] = enabled }
 
+    suspend fun setPetMessagesEnabled(enabled: Boolean) = edit { it[Keys.PET_MESSAGES] = enabled }
+
+    suspend fun setPetCallsEnabled(enabled: Boolean) = edit { it[Keys.PET_CALLS] = enabled }
+
+    suspend fun setBreathingGateEnabled(enabled: Boolean) = edit { it[Keys.BREATHING_GATE] = enabled }
+
     suspend fun restore(settings: Settings) =
         edit {
             it[Keys.MASCOT] = settings.selectedMascotId
@@ -93,6 +102,9 @@ class SettingsRepository @Inject constructor(private val store: DataStore<Prefer
             it[Keys.TRACKING] = settings.trackingEnabled
             it[Keys.SOUNDS] = settings.soundsEnabled
             it[Keys.VOICE] = settings.voiceEnabled
+            it[Keys.PET_MESSAGES] = settings.petMessagesEnabled
+            it[Keys.PET_CALLS] = settings.petCallsEnabled
+            it[Keys.BREATHING_GATE] = settings.breathingGateEnabled
         }
 
     private suspend fun edit(block: (androidx.datastore.preferences.core.MutablePreferences) -> Unit) {
@@ -102,25 +114,30 @@ class SettingsRepository @Inject constructor(private val store: DataStore<Prefer
     private fun Preferences.toSettings(): Settings {
         val defaults = Settings.DEFAULT
         return Settings(
-            selectedMascotId = this[Keys.MASCOT] ?: defaults.selectedMascotId,
-            strictMode = this[Keys.STRICT] ?: defaults.strictMode,
-            dailySummaryEnabled = this[Keys.SUMMARY_ENABLED] ?: defaults.dailySummaryEnabled,
-            dailySummaryHour = this[Keys.SUMMARY_HOUR] ?: defaults.dailySummaryHour,
-            dynamicColor = this[Keys.DYNAMIC_COLOR] ?: defaults.dynamicColor,
+            selectedMascotId = or(Keys.MASCOT, defaults.selectedMascotId),
+            strictMode = or(Keys.STRICT, defaults.strictMode),
+            dailySummaryEnabled = or(Keys.SUMMARY_ENABLED, defaults.dailySummaryEnabled),
+            dailySummaryHour = or(Keys.SUMMARY_HOUR, defaults.dailySummaryHour),
+            dynamicColor = or(Keys.DYNAMIC_COLOR, defaults.dynamicColor),
             language = AppLanguage.fromTag(this[Keys.LANGUAGE]),
-            onboardingDone = this[Keys.ONBOARDING_DONE] ?: defaults.onboardingDone,
+            onboardingDone = or(Keys.ONBOARDING_DONE, defaults.onboardingDone),
             lastRolloverDate = this[Keys.LAST_ROLLOVER]?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
-            currentStreak = this[Keys.STREAK] ?: defaults.currentStreak,
-            bestStreak = this[Keys.BEST_STREAK] ?: defaults.bestStreak,
-            premium = this[Keys.PREMIUM] ?: defaults.premium,
-            reduceMotion =
-                this[Keys.REDUCE_MOTION]?.let { mode ->
-                    runCatching { ReduceMotionMode.valueOf(mode) }.getOrNull()
-                } ?: defaults.reduceMotion,
-            trackingEnabled = this[Keys.TRACKING] ?: defaults.trackingEnabled,
-            freeTierNoticeShown = this[Keys.FREE_NOTICE] ?: defaults.freeTierNoticeShown,
-            soundsEnabled = this[Keys.SOUNDS] ?: defaults.soundsEnabled,
-            voiceEnabled = this[Keys.VOICE] ?: defaults.voiceEnabled,
+            currentStreak = or(Keys.STREAK, defaults.currentStreak),
+            bestStreak = or(Keys.BEST_STREAK, defaults.bestStreak),
+            premium = or(Keys.PREMIUM, defaults.premium),
+            reduceMotion = reduceMotion(defaults.reduceMotion),
+            trackingEnabled = or(Keys.TRACKING, defaults.trackingEnabled),
+            freeTierNoticeShown = or(Keys.FREE_NOTICE, defaults.freeTierNoticeShown),
+            soundsEnabled = or(Keys.SOUNDS, defaults.soundsEnabled),
+            voiceEnabled = or(Keys.VOICE, defaults.voiceEnabled),
+            petMessagesEnabled = or(Keys.PET_MESSAGES, defaults.petMessagesEnabled),
+            petCallsEnabled = or(Keys.PET_CALLS, defaults.petCallsEnabled),
+            breathingGateEnabled = or(Keys.BREATHING_GATE, defaults.breathingGateEnabled),
         )
     }
+
+    private fun <T> Preferences.or(key: Preferences.Key<T>, default: T): T = this[key] ?: default
+
+    private fun Preferences.reduceMotion(default: ReduceMotionMode): ReduceMotionMode =
+        this[Keys.REDUCE_MOTION]?.let { mode -> runCatching { ReduceMotionMode.valueOf(mode) }.getOrNull() } ?: default
 }

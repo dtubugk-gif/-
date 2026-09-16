@@ -152,6 +152,15 @@ object AnimationSpecs {
     val Crossfade: FiniteAnimationSpec<Float> = tween(CROSSFADE_MILLIS, easing = LinearEasing)
     const val STRICT_MODE_DELAY_SECONDS = 10
 
+    // Breathing pause: ten seconds, one breath in and out every four seconds, the circle between 55 % and 100 %.
+    const val BREATHING_GATE_SECONDS = 10
+    const val BREATH_HALF_CYCLE_MILLIS = 2_000
+    const val BREATH_MIN_SCALE = 0.55f
+
+    // Pet calls: how long the phone rings before the pet gives up, and the pause between spoken lines.
+    const val CALL_RING_MILLIS = 30_000L
+    const val CALL_LINE_GAP_MILLIS = 2_600L
+
     // ---- Reduced motion ------------------------------------------------------------------------
     const val REDUCED_MILLIS = 180
     val Reduced: FiniteAnimationSpec<Float> = tween(REDUCED_MILLIS, easing = LinearEasing)

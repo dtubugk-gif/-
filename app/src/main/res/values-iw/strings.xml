@@ -63,6 +63,15 @@
     <string name="settings_permissions">הרשאות</string>
     <string name="settings_permissions_ok">כל ההרשאות החיוניות ניתנו</string>
     <string name="settings_permissions_missing">חסרות הרשאות. לחצו להשלמה</string>
+    <string name="settings_breathing">הפסקת נשימה אחרי שינוי גבול</string>
+    <string name="settings_breathing_hint">הפתיחה הבאה של האפליקציה מחכה עשר שניות, נשימה אחרי נשימה</string>
+    <string name="settings_section_contact">המחמד יוצר קשר</string>
+    <string name="settings_pet_messages">הודעות מהמחמד</string>
+    <string name="settings_pet_messages_hint">התראה ב-80% מהגבול וכשמגיעים אליו</string>
+    <string name="settings_pet_calls">שיחות מהמחמד</string>
+    <string name="settings_pet_calls_hint">שיחה נכנסת ב-95% כשעדיין גוללים, ובכל ניסיון חסום שלישי</string>
+    <string name="settings_full_screen">שיחות במסך מלא לא מאושרות</string>
+    <string name="settings_full_screen_hint">אנדרואיד צריך את אישורכם כדי שהשיחה תשתלט על המסך. לחצו לאישור</string>
     <string name="settings_instant">חסימה מיידית</string>
     <string name="settings_instant_on">דולק. אפליקציות חסומות נסגרות ברגע שנפתחות</string>
     <string name="settings_instant_off">כבוי. אפליקציות חסומות נסגרות תוך שנייה. לחצו להפעלה</string>

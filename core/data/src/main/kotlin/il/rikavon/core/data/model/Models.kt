@@ -147,6 +147,12 @@ data class Settings(
     val soundsEnabled: Boolean,
     /** The pet reads its lines aloud through the device's text-to-speech engine. */
     val voiceEnabled: Boolean,
+    /** Heads-up messages from the pet when an app nears or reaches its limit. */
+    val petMessagesEnabled: Boolean,
+    /** Incoming-call style interruptions from the pet when the user keeps going anyway. */
+    val petCallsEnabled: Boolean,
+    /** After a limit changes, the next open of that app waits behind a ten-second breathing pause. */
+    val breathingGateEnabled: Boolean,
 ) {
     companion object {
         const val DEFAULT_MASCOT_ID = "potato"
@@ -169,6 +175,9 @@ data class Settings(
                 freeTierNoticeShown = false,
                 soundsEnabled = true,
                 voiceEnabled = true,
+                petMessagesEnabled = true,
+                petCallsEnabled = true,
+                breathingGateEnabled = true,
             )
     }
 }

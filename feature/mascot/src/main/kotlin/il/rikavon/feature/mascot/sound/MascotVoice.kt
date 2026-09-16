@@ -34,13 +34,35 @@ class MascotVoice @Inject constructor(
         }
     }
 
-    private fun sayNow(text: String, profile: VoiceProfile, languageTag: String) {
+    /** Speaks [lines] one after another (a call script); the first interrupts whatever was playing. */
+    fun speakLines(lines: List<String>, profile: VoiceProfile, languageTag: String) {
+        val spoken = lines.filter { it.isNotBlank() }
+        if (spoken.isEmpty() || !ringerAllowsSound()) return
+        if (ready) {
+            sayNow(spoken, profile, languageTag)
+        } else {
+            pending = { sayNow(spoken, profile, languageTag) }
+            ensureEngine()
+        }
+    }
+
+    private fun sayNow(text: String, profile: VoiceProfile, languageTag: String) =
+        sayNow(
+            listOf(text),
+            profile,
+            languageTag,
+        )
+
+    private fun sayNow(lines: List<String>, profile: VoiceProfile, languageTag: String) {
         val tts = engine ?: return
         val language = tts.setLanguage(Locale.forLanguageTag(languageTag))
         if (language < TextToSpeech.LANG_AVAILABLE) return
         tts.setPitch(profile.pitch)
         tts.setSpeechRate(profile.rate)
-        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, UTTERANCE_ID)
+        lines.forEachIndexed { index, line ->
+            val mode = if (index == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
+            tts.speak(line, mode, null, "$UTTERANCE_ID$index")
+        }
     }
 
     fun stop() {

@@ -9,25 +9,40 @@ import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** What the accessibility service asks the enforcement service to do for a package it just saw open. */
+sealed interface InstantRequest {
+    val packageName: String
+
+    /** The package is blocked; it was already sent home, raise the block screen. */
+    data class Block(override val packageName: String) : InstantRequest
+
+    /** The package's limit just changed; hold it behind the breathing pause. */
+    data class Gate(override val packageName: String) : InstantRequest
+}
+
 /**
- * What the polling service and the accessibility service share: the set of packages that are blocked right
- * now (published after every poll, read on the accessibility event thread without any IO) and requests to
- * raise the block screen for a package the accessibility service has just sent home.
+ * What the polling service and the accessibility service share: the packages that are blocked right now
+ * and the ones waiting for a breathing pause (both published after every poll and read on the accessibility
+ * event thread without any IO), plus requests going the other way.
  */
 @Singleton
 class InstantBlockBus @Inject constructor() {
     private val _blocked = MutableStateFlow<Set<String>>(emptySet())
     val blocked: StateFlow<Set<String>> = _blocked.asStateFlow()
 
-    private val _requests = MutableSharedFlow<String>(extraBufferCapacity = BUFFER)
-    val requests: SharedFlow<String> = _requests.asSharedFlow()
+    private val _gated = MutableStateFlow<Set<String>>(emptySet())
+    val gated: StateFlow<Set<String>> = _gated.asStateFlow()
 
-    fun publish(blocked: Set<String>) {
+    private val _requests = MutableSharedFlow<InstantRequest>(extraBufferCapacity = BUFFER)
+    val requests: SharedFlow<InstantRequest> = _requests.asSharedFlow()
+
+    fun publish(blocked: Set<String>, gated: Set<String> = emptySet()) {
         _blocked.value = blocked
+        _gated.value = gated
     }
 
-    fun request(packageName: String) {
-        _requests.tryEmit(packageName)
+    fun request(request: InstantRequest) {
+        _requests.tryEmit(request)
     }
 
     private companion object {

@@ -2,6 +2,8 @@ package il.rikavon.ui.settings
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.PaddingValues
@@ -61,6 +63,16 @@ import il.rikavon.feature.mascot.ui.UiLanguage
 import java.time.LocalDate
 
 private enum class Sheet { REDUCE_MOTION, LANGUAGE, SYSTEM_APPS }
+
+/** Android 14+: the system page where the user lets the pet's calls take over the screen. */
+private fun Context.openFullScreenIntentSettings() {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
+    val intent =
+        Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT)
+            .setData(Uri.parse("package:$packageName"))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    runCatching { startActivity(intent) }
+}
 
 /** The system page where the user toggles the instant-blocking accessibility service. */
 private fun Context.openAccessibilitySettings() {
@@ -206,6 +218,12 @@ fun SettingsScreen(
                         checked = prefs.strictMode,
                         onCheckedChange = viewModel::setStrictMode,
                     )
+                    SettingSwitchRow(
+                        title = stringResource(R.string.settings_breathing),
+                        subtitle = stringResource(R.string.settings_breathing_hint),
+                        checked = prefs.breathingGateEnabled,
+                        onCheckedChange = viewModel::setBreathingGate,
+                    )
                     val permissionsOk = state.permissions?.coreGranted == true
                     val permissionsRes =
                         if (permissionsOk) R.string.settings_permissions_ok else R.string.settings_permissions_missing
@@ -234,6 +252,35 @@ fun SettingsScreen(
                         subtitle = stringResource(R.string.settings_score_hint),
                         onClick = onOpenScore,
                     )
+                }
+            }
+            item {
+                SectionLabel(
+                    stringResource(R.string.settings_section_contact),
+                    modifier = Modifier.padding(top = Spacing.md),
+                )
+                GroupCard {
+                    SettingSwitchRow(
+                        title = stringResource(R.string.settings_pet_messages),
+                        subtitle = stringResource(R.string.settings_pet_messages_hint),
+                        checked = prefs.petMessagesEnabled,
+                        onCheckedChange = viewModel::setPetMessages,
+                    )
+                    SettingSwitchRow(
+                        title = stringResource(R.string.settings_pet_calls),
+                        subtitle = stringResource(R.string.settings_pet_calls_hint),
+                        checked = prefs.petCallsEnabled,
+                        onCheckedChange = viewModel::setPetCalls,
+                    )
+                    val fullScreenOk = state.permissions?.fullScreenIntent != false
+                    if (prefs.petCallsEnabled && !fullScreenOk) {
+                        val context = LocalContext.current
+                        SettingNavRow(
+                            title = stringResource(R.string.settings_full_screen),
+                            subtitle = stringResource(R.string.settings_full_screen_hint),
+                            onClick = { context.openFullScreenIntentSettings() },
+                        )
+                    }
                 }
             }
             item {

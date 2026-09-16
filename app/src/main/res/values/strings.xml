@@ -63,6 +63,15 @@
     <string name="settings_permissions">Permissions</string>
     <string name="settings_permissions_ok">All essential permissions granted</string>
     <string name="settings_permissions_missing">Permissions missing. Tap to complete</string>
+    <string name="settings_breathing">Breathing pause after changing a limit</string>
+    <string name="settings_breathing_hint">The next open of that app waits ten seconds, one breath at a time</string>
+    <string name="settings_section_contact">The pet reaches out</string>
+    <string name="settings_pet_messages">Messages from the pet</string>
+    <string name="settings_pet_messages_hint">A heads-up at 80% of a limit and when it is reached</string>
+    <string name="settings_pet_calls">Calls from the pet</string>
+    <string name="settings_pet_calls_hint">An incoming call at 95% while you are still scrolling, and on every third blocked attempt</string>
+    <string name="settings_full_screen">Full-screen calls not allowed</string>
+    <string name="settings_full_screen_hint">Android needs your permission for the call to take over the screen. Tap to allow</string>
     <string name="settings_instant">Instant blocking</string>
     <string name="settings_instant_on">On. Blocked apps close the moment they open</string>
     <string name="settings_instant_off">Off. Blocked apps close within a second. Tap to enable</string>

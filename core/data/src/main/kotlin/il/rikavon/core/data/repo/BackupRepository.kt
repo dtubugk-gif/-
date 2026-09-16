@@ -51,6 +51,9 @@ data class SettingsDto(
     val trackingEnabled: Boolean,
     val soundsEnabled: Boolean = true,
     val voiceEnabled: Boolean = true,
+    val petMessagesEnabled: Boolean = true,
+    val petCallsEnabled: Boolean = true,
+    val breathingGateEnabled: Boolean = true,
 )
 
 @Serializable
@@ -145,6 +148,9 @@ class BackupRepository @Inject constructor(
                     trackingEnabled = s.trackingEnabled,
                     soundsEnabled = s.soundsEnabled,
                     voiceEnabled = s.voiceEnabled,
+                    petMessagesEnabled = s.petMessagesEnabled,
+                    petCallsEnabled = s.petCallsEnabled,
+                    breathingGateEnabled = s.breathingGateEnabled,
                 ),
             limits =
                 limits.all().map {
@@ -215,6 +221,9 @@ class BackupRepository @Inject constructor(
                 trackingEnabled = dto.trackingEnabled,
                 soundsEnabled = dto.soundsEnabled,
                 voiceEnabled = dto.voiceEnabled,
+                petMessagesEnabled = dto.petMessagesEnabled,
+                petCallsEnabled = dto.petCallsEnabled,
+                breathingGateEnabled = dto.breathingGateEnabled,
             ),
         )
         limits.replaceAll(

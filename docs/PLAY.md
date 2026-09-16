@@ -63,6 +63,15 @@ Rationale for every category:
 > only to see which app came to the front and to send you home. It never reads screen content."
 > The core feature is not gated on it: with the service off the enforcement loop polls every second.
 
+### USE_FULL_SCREEN_INTENT
+
+> Used for one feature the user switches on: an "incoming call" from their pet when an app they limited is
+> at 95 % of its limit while on screen, or after the third blocked attempt in a day. The call-style
+> notification carries a full-screen intent so it behaves like a real call on the lock screen. Android 14
+> does not grant this by default to a screen-time app; the app checks `canUseFullScreenIntent()` and offers
+> the system settings page from its own Settings, and falls back to a heads-up notification when the grant
+> is missing. Never used for promotion or re-engagement.
+
 ### Device admin / profile owner (Play Console → App content → "Device admin")
 
 > Rikavon can optionally create a work profile ("focus profile") of which it is the profile owner, started

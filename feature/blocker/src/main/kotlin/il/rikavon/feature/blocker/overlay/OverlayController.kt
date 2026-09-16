@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
 import android.view.WindowManager
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -25,17 +26,20 @@ import il.rikavon.feature.mascot.sound.MascotSoundPlayer
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Hosts the Compose block screen in a system overlay window owned by the service. */
+/** Hosts a Compose screen (the block screen or the breathing pause) in a system overlay window. */
 @Singleton
 class OverlayController @Inject constructor(
     @ApplicationContext private val context: Context,
     private val sounds: MascotSoundPlayer,
 ) {
+    enum class Kind { BLOCK, BREATHE }
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private val windowManager: WindowManager get() = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private var view: ComposeView? = null
     private var owner: OverlayLifecycleOwner? = null
     private var shownPackage: String? = null
+    private var shownKind: Kind? = null
 
     /** Visual preferences resolved by the caller off the main thread. */
     data class Appearance(val reducedMotion: Boolean)
@@ -53,7 +57,23 @@ class OverlayController @Inject constructor(
         val onShown: () -> Unit = {},
     )
 
+    /** The breathing pause shown on the first open after a limit changed. */
+    data class BreatheRequest(
+        val packageName: String,
+        val skin: MascotSkin,
+        val appLabel: String,
+        val seconds: Int,
+        val appearance: Appearance,
+        val onEnter: () -> Unit,
+        val onLeave: () -> Unit,
+    )
+
     fun isShowing(packageName: String): Boolean = shownPackage == packageName && view != null
+
+    /** The package the current overlay is about, or null when nothing is shown. */
+    val shownPackageName: String? get() = if (view != null) shownPackage else null
+
+    val kind: Kind? get() = if (view != null) shownKind else null
 
     fun appearance(reduceMotion: ReduceMotionMode): Appearance =
         Appearance(
@@ -66,31 +86,59 @@ class OverlayController @Inject constructor(
         )
 
     fun show(request: Request) {
-        mainHandler.post { showOnMain(request) }
+        mainHandler.post {
+            showOnMain(request.decision.packageName, Kind.BLOCK, request.skin.soundAsset, request.onShown) {
+                BlockOverlayContent(
+                    decision = request.decision,
+                    skin = request.skin,
+                    appLabel = request.appLabel,
+                    limitMinutes = request.limitMinutes,
+                    message = request.message,
+                    reducedMotion = request.appearance.reducedMotion,
+                    onClose = request.onClose,
+                )
+            }
+        }
+    }
+
+    fun showBreathing(request: BreatheRequest) {
+        mainHandler.post {
+            showOnMain(request.packageName, Kind.BREATHE, sound = null, onShown = {}) {
+                BreathingOverlayContent(
+                    skin = request.skin,
+                    appLabel = request.appLabel,
+                    seconds = request.seconds,
+                    reducedMotion = request.appearance.reducedMotion,
+                    onEnter = request.onEnter,
+                    onLeave = request.onLeave,
+                )
+            }
+        }
     }
 
     fun hide() {
         mainHandler.post { hideOnMain() }
     }
 
-    private fun showOnMain(request: Request) {
+    /** Hides the overlay only when it is of [kind]; used to drop a stale breathing pause. */
+    fun hideIf(kind: Kind) {
+        mainHandler.post { if (shownKind == kind) hideOnMain() }
+    }
+
+    private fun showOnMain(
+        packageName: String,
+        kind: Kind,
+        sound: String?,
+        onShown: () -> Unit,
+        content: @Composable () -> Unit,
+    ) {
         hideOnMain()
         val lifecycleOwner = OverlayLifecycleOwner().also { owner = it }
         val composeView =
             ComposeView(context).apply {
                 setViewTreeLifecycleOwner(lifecycleOwner)
                 setViewTreeSavedStateRegistryOwner(lifecycleOwner)
-                setContent {
-                    BlockOverlayContent(
-                        decision = request.decision,
-                        skin = request.skin,
-                        appLabel = request.appLabel,
-                        limitMinutes = request.limitMinutes,
-                        message = request.message,
-                        reducedMotion = request.appearance.reducedMotion,
-                        onClose = request.onClose,
-                    )
-                }
+                setContent(content)
             }
         val params =
             WindowManager
@@ -111,10 +159,11 @@ class OverlayController @Inject constructor(
         runCatching { windowManager.addView(composeView, params) }
             .onSuccess {
                 view = composeView
-                shownPackage = request.decision.packageName
+                shownPackage = packageName
+                shownKind = kind
                 lifecycleOwner.moveTo(Lifecycle.State.RESUMED)
-                request.skin.soundAsset?.let { sounds.play(it, BLOCK_SOUND_VOLUME) }
-                request.onShown()
+                sound?.let { sounds.play(it, BLOCK_SOUND_VOLUME) }
+                onShown()
             }
     }
 
@@ -125,6 +174,7 @@ class OverlayController @Inject constructor(
         view = null
         owner = null
         shownPackage = null
+        shownKind = null
     }
 
     /** Minimal lifecycle so Compose (and Lottie's idle loop) run and stop with the window. */

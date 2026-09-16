@@ -17,7 +17,9 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import il.rikavon.core.data.model.AppLimit
 import il.rikavon.core.data.model.Schedule
+import il.rikavon.core.data.model.Settings
 import il.rikavon.core.data.permissions.PermissionChecker
+import il.rikavon.core.data.repo.BreathingGateRepository
 import il.rikavon.core.data.repo.DailySummaryRepository
 import il.rikavon.core.data.repo.DayRolloverUseCase
 import il.rikavon.core.data.repo.LimitsRepository
@@ -26,12 +28,18 @@ import il.rikavon.core.data.repo.SettingsRepository
 import il.rikavon.core.data.repo.UsageRepository
 import il.rikavon.core.data.time.TimeSource
 import il.rikavon.core.data.usage.InstalledAppsSource
+import il.rikavon.core.ui.anim.AnimationSpecs
 import il.rikavon.feature.blocker.R
+import il.rikavon.feature.blocker.contact.PetContact
+import il.rikavon.feature.blocker.contact.PetContactNotifier
+import il.rikavon.feature.blocker.contact.PetContactPolicy
 import il.rikavon.feature.blocker.engine.BlockDecision
 import il.rikavon.feature.blocker.engine.BlockerEvent
 import il.rikavon.feature.blocker.engine.BlockerEvents
 import il.rikavon.feature.blocker.engine.EnforcementEngine
+import il.rikavon.feature.blocker.engine.FocusScoreProvider
 import il.rikavon.feature.blocker.engine.InstantBlockBus
+import il.rikavon.feature.blocker.engine.InstantRequest
 import il.rikavon.feature.blocker.engine.PollingPolicy
 import il.rikavon.feature.blocker.overlay.OverlayController
 import il.rikavon.feature.blocker.profile.FocusProfileManager
@@ -46,6 +54,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.time.LocalDate
 import javax.inject.Inject
 
 /**
@@ -92,11 +101,20 @@ class BlockerService : LifecycleService() {
 
     @Inject lateinit var profile: FocusProfileManager
 
+    @Inject lateinit var gate: BreathingGateRepository
+
+    @Inject lateinit var contact: PetContactNotifier
+
+    @Inject lateinit var score: FocusScoreProvider
+
     private val engine = EnforcementEngine()
     private val policy = PollingPolicy()
+    private val contactPolicy = PetContactPolicy()
     private val screenOn = MutableStateFlow(true)
     private var suppressedPackage: String? = null
     private var suppressedUntil = 0L
+    private val blockCounts = mutableMapOf<String, Int>()
+    private var blockCountsDate: LocalDate? = null
 
     private val screenReceiver =
         object : BroadcastReceiver() {
@@ -125,7 +143,14 @@ class BlockerService : LifecycleService() {
         midnightAlarm.schedule()
         events.emit(BlockerEvent.ServiceStarted)
         lifecycleScope.launch { loop() }
-        lifecycleScope.launch { instant.requests.collect { blockNow(it) } }
+        lifecycleScope.launch {
+            instant.requests.collect { request ->
+                when (request) {
+                    is InstantRequest.Block -> blockNow(request.packageName)
+                    is InstantRequest.Gate -> showBreathing(request.packageName)
+                }
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -172,9 +197,15 @@ class BlockerService : LifecycleService() {
             events.emit(BlockerEvent.UsageRefreshed)
 
             val blockable = engine.blockedPackages(snapshot, limitList, scheduleList, now)
-            instant.publish(blockable)
+            val gated = if (current.breathingGateEnabled) gate.current() else emptySet()
+            instant.publish(blockable, gated)
             // Inside the focus profile a block is a suspension: the icon greys out and the app cannot open.
             withContext(Dispatchers.IO) { profile.applySuspension(tracked(limitList, scheduleList), blockable) }
+            maybeGate(snapshot.foregroundPackage, decision, gated)
+            if (current.petMessagesEnabled || current.petCallsEnabled) {
+                resetBlockCountsIfNewDay(snapshot.date)
+                contactPolicy.evaluate(snapshot, limitList, blockCounts).forEach { reachOut(it, current) }
+            }
             val interval =
                 policy.intervalMillis(
                     screenOn = screenOn.value && snapshot.screenOn,
@@ -192,6 +223,61 @@ class BlockerService : LifecycleService() {
             limitList.filter { it.enabled }.map { it.packageName } +
                 scheduleList.filter { it.enabled }.flatMap { it.packages }
         ).toSet()
+
+    /**
+     * The breathing pause: shown when a package whose limit just changed is in front and not blocked; dropped
+     * again when the user leaves that app before sitting through it (the pause stays armed).
+     */
+    private suspend fun maybeGate(foreground: String?, decision: BlockDecision?, gated: Set<String>) {
+        if (decision == null && foreground != null && foreground in gated) {
+            showBreathing(foreground)
+        } else if (overlay.kind == OverlayController.Kind.BREATHE && overlay.shownPackageName != foreground) {
+            overlay.hideIf(OverlayController.Kind.BREATHE)
+        }
+    }
+
+    private suspend fun showBreathing(packageName: String) {
+        if (overlay.isShowing(packageName) || !permissions.state().overlay) return
+        if (packageName !in gate.current()) return
+        val skin = selectedMascot.current() ?: return
+        val prefs = settings.current()
+        overlay.showBreathing(
+            OverlayController.BreatheRequest(
+                packageName = packageName,
+                skin = skin,
+                appLabel = installed.label(packageName),
+                seconds = AnimationSpecs.BREATHING_GATE_SECONDS,
+                appearance = overlay.appearance(prefs.reduceMotion),
+                onEnter = {
+                    lifecycleScope.launch { gate.clear(packageName) }
+                    overlay.hide()
+                },
+                onLeave = {
+                    overlay.hide()
+                    goHome()
+                },
+            ),
+        )
+    }
+
+    private fun resetBlockCountsIfNewDay(date: LocalDate) {
+        if (blockCountsDate != date) {
+            blockCountsDate = date
+            blockCounts.clear()
+        }
+    }
+
+    /** Delivers one of the pet's messages or calls, honouring the two switches. */
+    private suspend fun reachOut(item: PetContact, prefs: Settings) {
+        val skin = selectedMascot.current() ?: return
+        val language = UiLanguage.fromLocale(resources.configuration.locales)
+        val label = installed.label(item.packageName)
+        val stage = score.currentStage()
+        when (item) {
+            is PetContact.Message -> if (prefs.petMessagesEnabled) contact.message(skin, stage, item, label, language)
+            is PetContact.Call -> if (prefs.petCallsEnabled) contact.call(skin, stage, item, label, language)
+        }
+    }
 
     /** The accessibility service already sent [packageName] home; put the block screen up right away. */
     private suspend fun blockNow(packageName: String) {
@@ -217,6 +303,7 @@ class BlockerService : LifecycleService() {
         val language = UiLanguage.fromLocale(resources.configuration.locales)
         val message = texts.blockMessage(skin, time.localTime().hour, language)
         summaries.recordBlock(decision.packageName, decision.reason)
+        blockCounts[decision.packageName] = (blockCounts[decision.packageName] ?: 0) + 1
         events.emit(BlockerEvent.Blocked(decision.packageName))
         if (prefs.soundsEnabled && prefs.voiceEnabled) voice.speak(message, skin.voice, language)
         overlay.show(

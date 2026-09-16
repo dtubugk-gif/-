@@ -114,6 +114,16 @@ BlockerService loop (2s/5s/15s, off when screen off) ◄────────
   `GLOBAL_ACTION_HOME` at once and asks the service for the overlay. This is the closest a third-party app
   can get to Family Link: Android reserves package suspension (greyed-out icons) for device owners and
   system apps. Without the service the 1 s poll takes over.
+* **Breathing pause** – saving a changed limit arms `BreathingGateRepository` for that package; the next time
+  it comes to the front (poll or accessibility event) `BreathingOverlayContent` sits over it for ten seconds
+  (circle swelling with a four-second breath, "breathe in / out", countdown) before the way in opens.
+  Leaving keeps the pause armed. Off switch in Settings.
+* **The pet reaches out** – `PetContactPolicy` decides once per app per day: a heads-up message at 80 % and
+  at the limit, an incoming call at 95 % while the app is on screen and on every third block. Calls are
+  call-style notifications with a full-screen intent answered in `PetCallActivity`, which rings with
+  vibration, shows the pet, then speaks its four lines (text-to-speech) as they appear, ending with
+  "I'll stop" (goes home) or "Hang up". Two switches in Settings; Android 14+ asks once for full-screen
+  notifications.
 * **Focus profile (optional)** – the Family Link behaviour itself, for apps the user installs inside a work
   profile that Rikavon owns. `FocusProfileAdminReceiver` is the profile owner (no device policies),
   `FocusProfileComplianceActivity` answers the Android 12+ provisioning handshake, and inside the profile the
@@ -161,7 +171,9 @@ Everything lives in `core/ui/.../anim/AnimationSpecs.kt`. `MascotView` implement
 | `BIND_DEVICE_ADMIN` (optional, profile owner of the focus profile) | grey out blocked apps installed inside the focus profile | overlay and instant path only |
 | `QUERY_ALL_PACKAGES` | the app picker lists launchable apps | the picker would be empty |
 | `FOREGROUND_SERVICE` + `_SPECIAL_USE` | keep the enforcement loop alive | Android kills the loop |
-| `POST_NOTIFICATIONS` (13+) | silent service notification, optional evening summary | service still runs, no summary |
+| `POST_NOTIFICATIONS` (13+) | silent service notification, optional evening summary, the pet's messages and calls | service still runs, no summary, no messages |
+| `USE_FULL_SCREEN_INTENT` (user grant on 14+) | the pet's call takes over the screen like a real one | the call is a heads-up notification instead |
+| `VIBRATE` | the call rings | silent ring |
 | `SCHEDULE_EXACT_ALARM` | refresh at exactly 00:00 | reset happens on the next tick instead |
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Doze exemption for the service | more OEM kills; the worker revives it |
 | `RECEIVE_BOOT_COMPLETED` | restart after reboot | service starts on next app open |
