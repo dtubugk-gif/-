@@ -50,6 +50,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import il.rikavon.R
+import il.rikavon.app.NavIcons
 import il.rikavon.core.ui.anim.AnimatedNumber
 import il.rikavon.core.ui.anim.AnimationSpecs
 import il.rikavon.core.ui.anim.FadeThrough
@@ -64,7 +65,6 @@ import il.rikavon.core.ui.components.DotChip
 import il.rikavon.core.ui.components.EmptyState
 import il.rikavon.core.ui.components.ErrorState
 import il.rikavon.core.ui.components.PrimaryButton
-import il.rikavon.core.ui.components.RikavonIcons
 import il.rikavon.core.ui.components.ScreenPadding
 import il.rikavon.core.ui.components.SectionLabel
 import il.rikavon.core.ui.components.SkeletonBlock
@@ -272,7 +272,7 @@ private fun Header(
                 onClick = onCallPet,
             )
             SquareIconButton(
-                icon = RikavonIcons.Settings,
+                icon = NavIcons.Settings,
                 contentDescription = stringResource(R.string.home_settings),
                 onClick = onOpenSettings,
             )

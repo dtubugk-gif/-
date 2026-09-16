@@ -74,31 +74,53 @@ object NavIcons {
         }
     }
 
+    /** Three sliders with a ring knob each: "settings" without a gear. Used in the bar and on Home. */
     val Settings: ImageVector by lazy {
         icon("nav_settings") {
-            path(stroke = SolidColor(Color.Black), strokeLineWidth = STROKE, fill = null) {
-                moveTo(14f, 11f)
-                arcTo(3f, 3f, 0f, isMoreThanHalf = true, isPositiveArc = true, 8f, 11f)
-                arcTo(3f, 3f, 0f, isMoreThanHalf = true, isPositiveArc = true, 14f, 11f)
-                close()
-            }
-            path(
-                stroke = SolidColor(Color.Black),
-                strokeLineWidth = STROKE,
-                strokeLineCap = StrokeCap.Round,
-                fill = null,
-            ) {
-                moveTo(11f, 2.5f)
-                verticalLineTo(5.1f)
-                moveTo(11f, 16.9f)
-                verticalLineTo(19.5f)
-                moveTo(19.5f, 11f)
-                horizontalLineTo(16.9f)
-                moveTo(5.1f, 11f)
-                horizontalLineTo(2.5f)
+            SLIDERS.forEach { (y, knob) ->
+                path(
+                    stroke = SolidColor(Color.Black),
+                    strokeLineWidth = STROKE,
+                    strokeLineCap = StrokeCap.Round,
+                    fill = null,
+                ) {
+                    moveTo(SLIDER_START, y)
+                    horizontalLineTo(knob - KNOB_GAP)
+                    moveTo(knob + KNOB_GAP, y)
+                    horizontalLineTo(SLIDER_END)
+                }
+                path(stroke = SolidColor(Color.Black), strokeLineWidth = STROKE, fill = null) {
+                    moveTo(knob + KNOB_RADIUS, y)
+                    arcTo(
+                        KNOB_RADIUS,
+                        KNOB_RADIUS,
+                        0f,
+                        isMoreThanHalf = true,
+                        isPositiveArc = true,
+                        knob - KNOB_RADIUS,
+                        y,
+                    )
+                    arcTo(
+                        KNOB_RADIUS,
+                        KNOB_RADIUS,
+                        0f,
+                        isMoreThanHalf = true,
+                        isPositiveArc = true,
+                        knob + KNOB_RADIUS,
+                        y,
+                    )
+                    close()
+                }
             }
         }
     }
+
+    /** Slider rows as (y, knob x): the knobs sit at different positions so the glyph reads as controls. */
+    private val SLIDERS = listOf(5.5f to 14f, 11f to 8f, 16.5f to 12.5f)
+    private const val SLIDER_START = 3f
+    private const val SLIDER_END = 19f
+    private const val KNOB_RADIUS = 2.1f
+    private const val KNOB_GAP = 3.3f
 
     private fun icon(name: String, block: ImageVector.Builder.() -> Unit): ImageVector =
         ImageVector
