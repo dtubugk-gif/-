@@ -13,6 +13,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -38,6 +39,7 @@ import il.rikavon.core.ui.components.RikavonBottomBar
 import il.rikavon.core.ui.theme.RikavonColors
 import il.rikavon.core.ui.theme.RikavonTheme
 import il.rikavon.feature.blocker.contact.DeepLinks
+import il.rikavon.feature.blocker.contact.PetCallActivity
 import il.rikavon.feature.blocker.ui.apps.AppPickerScreen
 import il.rikavon.feature.blocker.ui.limits.LimitEditorScreen
 import il.rikavon.feature.blocker.ui.limits.LimitEditorViewModel
@@ -59,7 +61,6 @@ import il.rikavon.ui.premium.PremiumScreen
 import il.rikavon.ui.privacy.PrivacyScreen
 import il.rikavon.ui.settings.SettingsScreen
 import il.rikavon.ui.talk.TalkScreen
-import il.rikavon.ui.talk.TalkViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -81,7 +82,7 @@ object Routes {
     const val BATTERY = "battery"
     const val PRIVACY = "privacy"
     const val PREMIUM = "premium"
-    const val TALK = "talk/{${TalkViewModel.ARG_DIALING}}"
+    const val TALK = "talk"
 
     /** The four bottom-bar destinations, in bar order. */
     val TOP_LEVEL = listOf(HOME, GALLERY, STATS, SETTINGS)
@@ -89,9 +90,6 @@ object Routes {
     fun limit(packageName: String) = "limit/$packageName"
 
     fun schedule(id: Long) = "schedule/$id"
-
-    /** The conversation screen; [dialing] opens it as an outgoing call the pet picks up after a moment. */
-    fun talk(dialing: Boolean) = "talk/$dialing"
 }
 
 data class RootUiState(
@@ -154,11 +152,12 @@ private fun RikavonNavHost(
     onOpened: () -> Unit = {},
 ) {
     val navController = rememberNavController()
+    val context = LocalContext.current
     val duration = AnimationSpecs.SCREEN_TRANSITION_MILLIS
-    // The call screen's "Talk back" lands here through the launch intent.
+    // The call screen's keyboard button lands here through the launch intent.
     LaunchedEffect(pendingOpen) {
         if (pendingOpen == DeepLinks.OPEN_TALK) {
-            navController.navigate(Routes.talk(dialing = false))
+            navController.navigate(Routes.TALK)
             onOpened()
         }
     }
@@ -227,15 +226,12 @@ private fun RikavonNavHost(
                             onOpenAchievements = { navController.navigate(Routes.ACHIEVEMENTS) },
                             onOpenSettings = { navController.navigateTopLevel(Routes.SETTINGS) },
                             onOpenOnboarding = { navController.navigate(Routes.ONBOARDING) },
-                            onCallPet = { navController.navigate(Routes.talk(dialing = true)) },
+                            onCallPet = { context.startActivity(PetCallActivity.outgoing(context)) },
                             bottomBar = bottomBar,
                         )
                     }
                 }
-                composable(
-                    route = Routes.TALK,
-                    arguments = listOf(navArgument(TalkViewModel.ARG_DIALING) { type = NavType.BoolType }),
-                ) {
+                composable(Routes.TALK) {
                     TalkScreen(onBack = { navController.popBackStack() })
                 }
                 composable(Routes.APPS) {

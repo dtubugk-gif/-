@@ -26,42 +26,37 @@ class PetContactPolicyTest {
     fun `a message at eighty percent and another at the limit, each once`() {
         assertEquals(
             listOf(PetContact.Message("a", MessageKind.NEAR_LIMIT, 12)),
-            policy.evaluate(snapshot(48), listOf(limit), emptyMap()),
+            policy.evaluate(snapshot(48), listOf(limit)),
         )
-        assertTrue(policy.evaluate(snapshot(50), listOf(limit), emptyMap()).isEmpty())
+        assertTrue(policy.evaluate(snapshot(50), listOf(limit)).isEmpty())
         assertEquals(
             listOf(PetContact.Message("a", MessageKind.AT_LIMIT, 0)),
-            policy.evaluate(snapshot(60), listOf(limit), emptyMap()),
+            policy.evaluate(snapshot(60), listOf(limit)),
         )
-        assertTrue(policy.evaluate(snapshot(70), listOf(limit), emptyMap()).isEmpty())
+        assertTrue(policy.evaluate(snapshot(70), listOf(limit)).isEmpty())
     }
 
     @Test
     fun `the near-limit call needs the app on screen`() {
-        assertTrue(policy.evaluate(snapshot(58), listOf(limit), emptyMap()).none { it is PetContact.Call })
-        val contacts = policy.evaluate(snapshot(58, foreground = "a"), listOf(limit), emptyMap())
+        assertTrue(policy.evaluate(snapshot(58), listOf(limit)).none { it is PetContact.Call })
+        val contacts = policy.evaluate(snapshot(58, foreground = "a"), listOf(limit))
         assertEquals(
             listOf(PetContact.Call("a", CallReason.NEAR_LIMIT, 2)),
             contacts.filterIsInstance<PetContact.Call>(),
         )
-        assertTrue(policy.evaluate(snapshot(59, foreground = "a"), listOf(limit), emptyMap()).isEmpty())
+        assertTrue(policy.evaluate(snapshot(59, foreground = "a"), listOf(limit)).isEmpty())
     }
 
     @Test
-    fun `every third block of the same app rings once`() {
-        assertTrue(policy.evaluate(snapshot(0), emptyList(), mapOf("a" to 2)).isEmpty())
-        assertEquals(
-            listOf(PetContact.Call("a", CallReason.REPEATED_BLOCKS, 0)),
-            policy.evaluate(snapshot(0), emptyList(), mapOf("a" to 3)),
-        )
-        assertTrue(policy.evaluate(snapshot(0), emptyList(), mapOf("a" to 3)).isEmpty())
-        assertEquals(1, policy.evaluate(snapshot(0), emptyList(), mapOf("a" to 6)).size)
+    fun `a full block never messages, the block itself rings`() {
+        val full = limit.copy(fullBlock = true)
+        assertTrue(policy.evaluate(snapshot(0, foreground = "a"), listOf(full)).isEmpty())
     }
 
     @Test
     fun `a new day starts over`() {
-        policy.evaluate(snapshot(60), listOf(limit), emptyMap())
-        assertTrue(policy.evaluate(snapshot(60), listOf(limit), emptyMap()).isEmpty())
-        assertEquals(1, policy.evaluate(snapshot(60, date = monday.plusDays(1)), listOf(limit), emptyMap()).size)
+        policy.evaluate(snapshot(60), listOf(limit))
+        assertTrue(policy.evaluate(snapshot(60), listOf(limit)).isEmpty())
+        assertEquals(1, policy.evaluate(snapshot(60, date = monday.plusDays(1)), listOf(limit)).size)
     }
 }

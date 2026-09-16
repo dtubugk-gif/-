@@ -65,8 +65,6 @@
     <string name="settings_permissions_missing">Permissions missing. Tap to complete</string>
     <string name="talk_title">Talk to %1$s</string>
     <string name="talk_call_pet">Call the pet</string>
-    <string name="talk_calling">Calling %1$s…</string>
-    <string name="talk_hang_up">Hang up</string>
     <string name="talk_listening">Listening…</string>
     <string name="talk_idle">Tap the mic and talk. Or type.</string>
     <string name="talk_type_hint">Type something</string>
@@ -78,6 +76,10 @@
     <string name="talk_error_permission">The microphone permission is needed to hear you. Nothing is recorded or stored.</string>
     <string name="talk_error_network">Speech recognition for this language needs the Google app online.</string>
     <string name="talk_error_unavailable">This phone has no speech recognition. You can still type.</string>
+    <string name="talk_voice_off">The pet\'s voice is off in Settings. Tap to turn it on.</string>
+    <string name="talk_voice_no_engine">No text-to-speech engine on this phone. Tap to open the voice settings.</string>
+    <string name="talk_voice_no_language">No voice for this language is installed. Tap to install one.</string>
+    <string name="talk_voice_muted">Media volume is off. Turn it up to hear %1$s.</string>
     <string name="settings_breathing">Breathing pause after changing a limit</string>
     <string name="settings_breathing_hint">The next open of that app waits ten seconds, one breath at a time</string>
     <string name="settings_section_contact">The pet reaches out</string>

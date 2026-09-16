@@ -1,4 +1,4 @@
-package il.rikavon.talk
+package il.rikavon.feature.mascot.talk
 
 import android.content.Context
 import android.content.Intent
@@ -10,33 +10,49 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+/** What the recogniser is doing right now. */
+sealed interface SpeechState {
+    data object Idle : SpeechState
+
+    data class Listening(val partial: String) : SpeechState
+
+    data class Heard(val text: String) : SpeechState
+
+    data class Failed(val reason: SpeechFailure) : SpeechState
+}
+
+enum class SpeechFailure { NOTHING_HEARD, NO_PERMISSION, NETWORK, UNAVAILABLE, BUSY, OTHER }
+
+/** Something that can hear the user; [SpeechListener] on a device, a fake in tests. */
+interface VoiceInput {
+    val state: StateFlow<SpeechState>
+
+    fun isAvailable(): Boolean
+
+    fun start(languageTag: String)
+
+    fun stop()
+
+    fun reset()
+
+    fun release()
+}
+
 /**
  * The user's voice, through the device's own speech recogniser (the Google app on most phones). Audio never
  * touches this app's process; this app holds no INTERNET permission. Must be used from the main thread.
  */
-class SpeechListener(private val context: Context) {
-    sealed interface State {
-        data object Idle : State
-
-        data class Listening(val partial: String) : State
-
-        data class Heard(val text: String) : State
-
-        data class Failed(val reason: Reason) : State
-    }
-
-    enum class Reason { NOTHING_HEARD, NO_PERMISSION, NETWORK, UNAVAILABLE, BUSY, OTHER }
-
-    private val _state = MutableStateFlow<State>(State.Idle)
-    val state: StateFlow<State> = _state.asStateFlow()
+class SpeechListener(private val context: Context) : VoiceInput {
+    private val _state = MutableStateFlow<SpeechState>(SpeechState.Idle)
+    override val state: StateFlow<SpeechState> = _state.asStateFlow()
 
     private var recognizer: SpeechRecognizer? = null
 
-    fun isAvailable(): Boolean = SpeechRecognizer.isRecognitionAvailable(context)
+    override fun isAvailable(): Boolean = SpeechRecognizer.isRecognitionAvailable(context)
 
-    fun start(languageTag: String) {
+    override fun start(languageTag: String) {
         if (!isAvailable()) {
-            _state.value = State.Failed(Reason.UNAVAILABLE)
+            _state.value = SpeechState.Failed(SpeechFailure.UNAVAILABLE)
             return
         }
         val engine = recognizer ?: SpeechRecognizer.createSpeechRecognizer(context).also { recognizer = it }
@@ -49,22 +65,24 @@ class SpeechListener(private val context: Context) {
                 .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                 .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
                 .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
-        _state.value = State.Listening("")
-        runCatching { engine.startListening(intent) }.onFailure { _state.value = State.Failed(Reason.OTHER) }
+        _state.value = SpeechState.Listening("")
+        runCatching { engine.startListening(intent) }.onFailure {
+            _state.value = SpeechState.Failed(SpeechFailure.OTHER)
+        }
     }
 
-    fun stop() {
+    override fun stop() {
         runCatching { recognizer?.stopListening() }
     }
 
-    fun reset() {
-        _state.value = State.Idle
+    override fun reset() {
+        _state.value = SpeechState.Idle
     }
 
-    fun release() {
+    override fun release() {
         runCatching { recognizer?.destroy() }
         recognizer = null
-        _state.value = State.Idle
+        _state.value = SpeechState.Idle
     }
 
     private val listener =
@@ -83,27 +101,29 @@ class SpeechListener(private val context: Context) {
 
             override fun onPartialResults(partialResults: Bundle?) {
                 val text = partialResults?.firstResult().orEmpty()
-                if (text.isNotBlank()) _state.value = State.Listening(text)
+                if (text.isNotBlank()) _state.value = SpeechState.Listening(text)
             }
 
             override fun onResults(results: Bundle?) {
                 val text = results?.firstResult().orEmpty()
-                _state.value = if (text.isBlank()) State.Failed(Reason.NOTHING_HEARD) else State.Heard(text)
+                _state.value =
+                    if (text.isBlank()) SpeechState.Failed(SpeechFailure.NOTHING_HEARD) else SpeechState.Heard(text)
             }
 
             override fun onError(error: Int) {
                 _state.value =
-                    State.Failed(
+                    SpeechState.Failed(
                         when (error) {
                             SpeechRecognizer.ERROR_NO_MATCH,
                             SpeechRecognizer.ERROR_SPEECH_TIMEOUT,
-                            -> Reason.NOTHING_HEARD
-                            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> Reason.NO_PERMISSION
-                            SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT,
+                            -> SpeechFailure.NOTHING_HEARD
+                            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> SpeechFailure.NO_PERMISSION
+                            SpeechRecognizer.ERROR_NETWORK,
+                            SpeechRecognizer.ERROR_NETWORK_TIMEOUT,
                             SpeechRecognizer.ERROR_SERVER,
-                            -> Reason.NETWORK
-                            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> Reason.BUSY
-                            else -> Reason.OTHER
+                            -> SpeechFailure.NETWORK
+                            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> SpeechFailure.BUSY
+                            else -> SpeechFailure.OTHER
                         },
                     )
             }

@@ -1,4 +1,4 @@
-package il.rikavon.talk
+package il.rikavon.feature.mascot.talk
 
 import kotlin.random.Random
 
@@ -16,9 +16,16 @@ data class TalkContext(
     val blocked: Boolean = false,
 )
 
-/** One turn of the conversation: the user's text in, the pet's reply out. */
-fun interface ConversationEngine {
+/** The pet's side of a conversation: the user's words in, one spoken line out. */
+interface ConversationEngine {
+    /** What the pet says back to [userText]. */
     fun reply(userText: String, context: TalkContext): String
+
+    /** The pet opens the conversation. */
+    fun greeting(context: TalkContext): String
+
+    /** A line for an intent the caller already knows (a pressed button, silence on the line). */
+    fun answer(intent: TalkIntent, context: TalkContext): String
 }
 
 /**
@@ -28,25 +35,20 @@ fun interface ConversationEngine {
 class ScriptedConversation(private val random: Random = Random.Default) : ConversationEngine {
     private var last: String? = null
 
-    override fun reply(userText: String, context: TalkContext): String {
-        val intent = TalkScript.intentOf(userText, context.language)
-        val pool = TalkScript.candidates(intent, context.personality, context.language)
-        val chosen = pick(pool)
+    override fun reply(userText: String, context: TalkContext): String =
+        answer(TalkScript.intentOf(userText, context.language), context)
+
+    override fun greeting(context: TalkContext): String = answer(TalkIntent.GREETING, context)
+
+    override fun answer(intent: TalkIntent, context: TalkContext): String {
         val body =
             if (intent == TalkIntent.WHY_BLOCKED && !context.blocked) {
                 TalkScript.noBlockLine(context.language)
             } else {
-                chosen
+                pick(TalkScript.candidates(intent, context.personality, context.language))
             }
         return fill(body, context).also { last = it }
     }
-
-    /** The pet opens the conversation. */
-    fun greeting(context: TalkContext): String =
-        fill(pick(TalkScript.candidates(TalkIntent.GREETING, context.personality, context.language)), context).also {
-            last =
-                it
-        }
 
     private fun pick(pool: List<String>): String {
         if (pool.isEmpty()) return ""

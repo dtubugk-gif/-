@@ -13,13 +13,16 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- The call with the pet uses the voice-call audio mode and the earpiece / speaker switch. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
     <application>
         <activity
             android:name=".contact.PetCallActivity"
             android:excludeFromRecents="true"
             android:exported="false"
-            android:launchMode="singleTop"
+            android:launchMode="singleTask"
+            android:taskAffinity="il.rikavon.call"
             android:showWhenLocked="true"
             android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
             android:turnScreenOn="true" />

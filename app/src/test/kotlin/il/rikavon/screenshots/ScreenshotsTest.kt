@@ -63,7 +63,10 @@ import il.rikavon.core.data.repo.SettingsRepository
 import il.rikavon.core.data.repo.UsageRepository
 import il.rikavon.core.ui.theme.RikavonTheme
 import il.rikavon.core.ui.theme.schemeFromAccent
+import il.rikavon.feature.blocker.contact.CallPhase
+import il.rikavon.feature.blocker.contact.CallTurn
 import il.rikavon.feature.blocker.contact.PetCallContent
+import il.rikavon.feature.blocker.contact.VoiceCallState
 import il.rikavon.feature.blocker.engine.BlockDecision
 import il.rikavon.feature.blocker.overlay.BlockOverlayContent
 import il.rikavon.feature.blocker.overlay.BreathingOverlayContent
@@ -297,41 +300,53 @@ class ScreenshotsTest {
     @Test
     fun petCall() {
         val skin = runBlocking { registry.load() }.first { it.id == "potato" }
-        val lines =
-            listOf(
-                "It's Potato.",
-                "Instagram again. 3 minutes left, and we both know how this ends.",
-                "Sprouting. Not on purpose.",
-                "Put the phone down. Breathe. I will stop calling.",
+        val ringing = VoiceCallState(phase = CallPhase.RINGING, incoming = true)
+        val talking =
+            VoiceCallState(
+                phase = CallPhase.CONNECTED,
+                incoming = true,
+                turn = CallTurn.SPEAKING,
+                caption = "Instagram again. 3 minutes left, and we both know how this ends.",
+                seconds = CALL_SECONDS,
             )
+        val listening =
+            talking.copy(
+                turn = CallTurn.LISTENING,
+                caption = "So. Talk to me.",
+                heard = "ok fine, I'll",
+                seconds =
+                    CALL_SECONDS + 9,
+            )
+        val dialing = VoiceCallState(phase = CallPhase.DIALING, incoming = false)
         ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                activity.setContent { callScreen(skin, lines, answered = false) }
+            listOf(
+                ringing to "21_pet_call_ringing",
+                talking to "22_pet_call_talking",
+                listening to "24_pet_call_listening",
+                dialing to "25_pet_call_dialing",
+            ).forEach { (state, name) ->
+                scenario.onActivity { activity -> activity.setContent { callScreen(skin, state) } }
+                settle(LONG_SETTLE)
+                captureFrom(scenario, name)
             }
-            settle(LONG_SETTLE)
-            captureFrom(scenario, "21_pet_call_ringing")
-            scenario.onActivity { activity ->
-                activity.setContent { callScreen(skin, lines, answered = true) }
-            }
-            settle(LONG_SETTLE)
-            captureFrom(scenario, "22_pet_call_answered")
         }
     }
 
     @Composable
-    private fun callScreen(skin: MascotSkin, lines: List<String>, answered: Boolean) {
+    private fun callScreen(skin: MascotSkin, state: VoiceCallState) {
         PetCallContent(
             skin = skin,
             petName = "Potato",
             appLabel = "Instagram",
-            lines = lines,
-            answered = answered,
-            reducedMotion = answered,
+            state = state,
+            reducedMotion = true,
             onAnswer = {},
             onDecline = {},
-            onPromise = {},
             onHangUp = {},
-            onTalkBack = {},
+            onMute = {},
+            onSpeaker = {},
+            onKeyboard = {},
+            onPromise = {},
         )
     }
 
@@ -356,9 +371,6 @@ class ScreenshotsTest {
             scenario.onActivity { activity -> activity.setContent { talkScreen(state) } }
             settle(LONG_SETTLE)
             captureFrom(scenario, "23_talk")
-            scenario.onActivity { activity -> activity.setContent { talkScreen(state.copy(dialing = true)) } }
-            settle(LONG_SETTLE)
-            captureFrom(scenario, "24_talk_dialing")
         }
     }
 
@@ -380,7 +392,7 @@ class ScreenshotsTest {
         ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
             scenario.onActivity { activity -> activity.setContent { rotSheet(skins) } }
             settle(LONG_SETTLE)
-            captureFrom(scenario, "25_rot_sheet")
+            captureFrom(scenario, "26_rot_sheet")
         }
     }
 
@@ -658,6 +670,7 @@ class ScreenshotsTest {
         private const val MAX_SCROLL_ITEMS = 40
         private const val SCROLL_STEP_MILLIS = 400L
         private const val BREATHE_SECONDS = 10
+        private const val CALL_SECONDS = 42
     }
 }
 

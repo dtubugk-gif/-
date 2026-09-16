@@ -6,7 +6,7 @@ import java.time.LocalDate
 
 enum class MessageKind { NEAR_LIMIT, AT_LIMIT }
 
-enum class CallReason { NEAR_LIMIT, REPEATED_BLOCKS }
+enum class CallReason { NEAR_LIMIT, BLOCKED }
 
 /** One thing the pet wants to say, and how loudly. */
 sealed interface PetContact {
@@ -21,18 +21,19 @@ sealed interface PetContact {
 }
 
 /**
- * When the pet reaches out. Pure and stateful only for de-duplication: every message or call fires once per
- * app per day, and the slate is wiped when the snapshot's date changes.
+ * When the pet reaches out on its own, before a block. Pure and stateful only for de-duplication: every
+ * message or call fires once per app per day, and the slate is wiped when the snapshot's date changes.
  *
  *  - message at 80 % of a limit, and again when the limit is reached
  *  - call at 95 % while that app is on screen (the user is scrolling towards the wall)
- *  - call on every third block of the same app in a day (the user keeps coming back)
+ *
+ * The call on every block is not a policy question: the block itself rings (see `BlockerService`).
  */
 class PetContactPolicy {
     private var day: LocalDate? = null
     private val sent = mutableSetOf<String>()
 
-    fun evaluate(snapshot: DayUsageSnapshot, limits: List<AppLimit>, blockCounts: Map<String, Int>): List<PetContact> {
+    fun evaluate(snapshot: DayUsageSnapshot, limits: List<AppLimit>): List<PetContact> {
         if (day != snapshot.date) {
             day = snapshot.date
             sent.clear()
@@ -55,11 +56,6 @@ class PetContactPolicy {
                 once(pkg, "call-near") { out += PetContact.Call(pkg, CallReason.NEAR_LIMIT, left) }
             }
         }
-        for ((pkg, count) in blockCounts) {
-            if (count > 0 && count % REPEATED_BLOCKS == 0) {
-                once(pkg, "call-blocks-$count") { out += PetContact.Call(pkg, CallReason.REPEATED_BLOCKS, 0) }
-            }
-        }
         return out
     }
 
@@ -70,6 +66,5 @@ class PetContactPolicy {
     companion object {
         const val NEAR_RATIO = 0.8f
         const val CALL_RATIO = 0.95f
-        const val REPEATED_BLOCKS = 3
     }
 }

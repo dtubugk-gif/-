@@ -67,12 +67,18 @@ class PetContactNotifier @Inject constructor(
         runCatching { manager.notify(MESSAGE_ID_BASE + (contact.packageName.hashCode() and ID_MASK), notification) }
     }
 
+    /**
+     * Rings. The call screen is started directly (allowed in the background because the user granted
+     * "display over other apps", the same grant the block screen needs) and, so the ring survives a locked
+     * screen and shows Answer / Decline in the shade, posted as a call-style notification as well.
+     */
     fun call(skin: MascotSkin, stage: MascotStage, contact: PetContact.Call, appLabel: String, language: String) {
-        if (!permissions.hasNotifications()) return
-        ensureChannels()
         val petName = texts.name(skin, language)
         val lines = callLines(skin, stage, contact, petName, appLabel, language)
         val ringing = callActivity(petName, appLabel, lines, answered = false)
+        runCatching { context.startActivity(ringing) }
+        if (!permissions.hasNotifications()) return
+        ensureChannels()
         val answered = callActivity(petName, appLabel, lines, answered = true)
         val fullScreen = PendingIntent.getActivity(context, REQUEST_RING, ringing, PENDING_FLAGS)
         val answer = PendingIntent.getActivity(context, REQUEST_ANSWER, answered, PENDING_FLAGS)
@@ -126,7 +132,7 @@ class PetContactNotifier @Inject constructor(
         val reason =
             when (contact.reason) {
                 CallReason.NEAR_LIMIT -> context.getString(R.string.contact_call_near, appLabel, contact.minutesLeft)
-                CallReason.REPEATED_BLOCKS -> context.getString(R.string.contact_call_repeated, appLabel)
+                CallReason.BLOCKED -> context.getString(R.string.contact_call_blocked, appLabel)
             }
         return listOf(
             context.getString(R.string.contact_call_intro, petName),

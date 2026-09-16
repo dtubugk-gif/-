@@ -66,7 +66,7 @@ Rationale for every category:
 ### USE_FULL_SCREEN_INTENT
 
 > Used for one feature the user switches on: an "incoming call" from their pet when an app they limited is
-> at 95 % of its limit while on screen, or after the third blocked attempt in a day. The call-style
+> at 95 % of its limit while on screen, or when a limit is reached and the app is blocked. The call-style
 > notification carries a full-screen intent so it behaves like a real call on the lock screen. Android 14
 > does not grant this by default to a screen-time app; the app checks `canUseFullScreenIntent()` and offers
 > the system settings page from its own Settings, and falls back to a heads-up notification when the grant
@@ -74,11 +74,17 @@ Rationale for every category:
 
 ### RECORD_AUDIO
 
-> Used for one feature the user starts by hand: talking to their pet. Tapping the microphone on the
-> conversation screen asks for the runtime permission and hands the audio to the device's own
-> `SpeechRecognizer`; the app receives only the recognised text, never the audio, and stores neither. There is
-> no INTERNET permission, so nothing can leave the app. Typing works without the permission, and the
-> microphone button is disabled on devices without a recogniser.
+> Used for talking to the pet: the conversation screen and the pet's calls. The first mic tap or the first
+> call asks for the runtime permission and hands the audio to the device's own `SpeechRecognizer`; the app
+> receives only the recognised text, never the audio, and stores neither. There is no INTERNET permission, so
+> nothing can leave the app. Typing works without the permission, and speech recognition is skipped on devices
+> without a recogniser.
+
+### MODIFY_AUDIO_SETTINGS
+
+> Used only during a call with the pet: the app sets the voice-call audio mode and switches between the
+> earpiece and the loudspeaker so the call behaves like a normal phone call. It changes nothing outside the
+> call and is released when the call ends.
 
 ### Device admin / profile owner (Play Console → App content → "Device admin")
 

@@ -1,4 +1,4 @@
-package il.rikavon.talk
+package il.rikavon.feature.mascot.talk
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

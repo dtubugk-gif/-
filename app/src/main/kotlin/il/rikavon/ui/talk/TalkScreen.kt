@@ -1,7 +1,11 @@
 package il.rikavon.ui.talk
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.provider.Settings
+import android.speech.tts.TextToSpeech
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.RepeatMode
@@ -23,7 +27,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -57,16 +60,15 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import il.rikavon.R
 import il.rikavon.core.ui.anim.floatLoop
+import il.rikavon.core.ui.components.CallIcons
 import il.rikavon.core.ui.components.RikavonTopBar
 import il.rikavon.core.ui.components.ScreenPadding
-import il.rikavon.core.ui.components.SecondaryButton
 import il.rikavon.core.ui.components.SegmentPills
 import il.rikavon.core.ui.components.SquareIconButton
 import il.rikavon.core.ui.components.pressScale
 import il.rikavon.core.ui.theme.LocalExtraColors
 import il.rikavon.core.ui.theme.Spacing
-import il.rikavon.feature.mascot.model.MascotSkin
-import il.rikavon.feature.mascot.model.MascotStage
+import il.rikavon.feature.mascot.sound.VoiceIssue
 import il.rikavon.feature.mascot.ui.MascotView
 
 /** Talk to the pet: hears the user through the device recogniser, answers in character, out loud. */
@@ -90,7 +92,17 @@ fun TalkScreen(onBack: () -> Unit, viewModel: TalkViewModel = hiltViewModel()) {
         onSend = viewModel::send,
         onLanguage = viewModel::setLanguage,
         onDismissError = viewModel::dismissError,
+        onVoiceHint = { if (state.voiceOff) viewModel.enableVoice() else openVoiceSettings(context, state.voiceIssue) },
     )
+}
+
+/** The system page that fixes the voice: the language pack installer, or the text-to-speech settings. */
+private fun openVoiceSettings(context: Context, issue: VoiceIssue?) {
+    val action = if (issue == VoiceIssue.NO_LANGUAGE) TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA else TTS_SETTINGS
+    val opened = runCatching { context.startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    if (opened.isFailure) {
+        runCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }
 }
 
 @Composable
@@ -101,15 +113,12 @@ fun TalkContent(
     onSend: (String) -> Unit,
     onLanguage: (String) -> Unit,
     onDismissError: () -> Unit = {},
+    onVoiceHint: () -> Unit = {},
 ) {
     var draft by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     LaunchedEffect(state.messages.size) {
         if (state.messages.isNotEmpty()) listState.animateScrollToItem(state.messages.lastIndex)
-    }
-    if (state.dialing) {
-        state.skin?.let { Dialing(skin = it, petName = state.petName, onHangUp = onBack) }
-        return
     }
     Scaffold(
         topBar = { RikavonTopBar(title = stringResource(R.string.talk_title, state.petName), onBack = onBack) },
@@ -134,7 +143,7 @@ fun TalkContent(
             ) {
                 itemsIndexed(state.messages) { _, message -> Bubble(message) }
             }
-            StatusLine(state, onDismissError)
+            StatusLine(state, onDismissError, onVoiceHint)
             SegmentPills(
                 options = listOf("en", "he"),
                 selected = state.language,
@@ -170,60 +179,6 @@ fun TalkContent(
     }
 }
 
-/** Outgoing call: the pet in a pulsing ring, "Calling…", one hang-up button, until it picks up. */
-@Composable
-private fun Dialing(skin: MascotSkin, petName: String, onHangUp: () -> Unit) {
-    val pulse = rememberInfiniteTransition(label = "dial")
-    val ring by
-        pulse.animateFloat(
-            initialValue = 1f,
-            targetValue = DIAL_PULSE_SCALE,
-            animationSpec = infiniteRepeatable(tween(DIAL_PULSE_MILLIS), RepeatMode.Reverse),
-            label = "dialRing",
-        )
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .safeDrawingPadding()
-                .padding(horizontal = ScreenPadding, vertical = Spacing.xxl),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Spacer(Modifier.height(Spacing.xl))
-        Text(
-            text = stringResource(R.string.talk_calling, petName),
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Spacer(Modifier.weight(1f))
-        Box(modifier = Modifier.size(DIAL_RING), contentAlignment = Alignment.Center) {
-            Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            scaleX = ring
-                            scaleY = ring
-                        }.background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-            )
-            MascotView(
-                skin = skin,
-                stage = MascotStage.PRISTINE,
-                interactive = false,
-                modifier = Modifier.size(PET_SIZE),
-            )
-        }
-        Spacer(Modifier.weight(1f))
-        SecondaryButton(
-            text = stringResource(R.string.talk_hang_up),
-            onClick = onHangUp,
-            destructive = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-    }
-}
-
 @Composable
 private fun Bubble(message: TalkMessage) {
     val pet = message.fromPet
@@ -247,8 +202,9 @@ private fun Bubble(message: TalkMessage) {
 }
 
 @Composable
-private fun StatusLine(state: TalkUiState, onDismissError: () -> Unit) {
+private fun StatusLine(state: TalkUiState, onDismissError: () -> Unit, onVoiceHint: () -> Unit) {
     val extras = LocalExtraColors.current
+    val voiceHint = voiceHint(state)
     val text =
         when {
             state.error != null ->
@@ -262,9 +218,16 @@ private fun StatusLine(state: TalkUiState, onDismissError: () -> Unit) {
                 )
             state.listening && state.partial.isNotBlank() -> state.partial
             state.listening -> stringResource(R.string.talk_listening)
+            voiceHint != null -> voiceHint
             state.speaking -> stringResource(R.string.talk_speaking, state.petName)
             !state.micAvailable -> stringResource(R.string.talk_error_unavailable)
             else -> stringResource(R.string.talk_idle)
+        }
+    val action: (() -> Unit)? =
+        when {
+            state.error != null -> onDismissError
+            !state.listening && voiceHint != null -> onVoiceHint
+            else -> null
         }
     Text(
         text = text,
@@ -274,9 +237,20 @@ private fun StatusLine(state: TalkUiState, onDismissError: () -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = ScreenPadding, vertical = Spacing.xs)
-                .then(if (state.error != null) Modifier.clickable(onClick = onDismissError) else Modifier),
+                .then(if (action != null) Modifier.clickable(onClick = action) else Modifier),
     )
 }
+
+/** Why the pet cannot be heard right now, worded as the thing to tap; null when it can. */
+@Composable
+private fun voiceHint(state: TalkUiState): String? =
+    when {
+        state.voiceOff -> stringResource(R.string.talk_voice_off)
+        state.voiceIssue == VoiceIssue.NO_ENGINE -> stringResource(R.string.talk_voice_no_engine)
+        state.voiceIssue == VoiceIssue.NO_LANGUAGE -> stringResource(R.string.talk_voice_no_language)
+        state.voiceIssue == VoiceIssue.MUTED -> stringResource(R.string.talk_voice_muted, state.petName)
+        else -> null
+    }
 
 @Composable
 private fun MicButton(listening: Boolean, enabled: Boolean, onClick: () -> Unit) {
@@ -319,7 +293,7 @@ private fun MicButton(listening: Boolean, enabled: Boolean, onClick: () -> Unit)
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                imageVector = MicIcon,
+                imageVector = CallIcons.Mic,
                 contentDescription = null,
                 tint = if (enabled) scheme.onPrimary else LocalExtraColors.current.onSurfaceMuted,
                 modifier = Modifier.size(MIC_ICON),
@@ -335,6 +309,4 @@ private val MIC_ICON = 32.dp
 private const val MIC_PULSE_SCALE = 1.3f
 private const val MIC_PULSE_MILLIS = 800
 private const val MIC_RING_ALPHA = 0.25f
-private val DIAL_RING = 220.dp
-private const val DIAL_PULSE_SCALE = 1.08f
-private const val DIAL_PULSE_MILLIS = 900
+private const val TTS_SETTINGS = "com.android.settings.TTS_SETTINGS"

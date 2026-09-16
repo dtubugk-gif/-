@@ -1,27 +1,26 @@
 package il.rikavon.ui.talk
 
 import android.content.Context
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import il.rikavon.core.data.repo.LimitsRepository
 import il.rikavon.core.data.repo.SettingsRepository
-import il.rikavon.core.data.repo.UsageRepository
-import il.rikavon.core.data.usage.InstalledAppsSource
+import il.rikavon.feature.blocker.contact.TalkContextSource
 import il.rikavon.feature.blocker.engine.FocusScoreProvider
 import il.rikavon.feature.mascot.model.MascotSkin
 import il.rikavon.feature.mascot.model.MascotStage
 import il.rikavon.feature.mascot.registry.MascotTexts
 import il.rikavon.feature.mascot.registry.SelectedMascot
 import il.rikavon.feature.mascot.sound.MascotVoice
+import il.rikavon.feature.mascot.sound.VoiceIssue
+import il.rikavon.feature.mascot.talk.ScriptedConversation
+import il.rikavon.feature.mascot.talk.SpeechFailure
+import il.rikavon.feature.mascot.talk.SpeechListener
+import il.rikavon.feature.mascot.talk.SpeechState
+import il.rikavon.feature.mascot.talk.TalkContext
+import il.rikavon.feature.mascot.talk.TalkScript
 import il.rikavon.feature.mascot.ui.UiLanguage
-import il.rikavon.talk.ScriptedConversation
-import il.rikavon.talk.SpeechListener
-import il.rikavon.talk.TalkContext
-import il.rikavon.talk.TalkScript
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,24 +44,24 @@ data class TalkUiState(
     val language: String = "en",
     val micAvailable: Boolean = true,
     val error: TalkError? = null,
-    /** Outgoing call: the pet has not picked up yet. */
-    val dialing: Boolean = false,
+    /** The pet's voice is switched off in Settings, so replies are text only. */
+    val voiceOff: Boolean = false,
+    /** Why the last spoken reply could not be heard, if it could not. */
+    val voiceIssue: VoiceIssue? = null,
 )
 
 /**
- * A spoken conversation with the pet: the device recogniser hears the user, the offline script answers in the
- * pet's personality with today's numbers, and the pet says it out loud. Typed input works the same way.
+ * The typed-or-spoken conversation with the pet (the keyboard side of a call): the device recogniser hears
+ * the user, the offline script answers in the pet's personality with today's numbers, and the pet says it
+ * out loud. Typed input works the same way.
  */
 @HiltViewModel
 class TalkViewModel @Inject constructor(
     @ApplicationContext context: Context,
-    savedState: SavedStateHandle,
     private val selectedMascot: SelectedMascot,
     private val voice: MascotVoice,
     private val texts: MascotTexts,
-    private val usage: UsageRepository,
-    private val limits: LimitsRepository,
-    private val installed: InstalledAppsSource,
+    private val contextSource: TalkContextSource,
     private val score: FocusScoreProvider,
     private val settings: SettingsRepository,
 ) : ViewModel() {
@@ -73,13 +72,13 @@ class TalkViewModel @Inject constructor(
             TalkUiState(
                 language = TalkScript.language(UiLanguage.fromLocale(context.resources.configuration.locales)),
                 micAvailable = listener.isAvailable(),
-                dialing = savedState.get<Boolean>(ARG_DIALING) ?: false,
             ),
         )
     val state: StateFlow<TalkUiState> = _state.asStateFlow()
 
     init {
         voice.onSpeakingChanged = { speaking -> _state.update { it.copy(speaking = speaking) } }
+        viewModelScope.launch { voice.issue.collect { issue -> _state.update { it.copy(voiceIssue = issue) } } }
         viewModelScope.launch {
             val skin = selectedMascot.current() ?: return@launch
             _state.update {
@@ -88,11 +87,6 @@ class TalkViewModel @Inject constructor(
                     petName = texts.name(skin, it.language),
                     stage = score.currentStage(),
                 )
-            }
-            if (_state.value.dialing) {
-                // The pet lets it ring a little, like anyone with something better to do.
-                delay(DIAL_MILLIS)
-                _state.update { it.copy(dialing = false) }
             }
             say(engine.greeting(context()))
         }
@@ -124,6 +118,15 @@ class TalkViewModel @Inject constructor(
         listener.reset()
     }
 
+    /** The hint said the voice is off; one tap turns sounds and the voice back on. */
+    fun enableVoice() {
+        viewModelScope.launch {
+            settings.setSoundsEnabled(true)
+            settings.setVoiceEnabled(true)
+            _state.update { it.copy(voiceOff = false) }
+        }
+    }
+
     override fun onCleared() {
         listener.release()
         voice.stop()
@@ -141,13 +144,15 @@ class TalkViewModel @Inject constructor(
         _state.update { it.copy(messages = it.messages + TalkMessage(fromPet = true, text = text)) }
         val prefs = settings.current()
         val skin = _state.value.skin ?: return
-        if (prefs.soundsEnabled && prefs.voiceEnabled) voice.speak(text, skin.voice, _state.value.language)
+        val on = prefs.soundsEnabled && prefs.voiceEnabled
+        _state.update { it.copy(voiceOff = !on) }
+        if (on) voice.speak(text, skin.voice, _state.value.language, prompted = true)
     }
 
-    private fun onListen(state: SpeechListener.State) {
+    private fun onListen(state: SpeechState) {
         when (state) {
-            SpeechListener.State.Idle -> _state.update { it.copy(listening = false, partial = "") }
-            is SpeechListener.State.Listening ->
+            SpeechState.Idle -> _state.update { it.copy(listening = false, partial = "") }
+            is SpeechState.Listening ->
                 _state.update {
                     it.copy(
                         listening = true,
@@ -155,21 +160,21 @@ class TalkViewModel @Inject constructor(
                         error = null,
                     )
                 }
-            is SpeechListener.State.Heard -> {
+            is SpeechState.Heard -> {
                 _state.update { it.copy(listening = false, partial = "") }
                 listener.reset()
                 viewModelScope.launch { onUserSaid(state.text) }
             }
-            is SpeechListener.State.Failed ->
+            is SpeechState.Failed ->
                 _state.update {
                     it.copy(
                         listening = false,
                         partial = "",
                         error =
                             when (state.reason) {
-                                SpeechListener.Reason.NO_PERMISSION -> TalkError.NO_PERMISSION
-                                SpeechListener.Reason.NETWORK -> TalkError.NETWORK
-                                SpeechListener.Reason.UNAVAILABLE -> TalkError.UNAVAILABLE
+                                SpeechFailure.NO_PERMISSION -> TalkError.NO_PERMISSION
+                                SpeechFailure.NETWORK -> TalkError.NETWORK
+                                SpeechFailure.UNAVAILABLE -> TalkError.UNAVAILABLE
                                 else -> TalkError.NOTHING_HEARD
                             },
                     )
@@ -177,44 +182,11 @@ class TalkViewModel @Inject constructor(
         }
     }
 
-    /** Today's numbers for the script: score, the pet's stage line, and the app closest to its limit. */
+    /** Today's numbers for the script, in the language the user picked on screen. */
     private suspend fun context(): TalkContext {
         val current = _state.value
-        val skin = checkNotNull(current.skin)
-        val stage = score.currentStage()
-        val snapshot = usage.today.value
-        val worst =
-            limits
-                .all()
-                .filter { it.enabled }
-                .map { limit ->
-                    val used = snapshot.usageOf(limit.packageName).minutes
-                    val ratio =
-                        if (limit.fullBlock) {
-                            FULL_BLOCK_RATIO
-                        } else {
-                            used.toFloat() /
-                                limit.limitMinutes.coerceAtLeast(1)
-                        }
-                    Triple(limit, used, ratio)
-                }.maxByOrNull { it.third }
-        return TalkContext(
-            petName = current.petName,
-            personality = skin.personality,
-            stageLine = texts.stageText(skin, stage, current.language),
-            score = score.score.value.total,
-            language = current.language,
-            app = worst?.let { installed.label(it.first.packageName) },
-            minutesLeft = worst?.let { (it.first.limitMinutes - it.second).coerceAtLeast(0) } ?: 0,
-            blocked = (worst?.third ?: 0f) >= 1f,
-        )
+        return contextSource.build(checkNotNull(current.skin), current.language).copy(petName = current.petName)
     }
 
     private fun recognizerTag(language: String): String = if (language == "he") "he-IL" else "en-US"
-
-    companion object {
-        const val ARG_DIALING = "dialing"
-        private const val FULL_BLOCK_RATIO = 2f
-        private const val DIAL_MILLIS = 2_600L
-    }
 }

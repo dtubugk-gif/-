@@ -30,6 +30,7 @@ import il.rikavon.core.data.time.TimeSource
 import il.rikavon.core.data.usage.InstalledAppsSource
 import il.rikavon.core.ui.anim.AnimationSpecs
 import il.rikavon.feature.blocker.R
+import il.rikavon.feature.blocker.contact.CallReason
 import il.rikavon.feature.blocker.contact.PetContact
 import il.rikavon.feature.blocker.contact.PetContactNotifier
 import il.rikavon.feature.blocker.contact.PetContactPolicy
@@ -43,6 +44,7 @@ import il.rikavon.feature.blocker.engine.InstantRequest
 import il.rikavon.feature.blocker.engine.PollingPolicy
 import il.rikavon.feature.blocker.overlay.OverlayController
 import il.rikavon.feature.blocker.profile.FocusProfileManager
+import il.rikavon.feature.mascot.model.MascotSkin
 import il.rikavon.feature.mascot.registry.MascotTexts
 import il.rikavon.feature.mascot.registry.SelectedMascot
 import il.rikavon.feature.mascot.sound.MascotVoice
@@ -54,7 +56,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
 import javax.inject.Inject
 
 /**
@@ -113,8 +114,7 @@ class BlockerService : LifecycleService() {
     private val screenOn = MutableStateFlow(true)
     private var suppressedPackage: String? = null
     private var suppressedUntil = 0L
-    private val blockCounts = mutableMapOf<String, Int>()
-    private var blockCountsDate: LocalDate? = null
+    private val lastCallAt = mutableMapOf<String, Long>()
 
     private val screenReceiver =
         object : BroadcastReceiver() {
@@ -203,8 +203,7 @@ class BlockerService : LifecycleService() {
             withContext(Dispatchers.IO) { profile.applySuspension(tracked(limitList, scheduleList), blockable) }
             maybeGate(snapshot.foregroundPackage, decision, gated)
             if (current.petMessagesEnabled || current.petCallsEnabled) {
-                resetBlockCountsIfNewDay(snapshot.date)
-                contactPolicy.evaluate(snapshot, limitList, blockCounts).forEach { reachOut(it, current) }
+                contactPolicy.evaluate(snapshot, limitList).forEach { reachOut(it, current) }
             }
             val interval =
                 policy.intervalMillis(
@@ -260,13 +259,6 @@ class BlockerService : LifecycleService() {
         )
     }
 
-    private fun resetBlockCountsIfNewDay(date: LocalDate) {
-        if (blockCountsDate != date) {
-            blockCountsDate = date
-            blockCounts.clear()
-        }
-    }
-
     /** Delivers one of the pet's messages or calls, honouring the two switches. */
     private suspend fun reachOut(item: PetContact, prefs: Settings) {
         val skin = selectedMascot.current() ?: return
@@ -277,6 +269,19 @@ class BlockerService : LifecycleService() {
             is PetContact.Message -> if (prefs.petMessagesEnabled) contact.message(skin, stage, item, label, language)
             is PetContact.Call -> if (prefs.petCallsEnabled) contact.call(skin, stage, item, label, language)
         }
+    }
+
+    /**
+     * With calls on, a block is a phone call: the pet rings (the call screen comes up over the blocked app)
+     * and the app is sent home. The loop can meet the same block several times while the ring is still up,
+     * so one ring per package per cooldown; the app still goes home every time.
+     */
+    private suspend fun ringForBlock(packageName: String, skin: MascotSkin, language: String) {
+        val now = time.nowMillis()
+        if (now - (lastCallAt[packageName] ?: 0L) < CALL_COOLDOWN_MILLIS) return
+        lastCallAt[packageName] = now
+        val call = PetContact.Call(packageName, CallReason.BLOCKED, minutesLeft = 0)
+        contact.call(skin, score.currentStage(), call, installed.label(packageName), language)
     }
 
     /** The accessibility service already sent [packageName] home; put the block screen up right away. */
@@ -303,8 +308,12 @@ class BlockerService : LifecycleService() {
         val language = UiLanguage.fromLocale(resources.configuration.locales)
         val message = texts.blockMessage(skin, time.localTime().hour, language)
         summaries.recordBlock(decision.packageName, decision.reason)
-        blockCounts[decision.packageName] = (blockCounts[decision.packageName] ?: 0) + 1
         events.emit(BlockerEvent.Blocked(decision.packageName))
+        if (prefs.petCallsEnabled) {
+            ringForBlock(decision.packageName, skin, language)
+            goHome()
+            return
+        }
         if (prefs.soundsEnabled && prefs.voiceEnabled) voice.speak(message, skin.voice, language)
         overlay.show(
             OverlayController.Request(
@@ -386,6 +395,7 @@ class BlockerService : LifecycleService() {
         const val CHANNEL_ID = "rikavon_service"
         private const val NOTIFICATION_ID = 1001
         private const val SUPPRESS_AFTER_CLOSE_MILLIS = 4_000L
+        private const val CALL_COOLDOWN_MILLIS = 15_000L
 
         fun start(context: Context) {
             val intent = Intent(context, BlockerService::class.java)

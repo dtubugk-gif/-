@@ -118,21 +118,24 @@ BlockerService loop (2s/5s/15s, off when screen off) ◄────────
   it comes to the front (poll or accessibility event) `BreathingOverlayContent` sits over it for ten seconds
   (circle swelling with a four-second breath, "breathe in / out", countdown) before the way in opens.
   Leaving keeps the pause armed. Off switch in Settings.
-* **The pet reaches out** – `PetContactPolicy` decides once per app per day: a heads-up message at 80 % and
-  at the limit, an incoming call at 95 % while the app is on screen and on every third block. Calls are
-  call-style notifications with a full-screen intent answered in `PetCallActivity`, which rings with
-  vibration, shows the pet, then speaks its four lines (text-to-speech) as they appear, ending with
-  "I'll stop" (goes home) or "Hang up". Two switches in Settings; Android 14+ asks once for full-screen
-  notifications. "Talk back" on an answered call opens the conversation screen.
-* **Talking to the pet** – the phone button on Home places an outgoing call: it rings for a moment, the pet
-  picks up and greets you out loud. `TalkScreen` then holds a two-way spoken conversation in Hebrew or
-  English: `SpeechListener` wraps the device's `SpeechRecognizer` (partial results shown live), typed input
-  works the same way, and every reply is spoken by `MascotVoice` in the pet's voice profile while the mascot
-  bobs. Replies come from `ScriptedConversation`, an offline engine: `TalkScript` maps what you said to an
-  intent (greeting, "give me more time", a promise, an insult, "why am I blocked", the score, thanks, love,
-  goodbye) and answers in the pet's personality with today's numbers filled in (score, stage, the app closest
-  to its limit and its minutes left). Nothing leaves the device and nothing is recorded; `ConversationEngine`
-  is the seam for a smarter backend later.
+* **The pet calls you** – a block is a phone call. When calls are on (`PetContactPolicy` also messages at
+  80 %, and rings once at 95 % while the app is on screen), reaching a limit rings instead of showing the
+  block card: `PetContactNotifier` starts `PetCallActivity` over the blocked app and posts a call-style
+  notification with a full-screen intent, and the app is sent home. It is a real, two-way call, not a
+  monologue: `VoiceCallSession` speaks the pet's line, listens through the device recogniser, answers what it
+  heard, and loops until someone hangs up. Silence gets a retry, then a nudge, then a goodbye; saying "bye"
+  ends it, and a promise ("I'll stop", said or pressed) ends it and sends you home. `CallAudioRoute` gives it
+  the voice-call audio mode with an earpiece / speaker switch and screen-off proximity. The screen is the
+  phone app's: a pulsing avatar, a live caption of both sides, and round mute / speaker / keyboard / end
+  buttons. Two switches in Settings; Android 14+ asks once for full-screen notifications.
+* **You call the pet** – the phone button on Home dials the pet (`PetCallActivity.outgoing`): it rings for a
+  moment, the pet picks up and greets you, and the same spoken conversation runs. The keyboard button drops
+  to `TalkScreen`, the typed side of the same engine, for a quiet room or a phone with no recogniser.
+* **What the pet says** – `ScriptedConversation`, an offline engine in `:feature:mascot`. `TalkScript` maps
+  what you said to an intent (greeting, "give me more time", a promise, an insult, "why am I blocked", the
+  score, thanks, love, goodbye, silence) in Hebrew and English and answers in the pet's personality with
+  today's numbers filled in (score, stage, the app closest to its limit and its minutes left). Nothing leaves
+  the device and nothing is recorded; `ConversationEngine` is the seam for a smarter backend later.
 * **Focus profile (optional)** – the Family Link behaviour itself, for apps the user installs inside a work
   profile that Rikavon owns. `FocusProfileAdminReceiver` is the profile owner (no device policies),
   `FocusProfileComplianceActivity` answers the Android 12+ provisioning handshake, and inside the profile the
@@ -183,7 +186,8 @@ Everything lives in `core/ui/.../anim/AnimationSpecs.kt`. `MascotView` implement
 | `POST_NOTIFICATIONS` (13+) | silent service notification, optional evening summary, the pet's messages and calls | service still runs, no summary, no messages |
 | `USE_FULL_SCREEN_INTENT` (user grant on 14+) | the pet's call takes over the screen like a real one | the call is a heads-up notification instead |
 | `VIBRATE` | the call rings | silent ring |
-| `RECORD_AUDIO` (asked on the first mic tap) | the device's speech recogniser hears what you say to the pet; nothing is stored | type to the pet instead |
+| `RECORD_AUDIO` (asked on the first mic tap or call) | the device's speech recogniser hears what you say to the pet; nothing is stored | type to the pet instead |
+| `MODIFY_AUDIO_SETTINGS` | the call uses the voice-call audio mode and the earpiece / speaker switch | the voice plays on the media stream |
 | `SCHEDULE_EXACT_ALARM` | refresh at exactly 00:00 | reset happens on the next tick instead |
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Doze exemption for the service | more OEM kills; the worker revives it |
 | `RECEIVE_BOOT_COMPLETED` | restart after reboot | service starts on next app open |

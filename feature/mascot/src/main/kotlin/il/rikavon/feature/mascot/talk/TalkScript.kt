@@ -1,4 +1,4 @@
-package il.rikavon.talk
+package il.rikavon.feature.mascot.talk
 
 /** What the user meant, as far as a keyword script can tell. */
 enum class TalkIntent {
@@ -12,6 +12,9 @@ enum class TalkIntent {
     THANKS,
     BYE,
     LOVE,
+
+    /** Nothing came back on the line; never matched from text. */
+    SILENCE,
     UNKNOWN,
 }
 
@@ -138,6 +141,11 @@ object TalkScript {
                             "Go. Live. I'll be here, rotting or not.",
                         ),
                     TalkIntent.LOVE to listOf("I know. Prove it with {app}.", "Sweet. Still not extending your limit."),
+                    TalkIntent.SILENCE to
+                        listOf(
+                            "Still there? I can hear the silence.",
+                            "Hello? Say something. Or don't, I'm used to it.",
+                        ),
                 ),
             "he" to
                 mapOf(
@@ -155,6 +163,11 @@ object TalkScript {
                             "ללכת. לחיות. אני פה, נרקב או לא.",
                         ),
                     TalkIntent.LOVE to listOf("אני יודע. להוכיח את זה עם {app}.", "מתוק. עדיין לא מאריך את הגבול."),
+                    TalkIntent.SILENCE to
+                        listOf(
+                            "עדיין שם? אני שומע את השקט.",
+                            "הלו? תגידו משהו. או לא, התרגלתי.",
+                        ),
                 ),
         )
 
