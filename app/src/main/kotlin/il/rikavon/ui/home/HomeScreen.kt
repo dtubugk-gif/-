@@ -27,8 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -65,6 +64,7 @@ import il.rikavon.core.ui.components.DotChip
 import il.rikavon.core.ui.components.EmptyState
 import il.rikavon.core.ui.components.ErrorState
 import il.rikavon.core.ui.components.PrimaryButton
+import il.rikavon.core.ui.components.RikavonIcons
 import il.rikavon.core.ui.components.ScreenPadding
 import il.rikavon.core.ui.components.SectionLabel
 import il.rikavon.core.ui.components.SkeletonBlock
@@ -267,12 +267,12 @@ private fun Header(
                 )
             }
             SquareIconButton(
-                icon = Icons.Filled.Call,
+                icon = Icons.Rounded.Call,
                 contentDescription = stringResource(R.string.talk_call_pet),
                 onClick = onCallPet,
             )
             SquareIconButton(
-                icon = Icons.Filled.Settings,
+                icon = RikavonIcons.Settings,
                 contentDescription = stringResource(R.string.home_settings),
                 onClick = onOpenSettings,
             )

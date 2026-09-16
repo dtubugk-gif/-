@@ -44,7 +44,7 @@
     <string name="limit_full_block">חסימה מלאה</string>
     <string name="limit_full_block_hint">האפליקציה נחסמת מיד בכל פתיחה</string>
     <string name="limit_call_on_open">המחמד מתקשר בכל פתיחה</string>
-    <string name="limit_call_on_open_hint">ברגע שהאפליקציה נפתחת, המחמד מתקשר ומתחנן. לא משנה מה הגבול אומר.</string>
+    <string name="limit_call_on_open_hint">ברגע שהאפליקציה נפתחת, המחמד מתקשר, מתחנן, ומשאיר הודעה שמבקשת להפסיק. לא משנה מה הגבול אומר.</string>
     <string name="limit_enabled">הגבול פעיל</string>
     <string name="limit_enabled_hint">כיבוי משאיר את האפליקציה ברשימה בלי אכיפה</string>
     <string name="limit_today_used">%1$s מתוך %2$s</string>
@@ -150,6 +150,7 @@
     <string name="apps_free_hint">חינם: עד %1$d אפליקציות במעקב</string>
     <string name="limit_section_limit">גבול יומי</string>
     <string name="limit_section_options">אפשרויות</string>
+    <string name="limit_section_pet">המחמד</string>
     <string name="limit_remove_confirm_title">להסיר את הגבול?</string>
     <string name="limit_remove_confirm_body">%1$s לא תהיה במעקב יותר. אפשר להוסיף אותה שוב בכל רגע.</string>
     <string name="limit_remove_confirm">הסרה</string>

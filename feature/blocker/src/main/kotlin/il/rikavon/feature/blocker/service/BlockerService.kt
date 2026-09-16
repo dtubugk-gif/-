@@ -37,6 +37,7 @@ import il.rikavon.core.data.usage.InstalledAppsSource
 import il.rikavon.core.ui.anim.AnimationSpecs
 import il.rikavon.feature.blocker.R
 import il.rikavon.feature.blocker.contact.CallReason
+import il.rikavon.feature.blocker.contact.MessageKind
 import il.rikavon.feature.blocker.contact.PetContact
 import il.rikavon.feature.blocker.contact.PetContactNotifier
 import il.rikavon.feature.blocker.contact.PetContactPolicy
@@ -49,6 +50,7 @@ import il.rikavon.feature.blocker.engine.FeedRules
 import il.rikavon.feature.blocker.engine.FocusScoreProvider
 import il.rikavon.feature.blocker.engine.InstantBlockBus
 import il.rikavon.feature.blocker.engine.InstantRequest
+import il.rikavon.feature.blocker.engine.OpenDetector
 import il.rikavon.feature.blocker.engine.PollingPolicy
 import il.rikavon.feature.blocker.overlay.OverlayController
 import il.rikavon.feature.blocker.profile.FocusProfileManager
@@ -131,7 +133,7 @@ class BlockerService : LifecycleService() {
     private var suppressedUntil = 0L
     private val lastCallAt = mutableMapOf<String, Long>()
     private val lastPleadAt = mutableMapOf<String, Long>()
-    private val lastOpens = mutableMapOf<String, Int>()
+    private lateinit var opens: OpenDetector
 
     private val screenReceiver =
         object : BroadcastReceiver() {
@@ -148,6 +150,7 @@ class BlockerService : LifecycleService() {
 
     override fun onCreate() {
         super.onCreate()
+        opens = OpenDetector(self = packageName)
         startInForeground()
         registerReceiver(
             screenReceiver,
@@ -187,6 +190,7 @@ class BlockerService : LifecycleService() {
         runCatching { unregisterReceiver(screenReceiver) }
         instant.publish(emptySet())
         profile.releaseAll()
+        contact.cancelCall()
         overlay.hide()
         super.onDestroy()
     }
@@ -244,6 +248,7 @@ class BlockerService : LifecycleService() {
                     anyBlockable = blockable.isNotEmpty(),
                     maxUsageRatio = engine.maxUsageRatio(snapshot, limitList),
                     instantPath = permissions.hasAccessibility(),
+                    watchingOpens = pleading.isNotEmpty(),
                 ) ?: PollingPolicy.NORMAL_MILLIS
             delay(interval)
         }
@@ -291,35 +296,37 @@ class BlockerService : LifecycleService() {
         )
     }
 
-    /** The polling path's "it just opened": a begged-about app's open count went up while it is in front. */
+    /** The polling path's "it just opened": a begged-about app moved to the front from somewhere else. */
     private suspend fun noticeOpens(snapshot: DayUsageSnapshot, pleading: Set<String>) {
-        for (packageName in pleading) {
-            val opens = snapshot.usageOf(packageName).opens
-            val before = lastOpens[packageName]
-            lastOpens[packageName] = opens
-            if (before != null && opens > before && snapshot.foregroundPackage == packageName) plead(packageName)
-        }
+        opens.opened(snapshot.foregroundPackage, pleading)?.let { plead(it) }
     }
 
     /**
-     * The pet begs: "calls on every open" rings the moment that app opens, whatever the limit says, at most
-     * once a minute per app (coming back from the call itself counts as an open, and must not ring again).
+     * The pet begs: "calls on every open" rings the moment that app opens, whatever the limit says, and
+     * leaves a message asking to stop (the message alone when calls are switched off). At most once a
+     * minute per app, so a quick in-and-out does not ring twice.
      */
     private suspend fun plead(packageName: String) {
         val prefs = settings.current()
-        if (!prefs.trackingEnabled || !prefs.petCallsEnabled) return
+        if (!prefs.trackingEnabled || !(prefs.petCallsEnabled || prefs.petMessagesEnabled)) return
         val now = time.nowMillis()
         if (now - (lastPleadAt[packageName] ?: 0L) < PLEAD_COOLDOWN_MILLIS) return
         lastPleadAt[packageName] = now
         val skin = selectedMascot.current() ?: return
         val language = UiLanguage.fromLocale(resources.configuration.locales)
+        val label = installed.label(packageName)
+        val stage = score.currentStage()
         val used =
             usage.today.value
                 .usageOf(packageName)
                 .minutes
         val left = limits.byPackage(packageName)?.let { (it.limitMinutes - used).coerceAtLeast(0) } ?: 0
-        val call = PetContact.Call(packageName, CallReason.PLEAD, minutesLeft = left)
-        contact.call(skin, score.currentStage(), call, installed.label(packageName), language)
+        if (prefs.petCallsEnabled) {
+            val call = PetContact.Call(packageName, CallReason.PLEAD, minutesLeft = left)
+            contact.call(skin, stage, call, label, language, prefs.reduceMotion)
+        } else {
+            contact.message(skin, stage, PetContact.Message(packageName, MessageKind.PLEAD, left), label, language)
+        }
     }
 
     /** Delivers one of the pet's messages or calls, honouring the two switches. */
@@ -330,22 +337,39 @@ class BlockerService : LifecycleService() {
         val stage = score.currentStage()
         when (item) {
             is PetContact.Message -> if (prefs.petMessagesEnabled) contact.message(skin, stage, item, label, language)
-            is PetContact.Call -> if (prefs.petCallsEnabled) contact.call(skin, stage, item, label, language)
+            is PetContact.Call ->
+                if (prefs.petCallsEnabled) contact.call(skin, stage, item, label, language, prefs.reduceMotion)
             is PetContact.Nudge -> if (prefs.petMessagesEnabled) contact.nudge(skin, stage, item, label, language)
         }
     }
 
     /**
-     * With calls on, a block is a phone call: the pet rings (the call screen comes up over the blocked app)
-     * and the app is sent home. The loop can meet the same block several times while the ring is still up,
-     * so one ring per package per cooldown; the app still goes home every time.
+     * With calls on, a block is a phone call: the pet rings over the blocked app and the app is sent home. A
+     * ring that is declined or left unanswered turns into the block screen, so the block is always visible.
+     * The loop can meet the same block several times while the ring is still up, so one ring per package per
+     * cooldown; inside the cooldown the caller falls back to the block screen.
      */
-    private suspend fun ringForBlock(packageName: String, skin: MascotSkin, language: String) {
+    private suspend fun ringForBlock(
+        decision: BlockDecision,
+        skin: MascotSkin,
+        prefs: Settings,
+        language: String,
+    ): Boolean {
         val now = time.nowMillis()
-        if (now - (lastCallAt[packageName] ?: 0L) < CALL_COOLDOWN_MILLIS) return
-        lastCallAt[packageName] = now
-        val call = PetContact.Call(packageName, CallReason.BLOCKED, minutesLeft = 0)
-        contact.call(skin, score.currentStage(), call, installed.label(packageName), language)
+        if (now - (lastCallAt[decision.packageName] ?: 0L) < CALL_COOLDOWN_MILLIS) return false
+        lastCallAt[decision.packageName] = now
+        val call = PetContact.Call(decision.packageName, CallReason.BLOCKED, minutesLeft = 0)
+        contact.call(
+            skin,
+            score.currentStage(),
+            call,
+            installed.label(decision.packageName),
+            language,
+            prefs.reduceMotion,
+        ) {
+            lifecycleScope.launch { showBlockScreen(decision, skin, prefs, language) }
+        }
+        return true
     }
 
     /**
@@ -403,7 +427,6 @@ class BlockerService : LifecycleService() {
         val skin = selectedMascot.current() ?: return
         val prefs = settings.current()
         val language = UiLanguage.fromLocale(resources.configuration.locales)
-        val message = texts.blockMessage(skin, time.localTime().hour, language)
         summaries.recordBlock(decision.packageName, decision.reason)
         events.emit(BlockerEvent.Blocked(decision.packageName))
         // A session that ran long becomes a break: reopening during it must stay blocked even though the
@@ -411,11 +434,17 @@ class BlockerService : LifecycleService() {
         if (decision.reason == BlockReason.SESSION) {
             pauses.pause(decision.packageName, decision.retryAtMillis, PauseReason.BREAK)
         }
-        if (prefs.petCallsEnabled) {
-            ringForBlock(decision.packageName, skin, language)
+        if (prefs.petCallsEnabled && ringForBlock(decision, skin, prefs, language)) {
             goHome()
             return
         }
+        showBlockScreen(decision, skin, prefs, language)
+    }
+
+    /** The block screen over the app, spoken by the pet when its voice is on; the app goes home behind it. */
+    private suspend fun showBlockScreen(decision: BlockDecision, skin: MascotSkin, prefs: Settings, language: String) {
+        if (!settings.current().trackingEnabled || !permissions.state().overlay) return
+        val message = texts.blockMessage(skin, time.localTime().hour, language)
         if (prefs.soundsEnabled && prefs.voiceEnabled) voice.speak(message, skin.voice, language)
         overlay.show(
             OverlayController.Request(

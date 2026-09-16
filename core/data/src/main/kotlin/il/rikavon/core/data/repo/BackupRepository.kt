@@ -66,7 +66,7 @@ data class LimitDto(
     val createdAt: Long,
     val maxOpens: Int = 0,
     val sessionMinutes: Int = 0,
-    val callOnOpen: Boolean = false,
+    val callOnOpen: Boolean = true,
 )
 
 @Serializable

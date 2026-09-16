@@ -20,19 +20,22 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import dagger.hilt.android.qualifiers.ApplicationContext
 import il.rikavon.core.data.model.ReduceMotionMode
 import il.rikavon.core.ui.anim.systemReducedMotion
+import il.rikavon.feature.blocker.contact.CallPhase
+import il.rikavon.feature.blocker.contact.PetCallContent
+import il.rikavon.feature.blocker.contact.VoiceCallState
 import il.rikavon.feature.blocker.engine.BlockDecision
 import il.rikavon.feature.mascot.model.MascotSkin
 import il.rikavon.feature.mascot.sound.MascotSoundPlayer
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Hosts a Compose screen (the block screen or the breathing pause) in a system overlay window. */
+/** Hosts a Compose screen (the block screen, the breathing pause, a ringing call) in a system overlay window. */
 @Singleton
 class OverlayController @Inject constructor(
     @ApplicationContext private val context: Context,
     private val sounds: MascotSoundPlayer,
 ) {
-    enum class Kind { BLOCK, BREATHE }
+    enum class Kind { BLOCK, BREATHE, CALL }
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private val windowManager: WindowManager get() = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -66,6 +69,17 @@ class OverlayController @Inject constructor(
         val appearance: Appearance,
         val onEnter: () -> Unit,
         val onLeave: () -> Unit,
+    )
+
+    /** An incoming call from the pet, ringing over whatever is open; answering hands over to the call activity. */
+    data class CallRequest(
+        val packageName: String,
+        val skin: MascotSkin,
+        val petName: String,
+        val appLabel: String,
+        val appearance: Appearance,
+        val onAnswer: () -> Unit,
+        val onDecline: () -> Unit,
     )
 
     fun isShowing(packageName: String): Boolean = shownPackage == packageName && view != null
@@ -111,6 +125,27 @@ class OverlayController @Inject constructor(
                     reducedMotion = request.appearance.reducedMotion,
                     onEnter = request.onEnter,
                     onLeave = request.onLeave,
+                )
+            }
+        }
+    }
+
+    fun showCall(request: CallRequest) {
+        mainHandler.post {
+            showOnMain(request.packageName, Kind.CALL, sound = null, onShown = {}) {
+                PetCallContent(
+                    skin = request.skin,
+                    petName = request.petName,
+                    appLabel = request.appLabel,
+                    state = VoiceCallState(phase = CallPhase.RINGING, incoming = true),
+                    reducedMotion = request.appearance.reducedMotion,
+                    onAnswer = request.onAnswer,
+                    onDecline = request.onDecline,
+                    onHangUp = request.onDecline,
+                    onMute = {},
+                    onSpeaker = {},
+                    onKeyboard = {},
+                    onPromise = {},
                 )
             }
         }

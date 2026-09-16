@@ -6,9 +6,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -53,6 +50,7 @@ class PetCallActivity : ComponentActivity() {
 
     @Inject lateinit var contextSource: TalkContextSource
 
+    private val ringer by lazy { CallRinger(applicationContext) }
     private var session: VoiceCallSession? = null
     private var route: CallAudioRoute? = null
     private var lines: List<String> = emptyList()
@@ -207,26 +205,16 @@ class PetCallActivity : ComponentActivity() {
         session?.hangUp() ?: finish()
     }
 
+    /** Vibration only: the call notification's channel plays the ringtone on this path. */
     private fun startRinging() {
-        val effect = VibrationEffect.createWaveform(RING_PATTERN, 0)
-        runCatching { vibrator()?.vibrate(effect) }
+        ringer.start(tone = false)
         lifecycleScope.launch {
             delay(AnimationSpecs.CALL_RING_MILLIS)
             if (!connected) decline()
         }
     }
 
-    private fun stopRinging() {
-        runCatching { vibrator()?.cancel() }
-    }
-
-    private fun vibrator(): Vibrator? =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-        }
+    private fun stopRinging() = ringer.stop()
 
     private fun showOverLockScreen() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
@@ -247,7 +235,6 @@ class PetCallActivity : ComponentActivity() {
         const val EXTRA_LINES = "lines"
         const val EXTRA_ANSWERED = "answered"
         const val EXTRA_OUTGOING = "outgoing"
-        private val RING_PATTERN = longArrayOf(0, 600, 400, 600, 1_200)
 
         /** The user calls the pet. */
         fun outgoing(context: Context): Intent =

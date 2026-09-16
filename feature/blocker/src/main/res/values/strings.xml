@@ -44,7 +44,7 @@
     <string name="limit_full_block">Full block</string>
     <string name="limit_full_block_hint">The app is blocked immediately on every open</string>
     <string name="limit_call_on_open">The pet calls on every open</string>
-    <string name="limit_call_on_open_hint">The moment this app opens, the pet calls and begs. Whatever the limit says.</string>
+    <string name="limit_call_on_open_hint">The moment this app opens, the pet calls, begs, and leaves a message asking you to stop. Whatever the limit says.</string>
     <string name="limit_enabled">Limit active</string>
     <string name="limit_enabled_hint">Turning off keeps the app listed without enforcement</string>
     <string name="limit_today_used">%1$s of %2$s</string>
@@ -150,6 +150,7 @@
     <string name="apps_free_hint">Free: up to %1$d tracked apps</string>
     <string name="limit_section_limit">Daily limit</string>
     <string name="limit_section_options">Options</string>
+    <string name="limit_section_pet">The pet</string>
     <string name="limit_remove_confirm_title">Remove the limit?</string>
     <string name="limit_remove_confirm_body">%1$s will no longer be tracked. You can add it again any time.</string>
     <string name="limit_remove_confirm">Remove</string>

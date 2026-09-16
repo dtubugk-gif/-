@@ -137,19 +137,27 @@ BlockerService loop (2s/5s/15s, off when screen off) ◄────────
   Leaving keeps the pause armed. Off switch in Settings.
 * **The pet calls you** – a block is a phone call. When calls are on (`PetContactPolicy` also messages at
   80 %, and rings once at 95 % while the app is on screen), reaching a limit rings instead of showing the
-  block card: `PetContactNotifier` starts `PetCallActivity` over the blocked app and posts a call-style
-  notification with a full-screen intent, and the app is sent home. It is a real, two-way call, not a
+  block card: `PetContactNotifier` rings inside a window over the blocked app (`OverlayController.showCall`,
+  the same mechanism as the block screen, so the system cannot refuse it; `CallRinger` plays the device
+  ringtone and vibrates, honouring silent and vibrate mode), posts a call-style notification with a
+  full-screen intent for the shade and the lock screen, and sends the app home. Answering opens
+  `PetCallActivity`; a ring that is declined or left unanswered turns into the block screen. Without
+  "display over other apps", or with the phone locked, the call activity is started directly instead. It is a
+  real, two-way call, not a
   monologue: `VoiceCallSession` speaks the pet's line, listens through the device recogniser, answers what it
   heard, and loops until someone hangs up. Silence gets a retry, then a nudge, then a goodbye; saying "bye"
   ends it, and a promise ("I'll stop", said or pressed) ends it and sends you home. `CallAudioRoute` gives it
   the voice-call audio mode with an earpiece / speaker switch and screen-off proximity. The screen is the
   phone app's: a pulsing avatar, a live caption of both sides, and round mute / speaker / keyboard / end
   buttons. Two switches in Settings; Android 14+ asks once for full-screen notifications.
-* **The pet begs on open (per app)** – `callOnOpen` on a limit: the moment that app comes to the front (the
-  instant path, or the poll seeing its open count rise) the pet rings with a plea, "No. No no no. Please. I
-  don't want to rot. Let go of it.", whatever the limit says, at most once a minute per app. A promise ends
-  the call and goes home; hanging up leaves the app open. Every call also leaves a message in the shade
-  asking to stop, so a declined or missed call still says what it wanted.
+* **The pet begs on every open** – `callOnOpen` on a limit, on by default for every limited app (the switch
+  at the top of the limit editor turns it off per app): the moment that app comes to the front (the instant
+  path, or `OpenDetector` seeing the poll's foreground move there from somewhere else; returning from the
+  pet's own call does not count) the pet rings with a plea, "No. No no no. Please. I don't want to rot. Let
+  go of it.", whatever the limit says, at most once a minute per app. A promise ends the call and goes home;
+  hanging up leaves the app open. Every call also leaves a message in the shade asking to stop, so a declined
+  or missed call still says what it wanted; with calls switched off, the message alone is sent. While any
+  app is begged about and the instant path is off, polling runs every 3 s.
 * **You call the pet** – the phone button on Home dials the pet (`PetCallActivity.outgoing`): it rings for a
   moment, the pet picks up and greets you, and the same spoken conversation runs. The keyboard button drops
   to `TalkScreen`, the typed side of the same engine, for a quiet room or a phone with no recogniser.

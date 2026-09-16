@@ -226,6 +226,11 @@ class PollingPolicyTest {
     @Test
     fun `a tracked app on screen or a blockable app forces the fast tier`() {
         assertEquals(PollingPolicy.FAST_MILLIS, policy.intervalMillis(true, true, false, 0f, instantPath = true))
+        assertEquals(PollingPolicy.WATCH_MILLIS, policy.intervalMillis(true, false, false, 0.5f, watchingOpens = true))
+        assertEquals(
+            PollingPolicy.NORMAL_MILLIS,
+            policy.intervalMillis(true, false, false, 0.5f, instantPath = true, watchingOpens = true),
+        )
         assertEquals(PollingPolicy.FAST_MILLIS, policy.intervalMillis(true, false, true, 0f, instantPath = true))
     }
 

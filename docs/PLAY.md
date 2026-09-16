@@ -180,7 +180,7 @@ Character limits: title 30, short description 80, full description 4000. Both la
 • גבול יומי לכל אפליקציה (5–240 דקות), חסימה מלאה, גבול פתיחות ביום וגבול לרצף אחד עם הפסקה כפויה
 • "לחסום עכשיו": 15 דקות, שעה, 3 שעות או עד מחר, בלחיצה
 • מסך חסימה שהמחמד נכנס אליו באנימציה, עם טיימר "נסה שוב בעוד…"
-• שיחות והודעות מהמחמד: ב-80% מהגבול, בגבול, בכל חסימה, ובכל פתיחה אם תרצו
+• שיחות והודעות מהמחמד: ב-80% מהגבול, בגבול, בכל חסימה, ובכל פתיחה של אפליקציה עם גבול (אפשר לכבות לכל אפליקציה)
 • שיחה קולית דו-כיוונית בעברית ובאנגלית, בלי שרת: מנוע הדיבור של המכשיר ותסריט באישיות של המחמד
 • חסימת אתרים בדפדפן, ו-Shorts ביוטיוב או Reels באינסטגרם לזמן שתבחרו
 • לוחות זמנים: עבודה, לימודים, שינה או מותאם אישית
@@ -217,8 +217,8 @@ What's inside:
   forced break
 • "Block now": 15 minutes, an hour, 3 hours or until tomorrow, in one tap
 • A block screen the pet drops into, with a "try again in…" timer
-• Calls and messages from the pet: at 80 % of a limit, at the limit, on every block, and on every open if
-  you want
+• Calls and messages from the pet: at 80 % of a limit, at the limit, on every block, and on every open of
+  a limited app (you can switch that off per app)
 • Two-way voice conversation in English and Hebrew, no server: the device's own speech engine and a script
   in the pet's personality
 • Block websites in the browser, and YouTube Shorts or Instagram Reels for as long as you choose

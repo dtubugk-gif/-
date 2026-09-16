@@ -1,5 +1,6 @@
 package il.rikavon.feature.blocker.contact
 
+import android.app.KeyguardManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -13,9 +14,11 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.Person
 import androidx.core.graphics.drawable.IconCompat
 import dagger.hilt.android.qualifiers.ApplicationContext
+import il.rikavon.core.data.model.ReduceMotionMode
 import il.rikavon.core.data.permissions.PermissionChecker
 import il.rikavon.core.ui.anim.AnimationSpecs
 import il.rikavon.feature.blocker.R
+import il.rikavon.feature.blocker.overlay.OverlayController
 import il.rikavon.feature.mascot.model.MascotSkin
 import il.rikavon.feature.mascot.model.MascotStage
 import il.rikavon.feature.mascot.registry.MascotTexts
@@ -25,8 +28,12 @@ import javax.inject.Singleton
 
 /**
  * The pet's two ways of reaching out: a heads-up message in its own voice, and an incoming call that takes
- * over the screen like a real one (call-style notification with a full-screen intent, answered in
- * [PetCallActivity]). Everything is local; the "caller" is the mascot.
+ * over the screen like a real one. Everything is local; the "caller" is the mascot.
+ *
+ * The ring itself is a window of this app over whatever is open (the same mechanism as the block screen,
+ * which the system cannot refuse once "display over other apps" is granted); answering opens the real,
+ * two-way call in [PetCallActivity]. Without that permission, or with the phone locked, the call activity
+ * is started directly and a call-style notification with a full-screen intent does the ringing.
  */
 @Singleton
 class PetContactNotifier @Inject constructor(
@@ -34,9 +41,14 @@ class PetContactNotifier @Inject constructor(
     private val permissions: PermissionChecker,
     private val texts: MascotTexts,
     private val renderer: MascotBitmapRenderer,
+    private val overlay: OverlayController,
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val ringer = CallRinger(context)
     private val manager: NotificationManager get() = context.getSystemService(NotificationManager::class.java)
+
+    /** Runs when the current ring ends without an answer (declined, timed out); cleared once answered. */
+    private var onUnanswered: (() -> Unit)? = null
 
     fun message(skin: MascotSkin, stage: MascotStage, contact: PetContact.Message, appLabel: String, language: String) {
         val body =
@@ -48,6 +60,7 @@ class PetContactNotifier @Inject constructor(
                         contact.minutesLeft,
                     )
                 MessageKind.AT_LIMIT -> context.getString(R.string.contact_message_limit, appLabel)
+                MessageKind.PLEAD -> context.getString(R.string.contact_message_stop, appLabel)
             }
         post(skin, stage, contact.packageName, body, language)
     }
@@ -84,20 +97,83 @@ class PetContactNotifier @Inject constructor(
     }
 
     /**
-     * Rings. The call screen is started directly (allowed in the background because the user granted
-     * "display over other apps", the same grant the block screen needs) and, so the ring survives a locked
-     * screen and shows Answer / Decline in the shade, posted as a call-style notification as well.
+     * Rings about [contact]. The ring ends by itself after [AnimationSpecs.CALL_RING_MILLIS]; [onUnanswered]
+     * runs when it ends without an answer (declined, timed out), so a block can put its screen up instead.
+     * A message asking to stop is posted alongside, since the call leaves the shade when it stops ringing.
      */
-    fun call(skin: MascotSkin, stage: MascotStage, contact: PetContact.Call, appLabel: String, language: String) {
+    fun call(
+        skin: MascotSkin,
+        stage: MascotStage,
+        contact: PetContact.Call,
+        appLabel: String,
+        language: String,
+        reduceMotion: ReduceMotionMode = ReduceMotionMode.SYSTEM,
+        onUnanswered: () -> Unit = {},
+    ) {
+        cancelCall()
+        this.onUnanswered = onUnanswered
         val petName = texts.name(skin, language)
         val lines = callLines(skin, stage, contact, petName, appLabel, language)
         val ringing = callActivity(petName, appLabel, lines, answered = false)
-        runCatching { context.startActivity(ringing) }
+        val answered = callActivity(petName, appLabel, lines, answered = true)
+        val ringsHere = permissions.state().overlay && !locked()
+        if (ringsHere) {
+            ringer.start()
+            overlay.showCall(
+                OverlayController.CallRequest(
+                    packageName = contact.packageName,
+                    skin = skin,
+                    petName = petName,
+                    appLabel = appLabel,
+                    appearance = overlay.appearance(reduceMotion),
+                    onAnswer = {
+                        this.onUnanswered = null
+                        runCatching { context.startActivity(answered) }
+                        cancelCall()
+                    },
+                    onDecline = ::decline,
+                ),
+            )
+        } else {
+            runCatching { context.startActivity(ringing) }
+        }
+        mainHandler.postDelayed({ decline() }, RING_TOKEN, AnimationSpecs.CALL_RING_MILLIS)
         if (!permissions.hasNotifications()) return
         ensureChannels()
         // The call goes away when it stops ringing; the message stays in the shade and says what it wanted.
         post(skin, stage, contact.packageName, context.getString(R.string.contact_message_stop, appLabel), language)
-        val answered = callActivity(petName, appLabel, lines, answered = true)
+        notifyCall(skin, stage, petName, appLabel, ringing, answered, silent = ringsHere)
+    }
+
+    /** The ring ended without an answer: everything down, then whoever asked for the call decides what next. */
+    fun decline() {
+        val callback = onUnanswered
+        cancelCall()
+        callback?.invoke()
+    }
+
+    /** Stops ringing everywhere (answered, hung up, or superseded) without telling the caller. */
+    fun cancelCall() {
+        mainHandler.removeCallbacksAndMessages(RING_TOKEN)
+        onUnanswered = null
+        ringer.stop()
+        overlay.hideIf(OverlayController.Kind.CALL)
+        runCatching { manager.cancel(CALL_ID) }
+    }
+
+    /**
+     * The call in the shade: Answer / Decline, and a full-screen intent so it covers a locked screen. Silent
+     * when the ring already plays from the overlay, so the phone rings once, not twice.
+     */
+    private fun notifyCall(
+        skin: MascotSkin,
+        stage: MascotStage,
+        petName: String,
+        appLabel: String,
+        ringing: Intent,
+        answered: Intent,
+        silent: Boolean,
+    ) {
         val fullScreen = PendingIntent.getActivity(context, REQUEST_RING, ringing, PENDING_FLAGS)
         val answer = PendingIntent.getActivity(context, REQUEST_ANSWER, answered, PENDING_FLAGS)
         val decline =
@@ -125,18 +201,14 @@ class PetContactNotifier @Inject constructor(
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setOngoing(true)
+                .setSilent(silent)
                 .setFullScreenIntent(fullScreen, true)
                 .setContentIntent(fullScreen)
                 .build()
         runCatching { manager.notify(CALL_ID, notification) }
-        mainHandler.removeCallbacksAndMessages(RING_TOKEN)
-        mainHandler.postDelayed({ cancelCall() }, RING_TOKEN, AnimationSpecs.CALL_RING_MILLIS)
     }
 
-    fun cancelCall() {
-        mainHandler.removeCallbacksAndMessages(RING_TOKEN)
-        runCatching { manager.cancel(CALL_ID) }
-    }
+    private fun locked(): Boolean = context.getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true
 
     /** The pet's script for the call: who it is, why, one line in its own voice, and the ask. */
     private fun callLines(

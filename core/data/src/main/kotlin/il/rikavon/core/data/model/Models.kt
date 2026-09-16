@@ -14,8 +14,8 @@ data class AppLimit(
     val maxOpens: Int = 0,
     /** Longest single sitting in minutes before a forced break; 0 means no session limit. */
     val sessionMinutes: Int = 0,
-    /** The pet calls and begs the moment this app opens, whatever the limit says. */
-    val callOnOpen: Boolean = false,
+    /** The pet calls and begs the moment this app opens, whatever the limit says. On unless switched off. */
+    val callOnOpen: Boolean = true,
 ) {
     companion object {
         const val MIN_MINUTES = 5

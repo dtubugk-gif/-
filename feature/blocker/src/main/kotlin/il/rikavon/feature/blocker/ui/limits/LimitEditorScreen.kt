@@ -86,7 +86,7 @@ data class LimitEditorUiState(
     /** Longest sitting in minutes before a break; 0 is off. */
     val sessionMinutes: Int = 0,
     /** The pet calls and begs the moment this app opens. */
-    val callOnOpen: Boolean = false,
+    val callOnOpen: Boolean = true,
     /** A "block now" or a session break in force for this app. */
     val pause: Pause? = null,
     val exists: Boolean = false,
@@ -137,7 +137,7 @@ class LimitEditorViewModel @Inject constructor(
                     fullBlock = existing?.fullBlock ?: false,
                     maxOpens = existing?.maxOpens ?: 0,
                     sessionMinutes = existing?.sessionMinutes ?: 0,
-                    callOnOpen = existing?.callOnOpen ?: false,
+                    callOnOpen = existing?.callOnOpen ?: true,
                     enabled = existing?.enabled ?: true,
                     exists = existing != null,
                     loaded = true,
@@ -321,6 +321,15 @@ fun LimitEditorScreen(onBack: () -> Unit, viewModel: LimitEditorViewModel = hilt
                 enabled = !state.fullBlock,
                 modifier = Modifier.padding(horizontal = ScreenPadding),
             )
+            SectionLabel(stringResource(R.string.limit_section_pet), modifier = Modifier.padding(top = Spacing.sm))
+            GroupCard {
+                SettingSwitchRow(
+                    title = stringResource(R.string.limit_call_on_open),
+                    subtitle = stringResource(R.string.limit_call_on_open_hint),
+                    checked = state.callOnOpen,
+                    onCheckedChange = viewModel::setCallOnOpen,
+                )
+            }
             BlockNowSection(state, viewModel)
             CapSection(
                 title = stringResource(R.string.limit_opens),
@@ -349,12 +358,6 @@ fun LimitEditorScreen(onBack: () -> Unit, viewModel: LimitEditorViewModel = hilt
                     subtitle = stringResource(R.string.limit_full_block_hint),
                     checked = state.fullBlock,
                     onCheckedChange = viewModel::setFullBlock,
-                )
-                SettingSwitchRow(
-                    title = stringResource(R.string.limit_call_on_open),
-                    subtitle = stringResource(R.string.limit_call_on_open_hint),
-                    checked = state.callOnOpen,
-                    onCheckedChange = viewModel::setCallOnOpen,
                 )
                 SettingSwitchRow(
                     title = stringResource(R.string.limit_enabled),

@@ -4,7 +4,7 @@ import il.rikavon.core.data.model.AppLimit
 import il.rikavon.core.data.model.DayUsageSnapshot
 import java.time.LocalDate
 
-enum class MessageKind { NEAR_LIMIT, AT_LIMIT }
+enum class MessageKind { NEAR_LIMIT, AT_LIMIT, PLEAD }
 
 enum class CallReason { NEAR_LIMIT, BLOCKED, PLEAD }
 

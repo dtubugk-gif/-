@@ -16,7 +16,7 @@ data class AppLimitEntity(
     val createdAt: Long,
     @ColumnInfo(defaultValue = "0") val maxOpens: Int = 0,
     @ColumnInfo(defaultValue = "0") val sessionMinutes: Int = 0,
-    @ColumnInfo(defaultValue = "0") val callOnOpen: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val callOnOpen: Boolean = true,
 )
 
 @Entity(tableName = "schedules")

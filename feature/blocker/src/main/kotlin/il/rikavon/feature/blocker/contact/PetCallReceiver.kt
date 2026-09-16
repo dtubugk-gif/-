@@ -12,6 +12,6 @@ class PetCallReceiver : BroadcastReceiver() {
     @Inject lateinit var notifier: PetContactNotifier
 
     override fun onReceive(context: Context, intent: Intent) {
-        notifier.cancelCall()
+        notifier.decline()
     }
 }

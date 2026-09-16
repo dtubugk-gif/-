@@ -7,6 +7,7 @@ package il.rikavon.feature.blocker.engine
  *  - some app is already blockable and the accessibility service is off (polling is the only thing
  *    standing between the user and that app): 1s
  *  - the app on screen is tracked, or some app is already blockable, or usage >= 95% of a limit: 2s
+ *  - some app rings on every open and only polling can notice the open: 3s
  *  - usage >= 80% of a limit: 5s
  *  - otherwise: 15s
  */
@@ -17,11 +18,13 @@ class PollingPolicy {
         anyBlockable: Boolean,
         maxUsageRatio: Float,
         instantPath: Boolean = false,
+        watchingOpens: Boolean = false,
     ): Long? =
         when {
             !screenOn -> null
             anyBlockable && !instantPath -> INSTANT_MILLIS
             foregroundTracked || anyBlockable || maxUsageRatio >= CRITICAL_RATIO -> FAST_MILLIS
+            watchingOpens && !instantPath -> WATCH_MILLIS
             maxUsageRatio >= WARNING_RATIO -> MEDIUM_MILLIS
             else -> NORMAL_MILLIS
         }
@@ -29,6 +32,7 @@ class PollingPolicy {
     companion object {
         const val NORMAL_MILLIS = 15_000L
         const val MEDIUM_MILLIS = 5_000L
+        const val WATCH_MILLIS = 3_000L
         const val FAST_MILLIS = 2_000L
         const val INSTANT_MILLIS = 1_000L
         const val WARNING_RATIO = 0.8f
