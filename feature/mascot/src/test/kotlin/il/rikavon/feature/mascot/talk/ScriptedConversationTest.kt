@@ -1,5 +1,6 @@
 package il.rikavon.feature.mascot.talk
 
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -33,29 +34,33 @@ class ScriptedConversationTest {
     }
 
     @Test
-    fun `replies are filled in and stay in the pet's language`() {
-        val engine = ScriptedConversation(Random(1))
-        val reply = engine.reply("what's my score", english)
-        assertTrue(reply, reply.contains("62") && reply.contains("Instagram") && reply.contains("12"))
-        assertFalse(reply, reply.contains("{"))
-        val hebrewReply = ScriptedConversation(Random(1)).reply("מה שלומך", hebrew)
-        assertTrue(hebrewReply, hebrewReply.contains("Sprouting. Not on purpose.") && hebrewReply.contains("62"))
-        assertFalse(hebrewReply, hebrewReply.contains("{"))
-    }
+    fun `replies are filled in and stay in the pet's language`() =
+        runTest {
+            val engine = ScriptedConversation(Random(1))
+            val reply = engine.reply("what's my score", english)
+            assertTrue(reply, reply.contains("62") && reply.contains("Instagram") && reply.contains("12"))
+            assertFalse(reply, reply.contains("{"))
+            val hebrewReply = ScriptedConversation(Random(1)).reply("מה שלומך", hebrew)
+            assertTrue(hebrewReply, hebrewReply.contains("Sprouting. Not on purpose.") && hebrewReply.contains("62"))
+            assertFalse(hebrewReply, hebrewReply.contains("{"))
+        }
 
     @Test
-    fun `asking why nothing is blocked gets the plain answer`() {
-        val reply = ScriptedConversation(Random(2)).reply("why is it blocked", english.copy(blocked = false))
-        assertEquals(TalkScript.noBlockLine("en"), reply)
-        val blocked = ScriptedConversation(Random(2)).reply("why blocked", english.copy(blocked = true))
-        assertTrue(blocked, blocked.contains("Instagram") || blocked.contains("Yesterday"))
-    }
+    fun `asking why nothing is blocked gets the plain answer`() =
+        runTest {
+            val reply = ScriptedConversation(Random(2)).reply("why is it blocked", english.copy(blocked = false))
+            assertEquals(TalkScript.noBlockLine("en"), reply)
+            val blocked = ScriptedConversation(Random(2)).reply("why blocked", english.copy(blocked = true))
+            assertTrue(blocked, blocked.contains("Instagram") || blocked.contains("Yesterday"))
+        }
 
     @Test
-    fun `personalities answer begging differently`() {
-        val potato = ScriptedConversation(Random(3)).reply("five minutes", english)
-        val robot = ScriptedConversation(Random(3)).reply("five minutes", english.copy(personality = "bureaucratic"))
-        assertTrue(robot, robot.contains("denied") || robot.contains("policy"))
-        assertTrue(potato, potato.contains("No"))
-    }
+    fun `personalities answer begging differently`() =
+        runTest {
+            val potato = ScriptedConversation(Random(3)).reply("five minutes", english)
+            val robot =
+                ScriptedConversation(Random(3)).reply("five minutes", english.copy(personality = "bureaucratic"))
+            assertTrue(robot, robot.contains("denied") || robot.contains("policy"))
+            assertTrue(potato, potato.contains("No"))
+        }
 }

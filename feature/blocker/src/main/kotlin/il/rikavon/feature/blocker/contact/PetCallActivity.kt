@@ -23,7 +23,7 @@ import il.rikavon.core.ui.anim.systemReducedMotion
 import il.rikavon.feature.mascot.registry.MascotTexts
 import il.rikavon.feature.mascot.registry.SelectedMascot
 import il.rikavon.feature.mascot.sound.MascotVoice
-import il.rikavon.feature.mascot.talk.ScriptedConversation
+import il.rikavon.feature.mascot.talk.ConversationEngines
 import il.rikavon.feature.mascot.talk.SpeechListener
 import il.rikavon.feature.mascot.ui.UiLanguage
 import kotlinx.coroutines.delay
@@ -49,6 +49,8 @@ class PetCallActivity : ComponentActivity() {
     @Inject lateinit var texts: MascotTexts
 
     @Inject lateinit var contextSource: TalkContextSource
+
+    @Inject lateinit var engines: ConversationEngines
 
     private val ringer by lazy { CallRinger(applicationContext) }
     private var session: VoiceCallSession? = null
@@ -87,7 +89,7 @@ class PetCallActivity : ComponentActivity() {
                     scope = lifecycleScope,
                     voice = voice,
                     ears = SpeechListener(applicationContext),
-                    engine = ScriptedConversation(),
+                    engine = engines.create(),
                     config =
                         VoiceCallSession.Config(
                             voiceProfile = skin.voice,

@@ -137,7 +137,7 @@
     <string name="settings_backup_import_done">הגיבוי שוחזר</string>
     <string name="settings_backup_failed">משהו השתבש עם הקובץ</string>
     <string name="settings_privacy">פרטיות</string>
-    <string name="settings_privacy_hint">אפס רשת, אפס איסוף. הכול בטלפון.</string>
+    <string name="settings_privacy_hint">בלי רשת, אלא אם הדלקתם את מוח ה-AI. כל השאר נשאר בטלפון.</string>
     <string name="settings_section_premium">פרימיום</string>
     <string name="settings_premium">רקבון פרימיום</string>
     <string name="settings_premium_active">פעיל</string>
@@ -170,11 +170,11 @@
     <string name="battery_vendor_other_body">במכשירי Pixel ורוב היצרנים האחרים הפטור למעלה מספיק. אם השירות בכל זאת נעצר, חפשו בהגדרות ״הפעלה אוטומטית״ או ״אפליקציות ברקע״.</string>
 
     <string name="privacy_title">פרטיות</string>
-    <string name="privacy_summary">אפס רשת. אפס אנליטיקס. אפס SDK צד שלישי. הכול נשאר בטלפון.</string>
+    <string name="privacy_summary">אפס אנליטיקס. אפס עוקבים של צד שלישי. הכול נשאר בטלפון, אלא אם הדלקתם את מוח ה-AI עם המפתח שלכם.</string>
     <string name="privacy_collect_title">מה האפליקציה אוספת</string>
     <string name="privacy_collect_body">רשימת האפליקציות המותקנות, זמן השימוש ומספר הפתיחות שלהן היום ובעד 90 הימים האחרונים, הגבולות ולוחות הזמנים שהגדרתם, הציון היומי, רצפים והישגים. הכול כדי להציג לכם את המחמד והסטטיסטיקות.</string>
     <string name="privacy_network_title">לאן זה הולך</string>
-    <string name="privacy_network_body">לשום מקום. לאפליקציה אין הרשאת אינטרנט בכלל. אין שרת, אין חשבון, אין מזהה מכשיר.</string>
+    <string name="privacy_network_body">לשום מקום, כברירת מחדל: אין שרת, אין חשבון, אין מזהה מכשיר. חריג אחד שבשליטתכם: כשמוח ה-AI דלוק (הגדרות ← מחמד ← מוח AI, עם מפתח Anthropic משלכם), מה שאתם אומרים למחמד וההקשר שלו (השם שלו, הציון שלכם, האפליקציה הקרובה ביותר לגבול והדקות שנשארו) נשלחים ל-API של Anthropic כדי לכתוב את התשובה של המחמד, לפי מדיניות הפרטיות של Anthropic. שום דבר אחר לא נשלח אף פעם, והסרת המפתח מפסיקה את זה.</string>
     <string name="privacy_permissions_title">למה ההרשאות</string>
     <string name="privacy_permissions_body">גישה לנתוני שימוש: כדי למדוד דקות ופתיחות. הצגה מעל אפליקציות: כדי להראות את מסך החסימה. רשימת כל האפליקציות: כדי שתוכלו לבחור מה להגביל. התראות: ההתראה השקטה של השירות וסיכום ערב אופציונלי.</string>
     <string name="privacy_storage_title">איפה זה נשמר</string>
@@ -221,6 +221,15 @@
     <string name="language_hebrew">עברית</string>
     <string name="settings_voice">קול</string>
     <string name="settings_voice_hint">המחמד מקריא את השורות שלו בקול (הקראת טקסט של המכשיר)</string>
+    <string name="settings_ai">מוח AI</string>
+    <string name="settings_ai_on">דלוק: Claude כותב כל שורה בקול של המחמד, עם המפתח שלכם</string>
+    <string name="settings_ai_off">כבוי: המחמד עונה מהתסריט הקבוע שלו</string>
+    <string name="settings_ai_dialog_title">מוח AI</string>
+    <string name="settings_ai_dialog_body">הדביקו מפתח API של Anthropic משלכם וכל תשובה תיכתב מחדש, באישיות של המחמד, על ידי מודל מהיר (Claude Haiku). כשזה דלוק, מה שאתם אומרים למחמד וההקשר שלו (השם שלו, הציון שלכם, האפליקציה הקרובה ביותר לגבול והדקות שנשארו) נשלחים ל-Anthropic. המפתח נשאר בטלפון הזה ולא נכלל בגיבוי. הסירו אותו כדי לחזור לתסריט.</string>
+    <string name="settings_ai_key_hint">sk-ant-…</string>
+    <string name="settings_ai_save">שמירה</string>
+    <string name="settings_ai_remove">הסרת המפתח</string>
+    <string name="settings_ai_cancel">ביטול</string>
 
     <!-- Nudge, PIN, websites -->
     <string name="settings_reminder">דחיפה בתוך אפליקציות</string>

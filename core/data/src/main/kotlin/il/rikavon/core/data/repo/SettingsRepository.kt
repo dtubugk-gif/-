@@ -159,4 +159,7 @@ internal object SettingsKeys {
     val BREATHING_GATE = booleanPreferencesKey("breathing_gate_enabled")
     val REMINDER_MINUTES = intPreferencesKey("reminder_minutes")
     val PIN_HASH = stringPreferencesKey("pin_hash")
+
+    /** The AI brain's API key; read and written only by [AiSettingsRepository]. */
+    val AI_KEY = stringPreferencesKey("ai_key")
 }

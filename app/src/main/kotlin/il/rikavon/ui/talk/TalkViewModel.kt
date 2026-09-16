@@ -14,13 +14,16 @@ import il.rikavon.feature.mascot.registry.MascotTexts
 import il.rikavon.feature.mascot.registry.SelectedMascot
 import il.rikavon.feature.mascot.sound.MascotVoice
 import il.rikavon.feature.mascot.sound.VoiceIssue
-import il.rikavon.feature.mascot.talk.ScriptedConversation
+import il.rikavon.feature.mascot.talk.ConversationEngine
+import il.rikavon.feature.mascot.talk.ConversationEngines
 import il.rikavon.feature.mascot.talk.SpeechFailure
 import il.rikavon.feature.mascot.talk.SpeechListener
 import il.rikavon.feature.mascot.talk.SpeechState
 import il.rikavon.feature.mascot.talk.TalkContext
 import il.rikavon.feature.mascot.talk.TalkScript
 import il.rikavon.feature.mascot.ui.UiLanguage
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -52,8 +55,8 @@ data class TalkUiState(
 
 /**
  * The typed-or-spoken conversation with the pet (the keyboard side of a call): the device recogniser hears
- * the user, the offline script answers in the pet's personality with today's numbers, and the pet says it
- * out loud. Typed input works the same way.
+ * the user, the engine (the AI brain with the user's key, or the offline script) answers in the pet's
+ * personality with today's numbers, and the pet says it out loud. Typed input works the same way.
  */
 @HiltViewModel
 class TalkViewModel @Inject constructor(
@@ -64,9 +67,10 @@ class TalkViewModel @Inject constructor(
     private val contextSource: TalkContextSource,
     private val score: FocusScoreProvider,
     private val settings: SettingsRepository,
+    engines: ConversationEngines,
 ) : ViewModel() {
     private val listener = SpeechListener(context)
-    private val engine = ScriptedConversation()
+    private val engine: Deferred<ConversationEngine> = viewModelScope.async { engines.create() }
     private val _state =
         MutableStateFlow(
             TalkUiState(
@@ -88,7 +92,7 @@ class TalkViewModel @Inject constructor(
                     stage = score.currentStage(),
                 )
             }
-            say(engine.greeting(context()))
+            say(engine.await().greeting(context()))
         }
         viewModelScope.launch { listener.state.collect { onListen(it) } }
     }
@@ -135,7 +139,7 @@ class TalkViewModel @Inject constructor(
 
     private suspend fun onUserSaid(text: String) {
         _state.update { it.copy(messages = it.messages + TalkMessage(fromPet = false, text = text), partial = "") }
-        say(engine.reply(text, context()))
+        say(engine.await().reply(text, context()))
     }
 
     private suspend fun say(text: String) {

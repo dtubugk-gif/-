@@ -12,3 +12,14 @@
 # Widget RemoteViews layout ids are referenced reflectively by the host.
 -keep class il.rikavon.R$id { *; }
 -keep class il.rikavon.R$layout { *; }
+
+# The Claude SDK (optional AI brain) maps JSON through Jackson reflection; keep it whole.
+-keep class com.anthropic.** { *; }
+-keep class com.fasterxml.jackson.** { *; }
+-dontwarn com.anthropic.**
+-dontwarn com.fasterxml.jackson.**
+-dontwarn okhttp3.**
+-dontwarn okio.**
+# Jackson (pulled in by the Claude SDK) references reflection types Android does not ship; never called here.
+-dontwarn java.lang.reflect.AnnotatedParameterizedType
+-dontwarn java.lang.reflect.AnnotatedType

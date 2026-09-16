@@ -16,16 +16,19 @@ data class TalkContext(
     val blocked: Boolean = false,
 )
 
-/** The pet's side of a conversation: the user's words in, one spoken line out. */
+/**
+ * The pet's side of a conversation: the user's words in, one spoken line out. Suspending, because the AI brain
+ * ([ClaudeConversation]) goes to the network for its line; the script answers at once.
+ */
 interface ConversationEngine {
     /** What the pet says back to [userText]. */
-    fun reply(userText: String, context: TalkContext): String
+    suspend fun reply(userText: String, context: TalkContext): String
 
     /** The pet opens the conversation. */
-    fun greeting(context: TalkContext): String
+    suspend fun greeting(context: TalkContext): String
 
     /** A line for an intent the caller already knows (a pressed button, silence on the line). */
-    fun answer(intent: TalkIntent, context: TalkContext): String
+    suspend fun answer(intent: TalkIntent, context: TalkContext): String
 }
 
 /**
@@ -35,12 +38,12 @@ interface ConversationEngine {
 class ScriptedConversation(private val random: Random = Random.Default) : ConversationEngine {
     private var last: String? = null
 
-    override fun reply(userText: String, context: TalkContext): String =
+    override suspend fun reply(userText: String, context: TalkContext): String =
         answer(TalkScript.intentOf(userText, context.language), context)
 
-    override fun greeting(context: TalkContext): String = answer(TalkIntent.GREETING, context)
+    override suspend fun greeting(context: TalkContext): String = answer(TalkIntent.GREETING, context)
 
-    override fun answer(intent: TalkIntent, context: TalkContext): String {
+    override suspend fun answer(intent: TalkIntent, context: TalkContext): String {
         val body =
             if (intent == TalkIntent.WHY_BLOCKED && !context.blocked) {
                 TalkScript.noBlockLine(context.language)

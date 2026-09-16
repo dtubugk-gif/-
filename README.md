@@ -1,7 +1,8 @@
 # רקבון · Rikavon
 
 App blocker, screen-time tracking, and a digital pet that rots in real time.
-Native Android, Kotlin + Jetpack Compose, minSdk 26, targetSdk 35. Zero network, zero analytics.
+Native Android, Kotlin + Jetpack Compose, minSdk 26, targetSdk 35. Zero analytics; no network unless the
+optional AI brain is switched on with the user's own key.
 UI in English by default; Hebrew (full RTL) is one tap away on the welcome screen or in Settings.
 
 The user sets daily limits for distracting apps. A pet on the home screen visibly decays as the day's usage
@@ -165,7 +166,16 @@ BlockerService loop (2s/5s/15s, off when screen off) ◄────────
   what you said to an intent (greeting, "give me more time", a promise, an insult, "why am I blocked", the
   score, thanks, love, goodbye, silence) in Hebrew and English and answers in the pet's personality with
   today's numbers filled in (score, stage, the app closest to its limit and its minutes left). Nothing leaves
-  the device and nothing is recorded; `ConversationEngine` is the seam for a smarter backend later.
+  the device and nothing is recorded; `ConversationEngine` is the seam the AI brain plugs into.
+* **The AI brain (optional)** – `ClaudeConversation` in `:feature:mascot`: with an Anthropic API key entered
+  in Settings (`AiSettingsRepository`, outside `Settings` and backups), every line is written fresh by
+  `claude-haiku-4-5` (the fastest current model, because the reply is spoken inside a conversational pause)
+  from `PetPrompt`: the rules first (one or two spoken sentences, in character, never repeat, brackets are
+  stage directions), then the pet, its stage line, the score, the app and its minutes, and the language. The
+  last twelve turns ride along as memory. `ClaudeBrain` calls the official Java SDK on the IO dispatcher with
+  an 8 s timeout and one retry; any error, refusal or empty answer falls back to the script for that line and
+  the conversation carries on. `ConversationEngines` picks the engine per conversation, so a call and the
+  talk screen each keep their own short memory.
 * **Focus profile (optional)** – the Family Link behaviour itself, for apps the user installs inside a work
   profile that Rikavon owns. `FocusProfileAdminReceiver` is the profile owner (no device policies),
   `FocusProfileComplianceActivity` answers the Android 12+ provisioning handshake, and inside the profile the
@@ -222,7 +232,8 @@ Everything lives in `core/ui/.../anim/AnimationSpecs.kt`. `MascotView` implement
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Doze exemption for the service | more OEM kills; the worker revives it |
 | `RECEIVE_BOOT_COMPLETED` | restart after reboot | service starts on next app open |
 
-There is **no** `INTERNET` permission.
+`INTERNET` is declared only for the optional AI brain (Settings → Pet → AI brain, the user's own Anthropic
+key); nothing touches the network without it.
 
 ---
 
@@ -317,6 +328,8 @@ nothing else changes.
 
 ## Privacy
 
-Zero network, zero analytics, zero third-party SDKs. Data lives in Room/DataStore inside the app sandbox,
+Zero analytics, zero third-party trackers, and no network unless the AI brain is switched on with the user's
+own key (then what they say to the pet and its context go to Anthropic's API, nothing else). Data lives in
+Room/DataStore inside the app sandbox,
 history is pruned after 90 days, backup is a JSON file the user writes through the system file picker.
 Play-facing text, the publishing checklist and the generated store graphics (`docs/play/`): [docs/PLAY.md](docs/PLAY.md).

@@ -88,11 +88,11 @@ class VoiceCallSessionTest {
     }
 
     private object Echo : ConversationEngine {
-        override fun reply(userText: String, context: TalkContext) = "re: $userText"
+        override suspend fun reply(userText: String, context: TalkContext) = "re: $userText"
 
-        override fun greeting(context: TalkContext) = "hi"
+        override suspend fun greeting(context: TalkContext) = "hi"
 
-        override fun answer(intent: TalkIntent, context: TalkContext) = intent.name
+        override suspend fun answer(intent: TalkIntent, context: TalkContext) = intent.name
     }
 
     private val context =

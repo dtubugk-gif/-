@@ -13,6 +13,7 @@ import il.rikavon.core.data.model.ReduceMotionMode
 import il.rikavon.core.data.model.Settings
 import il.rikavon.core.data.permissions.PermissionChecker
 import il.rikavon.core.data.permissions.PermissionState
+import il.rikavon.core.data.repo.AiSettingsRepository
 import il.rikavon.core.data.repo.BackupRepository
 import il.rikavon.core.data.repo.SettingsLockRepository
 import il.rikavon.core.data.repo.SettingsRepository
@@ -53,6 +54,8 @@ data class SettingsUiState(
     val profile: FocusProfileState = FocusProfileState(),
     /** Inside the focus profile: pre-installed apps that can still be switched on there. */
     val systemApps: List<SystemAppCandidate> = emptyList(),
+    /** The AI brain has a key, so the pet's lines come from the model. */
+    val aiConfigured: Boolean = false,
 )
 
 @HiltViewModel
@@ -60,6 +63,7 @@ class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settings: SettingsRepository,
     private val lockRepository: SettingsLockRepository,
+    private val aiSettings: AiSettingsRepository,
     private val backup: BackupRepository,
     private val permissions: PermissionChecker,
     private val starter: ServiceStarter,
@@ -86,9 +90,9 @@ class SettingsViewModel @Inject constructor(
             selectedMascot.skin,
             combine(permissionState, profileState, systemApps) { perms, profile, apps -> Triple(perms, profile, apps) },
             countdown.remaining,
-            backupMessage,
-        ) { prefs, skin, (perms, profile, apps), c, message ->
-            SettingsUiState(prefs, skin, perms, Tier.of(prefs.premium), c, message, versionName, profile, apps)
+            combine(backupMessage, aiSettings.key) { message, key -> message to (key != null) },
+        ) { prefs, skin, (perms, profile, apps), c, (message, ai) ->
+            SettingsUiState(prefs, skin, perms, Tier.of(prefs.premium), c, message, versionName, profile, apps, ai)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), SettingsUiState())
 
     /** The settings lock: switching enforcement off, and removing the lock itself, go through it. */
@@ -173,9 +177,12 @@ class SettingsViewModel @Inject constructor(
 
     fun setDynamicColor(enabled: Boolean) = viewModelScope.launch { settings.setDynamicColor(enabled) }
 
-    fun setSounds(enabled: Boolean) = viewModelScope.launch { settings.setAudio(soundsEnabled = enabled) }
+    /** Sounds and the pet's voice, either or both. */
+    fun setAudio(sounds: Boolean? = null, voice: Boolean? = null) =
+        viewModelScope.launch { settings.setAudio(soundsEnabled = sounds, voiceEnabled = voice) }
 
-    fun setVoice(enabled: Boolean) = viewModelScope.launch { settings.setAudio(voiceEnabled = enabled) }
+    /** The AI brain's key; null or blank switches the brain off. Never goes through the lock: it only adds. */
+    fun setAiKey(key: String?) = viewModelScope.launch { aiSettings.setKey(key) }
 
     fun setPetMessages(enabled: Boolean) = viewModelScope.launch { settings.setPetMessagesEnabled(enabled) }
 

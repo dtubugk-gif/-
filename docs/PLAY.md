@@ -38,7 +38,12 @@
 
 ## 1. Data Safety form
 
-**Does your app collect or share any of the required user data types?** – No.
+**Does your app collect or share any of the required user data types?** – **Yes, only for the optional AI
+brain.** With it off (the default) nothing leaves the phone and the app never opens a network connection.
+With it on (the user pastes their own Anthropic API key under Settings → Pet → AI brain), the text of what the
+user says to the pet and the pet's context (its name, the focus score, the name of the one app closest to its
+limit and its remaining minutes) are sent over HTTPS to Anthropic's API to write the pet's reply. The app
+stores none of it; Anthropic's API data policy applies on the other side.
 
 Rationale for every category:
 
@@ -48,21 +53,21 @@ Rationale for every category:
 | Personal info | No | No | No account, no name, no e-mail |
 | Financial info | No | No | Premium (if wired) goes through Play Billing; the app never sees payment data |
 | Health & fitness | No | No | – |
-| Messages | No | No | – |
+| Messages → *Other in-app messages* | Yes, optional | Yes, optional (Anthropic, app functionality) | Only with the AI brain on: what the user says to the pet, sent to generate the reply; ephemeral, not stored by the app, not required to use the app |
 | Photos & videos | No | No | – |
 | Audio files | No | No | – |
 | Files & docs | No | No | Backup export/import uses the system file picker; the file is written by the user, not uploaded |
 | Calendar | No | No | – |
 | Contacts | No | No | – |
-| App activity → *Installed apps* | **No** (on-device only) | No | The list of installed apps and their usage time is processed and stored **only on the device** and never leaves it. Play's definition of "collection" excludes on-device processing that is not transmitted off the device. |
+| App activity → *Installed apps* | **No** (on-device only) | Optional, minimal | The list of installed apps and their usage time is processed and stored **only on the device**. With the AI brain on, the name of the one app closest to its limit and its remaining minutes are part of the request to Anthropic; nothing else about installed apps ever leaves the device. |
 | App activity → *Other user-generated content / actions* | No | No | Limits, schedules, achievements: on-device only |
 | Web browsing | No | No | – |
 | App info & performance | No | No | No crash reporting, no diagnostics SDK |
 | Device or other IDs | No | No | – |
 
 **Security practices**
-- Data is encrypted in transit: not applicable (no transmission).
-- Users can request data deletion: uninstalling deletes everything; there is no server copy.
+- Data is encrypted in transit: yes (HTTPS), and only with the AI brain on.
+- Users can request data deletion: uninstalling deletes everything the app holds; there is no server copy on the app's side. Removing the key stops all transmission.
 - Independent security review: no.
 
 **Privacy policy URL**: host the text of `PrivacyScreen` (strings `privacy_*`) at a public URL and paste it.
@@ -189,8 +194,9 @@ Character limits: title 30, short description 80, full description 4000. Both la
 • סטטיסטיקות ל-7 ו-30 יום, רצפים, 12 הישגים, מחמדים שנפתחים בהישגים
 • ווידג׳ט למסך הבית, עברית ואנגלית, RTL מלא, גיבוי לקובץ מקומי
 
-פרטיות: אפס רשת. לאפליקציה אין הרשאת אינטרנט בכלל. אין חשבון, אין אנליטיקס, אין SDK של צד שלישי.
-כל הנתונים נשארים בטלפון ונמחקים אחרי 90 יום. שירות הנגישות אופציונלי, ורק אם חסמתם אתר או פיד הוא
+פרטיות: אין חשבון, אין אנליטיקס, אין עוקבים של צד שלישי, ובלי רשת כברירת מחדל. רק אם תדליקו את מוח ה-AI
+עם מפתח Anthropic משלכם, מה שאתם אומרים למחמד נשלח ל-Anthropic כדי שיענה. כל שאר הנתונים נשארים בטלפון
+ונמחקים אחרי 90 יום. שירות הנגישות אופציונלי, ורק אם חסמתם אתר או פיד הוא
 קורא את שורת הכתובת בדפדפן או מזהה את נגן ה-Shorts / Reels, ולא שומר כלום.
 
 הגרסה החינמית שלמה: 3 אפליקציות, לוח זמנים אחד, שני מחמדים מיידיים והשאר בהישגים. פרימיום מסיר את
@@ -228,8 +234,9 @@ What's inside:
 • 7- and 30-day statistics, streaks, 12 achievements, pets unlocked by achievements
 • A home-screen widget, English and Hebrew with full RTL, backup to a local file
 
-Privacy: zero network. The app has no internet permission at all. No account, no analytics, no third-party
-SDK. Everything stays on the phone and is deleted after 90 days. The accessibility service is optional, and
+Privacy: no account, no analytics, no third-party trackers, and no network by default. Only if you switch on
+the AI brain with your own Anthropic key, what you say to the pet is sent to Anthropic for its reply.
+Everything else stays on the phone and is deleted after 90 days. The accessibility service is optional, and
 only if you block a website or a feed does it read the browser's address bar or look for the Shorts / Reels
 player; it stores nothing.
 

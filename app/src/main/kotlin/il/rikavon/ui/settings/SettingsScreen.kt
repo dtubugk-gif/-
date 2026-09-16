@@ -108,6 +108,7 @@ fun SettingsScreen(
     val snackbar = remember { SnackbarHostState() }
     var sheet by remember { mutableStateOf<Sheet?>(null) }
     var profileHelp by remember { mutableStateOf(false) }
+    var aiDialog by remember { mutableStateOf(false) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refreshPermissions() }
     if (profileHelp) {
         AlertDialog(
@@ -196,14 +197,22 @@ fun SettingsScreen(
                         title = stringResource(R.string.settings_sounds),
                         subtitle = stringResource(R.string.settings_sounds_hint),
                         checked = prefs.soundsEnabled,
-                        onCheckedChange = viewModel::setSounds,
+                        onCheckedChange = { viewModel.setAudio(sounds = it) },
                     )
                     SettingSwitchRow(
                         title = stringResource(R.string.settings_voice),
                         subtitle = stringResource(R.string.settings_voice_hint),
                         checked = prefs.voiceEnabled,
-                        onCheckedChange = viewModel::setVoice,
+                        onCheckedChange = { viewModel.setAudio(voice = it) },
                         enabled = prefs.soundsEnabled,
+                    )
+                    SettingNavRow(
+                        title = stringResource(R.string.settings_ai),
+                        subtitle =
+                            stringResource(
+                                if (state.aiConfigured) R.string.settings_ai_on else R.string.settings_ai_off,
+                            ),
+                        onClick = { aiDialog = true },
                     )
                 }
             }
@@ -550,6 +559,20 @@ fun SettingsScreen(
             error = if (lock.wrong) stringResource(errorRes) else null,
             onSubmit = viewModel.lock::submit,
             onDismiss = viewModel.lock::cancel,
+        )
+    }
+    if (aiDialog) {
+        AiKeyDialog(
+            configured = state.aiConfigured,
+            onSave = { key ->
+                viewModel.setAiKey(key)
+                aiDialog = false
+            },
+            onRemove = {
+                viewModel.setAiKey(null)
+                aiDialog = false
+            },
+            onDismiss = { aiDialog = false },
         )
     }
     state.strictCountdown?.let { seconds ->
