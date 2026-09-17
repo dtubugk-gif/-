@@ -43,7 +43,9 @@ brain.** With it off (the default) nothing leaves the phone and the app never op
 With it on (the user pastes their own Anthropic API key under Settings → Pet → AI brain), the text of what the
 user says to the pet and the pet's context (its name, the focus score, the name of the one app closest to its
 limit and its remaining minutes) are sent over HTTPS to Anthropic's API to write the pet's reply. The app
-stores none of it; Anthropic's API data policy applies on the other side.
+stores none of it; Anthropic's API data policy applies on the other side. The optional realistic voice (the
+user's own ElevenLabs key, same place in Settings) sends only the pet's own lines, which are app text and not
+user data, to ElevenLabs to be turned into sound; nothing the user says or does is part of that request.
 
 Rationale for every category:
 
@@ -66,7 +68,7 @@ Rationale for every category:
 | Device or other IDs | No | No | – |
 
 **Security practices**
-- Data is encrypted in transit: yes (HTTPS), and only with the AI brain on.
+- Data is encrypted in transit: yes (HTTPS), and only with the AI brain or the realistic voice on.
 - Users can request data deletion: uninstalling deletes everything the app holds; there is no server copy on the app's side. Removing the key stops all transmission.
 - Independent security review: no.
 
@@ -195,7 +197,8 @@ Character limits: title 30, short description 80, full description 4000. Both la
 • ווידג׳ט למסך הבית, עברית ואנגלית, RTL מלא, גיבוי לקובץ מקומי
 
 פרטיות: אין חשבון, אין אנליטיקס, אין עוקבים של צד שלישי, ובלי רשת כברירת מחדל. רק אם תדליקו את מוח ה-AI
-עם מפתח Anthropic משלכם, מה שאתם אומרים למחמד נשלח ל-Anthropic כדי שיענה. כל שאר הנתונים נשארים בטלפון
+עם מפתח Anthropic משלכם, מה שאתם אומרים למחמד נשלח ל-Anthropic כדי שיענה; ואם תדליקו את הקול הריאליסטי עם
+מפתח ElevenLabs משלכם, השורות שהמחמד אומר נשלחות ל-ElevenLabs כדי להפוך לקול. כל שאר הנתונים נשארים בטלפון
 ונמחקים אחרי 90 יום. שירות הנגישות אופציונלי, ורק אם חסמתם אתר או פיד הוא
 קורא את שורת הכתובת בדפדפן או מזהה את נגן ה-Shorts / Reels, ולא שומר כלום.
 
@@ -235,8 +238,9 @@ What's inside:
 • A home-screen widget, English and Hebrew with full RTL, backup to a local file
 
 Privacy: no account, no analytics, no third-party trackers, and no network by default. Only if you switch on
-the AI brain with your own Anthropic key, what you say to the pet is sent to Anthropic for its reply.
-Everything else stays on the phone and is deleted after 90 days. The accessibility service is optional, and
+the AI brain with your own Anthropic key, what you say to the pet is sent to Anthropic for its reply; and only
+if you switch on the realistic voice with your own ElevenLabs key, the pet's own lines go to ElevenLabs to
+become sound. Everything else stays on the phone and is deleted after 90 days. The accessibility service is optional, and
 only if you block a website or a feed does it read the browser's address bar or look for the Shorts / Reels
 player; it stores nothing.
 

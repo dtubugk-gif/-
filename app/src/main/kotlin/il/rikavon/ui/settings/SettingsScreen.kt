@@ -42,6 +42,7 @@ import il.rikavon.core.data.model.AppLanguage
 import il.rikavon.core.data.model.ReduceMotionMode
 import il.rikavon.core.data.model.Settings
 import il.rikavon.core.data.repo.BackupRepository
+import il.rikavon.core.data.repo.CloudKey
 import il.rikavon.core.ui.components.ChoiceOption
 import il.rikavon.core.ui.components.ChoiceSheet
 import il.rikavon.core.ui.components.GroupCard
@@ -108,7 +109,7 @@ fun SettingsScreen(
     val snackbar = remember { SnackbarHostState() }
     var sheet by remember { mutableStateOf<Sheet?>(null) }
     var profileHelp by remember { mutableStateOf(false) }
-    var aiDialog by remember { mutableStateOf(false) }
+    var keyDialog by remember { mutableStateOf<CloudKey?>(null) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refreshPermissions() }
     if (profileHelp) {
         AlertDialog(
@@ -212,7 +213,19 @@ fun SettingsScreen(
                             stringResource(
                                 if (state.aiConfigured) R.string.settings_ai_on else R.string.settings_ai_off,
                             ),
-                        onClick = { aiDialog = true },
+                        onClick = { keyDialog = CloudKey.BRAIN },
+                    )
+                    SettingNavRow(
+                        title = stringResource(R.string.settings_realistic_voice),
+                        subtitle =
+                            stringResource(
+                                if (state.voiceConfigured) {
+                                    R.string.settings_realistic_voice_on
+                                } else {
+                                    R.string.settings_realistic_voice_off
+                                },
+                            ),
+                        onClick = { keyDialog = CloudKey.VOICE },
                     )
                 }
             }
@@ -561,18 +574,19 @@ fun SettingsScreen(
             onDismiss = viewModel.lock::cancel,
         )
     }
-    if (aiDialog) {
-        AiKeyDialog(
-            configured = state.aiConfigured,
+    keyDialog?.let { kind ->
+        CloudKeyDialog(
+            kind = kind,
+            configured = if (kind == CloudKey.BRAIN) state.aiConfigured else state.voiceConfigured,
             onSave = { key ->
-                viewModel.setAiKey(key)
-                aiDialog = false
+                viewModel.setCloudKey(kind, key)
+                keyDialog = null
             },
             onRemove = {
-                viewModel.setAiKey(null)
-                aiDialog = false
+                viewModel.setCloudKey(kind, null)
+                keyDialog = null
             },
-            onDismiss = { aiDialog = false },
+            onDismiss = { keyDialog = null },
         )
     }
     state.strictCountdown?.let { seconds ->

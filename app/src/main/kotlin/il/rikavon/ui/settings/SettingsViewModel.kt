@@ -13,8 +13,9 @@ import il.rikavon.core.data.model.ReduceMotionMode
 import il.rikavon.core.data.model.Settings
 import il.rikavon.core.data.permissions.PermissionChecker
 import il.rikavon.core.data.permissions.PermissionState
-import il.rikavon.core.data.repo.AiSettingsRepository
 import il.rikavon.core.data.repo.BackupRepository
+import il.rikavon.core.data.repo.CloudKey
+import il.rikavon.core.data.repo.CloudKeysRepository
 import il.rikavon.core.data.repo.SettingsLockRepository
 import il.rikavon.core.data.repo.SettingsRepository
 import il.rikavon.feature.blocker.profile.FocusProfileManager
@@ -56,6 +57,8 @@ data class SettingsUiState(
     val systemApps: List<SystemAppCandidate> = emptyList(),
     /** The AI brain has a key, so the pet's lines come from the model. */
     val aiConfigured: Boolean = false,
+    /** The realistic voice has a key, so the pet speaks through ElevenLabs. */
+    val voiceConfigured: Boolean = false,
 )
 
 @HiltViewModel
@@ -63,7 +66,7 @@ class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settings: SettingsRepository,
     private val lockRepository: SettingsLockRepository,
-    private val aiSettings: AiSettingsRepository,
+    private val cloudKeys: CloudKeysRepository,
     private val backup: BackupRepository,
     private val permissions: PermissionChecker,
     private val starter: ServiceStarter,
@@ -90,9 +93,27 @@ class SettingsViewModel @Inject constructor(
             selectedMascot.skin,
             combine(permissionState, profileState, systemApps) { perms, profile, apps -> Triple(perms, profile, apps) },
             countdown.remaining,
-            combine(backupMessage, aiSettings.key) { message, key -> message to (key != null) },
-        ) { prefs, skin, (perms, profile, apps), c, (message, ai) ->
-            SettingsUiState(prefs, skin, perms, Tier.of(prefs.premium), c, message, versionName, profile, apps, ai)
+            combine(
+                backupMessage,
+                cloudKeys.key(CloudKey.BRAIN),
+                cloudKeys.key(CloudKey.VOICE),
+            ) { message, brain, voice ->
+                Triple(message, brain != null, voice != null)
+            },
+        ) { prefs, skin, (perms, profile, apps), c, (message, ai, voice) ->
+            SettingsUiState(
+                prefs,
+                skin,
+                perms,
+                Tier.of(prefs.premium),
+                c,
+                message,
+                versionName,
+                profile,
+                apps,
+                ai,
+                voice,
+            )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), SettingsUiState())
 
     /** The settings lock: switching enforcement off, and removing the lock itself, go through it. */
@@ -181,8 +202,8 @@ class SettingsViewModel @Inject constructor(
     fun setAudio(sounds: Boolean? = null, voice: Boolean? = null) =
         viewModelScope.launch { settings.setAudio(soundsEnabled = sounds, voiceEnabled = voice) }
 
-    /** The AI brain's key; null or blank switches the brain off. Never goes through the lock: it only adds. */
-    fun setAiKey(key: String?) = viewModelScope.launch { aiSettings.setKey(key) }
+    /** A cloud feature's key; null or blank switches it off. Never behind the lock: keys only add. */
+    fun setCloudKey(kind: CloudKey, key: String?) = viewModelScope.launch { cloudKeys.set(kind, key) }
 
     fun setPetMessages(enabled: Boolean) = viewModelScope.launch { settings.setPetMessagesEnabled(enabled) }
 

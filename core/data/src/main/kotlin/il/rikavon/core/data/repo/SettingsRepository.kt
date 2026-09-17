@@ -160,6 +160,7 @@ internal object SettingsKeys {
     val REMINDER_MINUTES = intPreferencesKey("reminder_minutes")
     val PIN_HASH = stringPreferencesKey("pin_hash")
 
-    /** The AI brain's API key; read and written only by [AiSettingsRepository]. */
+    /** The optional cloud features' keys; read and written only by [CloudKeysRepository]. */
     val AI_KEY = stringPreferencesKey("ai_key")
+    val VOICE_KEY = stringPreferencesKey("voice_key")
 }

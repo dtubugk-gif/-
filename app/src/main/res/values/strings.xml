@@ -137,7 +137,7 @@
     <string name="settings_backup_import_done">Backup restored</string>
     <string name="settings_backup_failed">Something went wrong with the file</string>
     <string name="settings_privacy">Privacy</string>
-    <string name="settings_privacy_hint">No network unless you switch on the AI brain. Everything else stays on the phone.</string>
+    <string name="settings_privacy_hint">No network unless you switch on the AI brain or the realistic voice. Everything else stays on the phone.</string>
     <string name="settings_section_premium">Premium</string>
     <string name="settings_premium">Rikavon Premium</string>
     <string name="settings_premium_active">Active</string>
@@ -170,11 +170,11 @@
     <string name="battery_vendor_other_body">On Pixel and most other brands the exemption above is enough. If the service still stops, look for "Autostart" or "Background apps" in settings.</string>
 
     <string name="privacy_title">Privacy</string>
-    <string name="privacy_summary">Zero analytics. Zero third-party trackers. Everything stays on the phone, unless you switch on the AI brain with your own key.</string>
+    <string name="privacy_summary">Zero analytics. Zero third-party trackers. Everything stays on the phone, unless you switch on the AI brain or the realistic voice with your own keys.</string>
     <string name="privacy_collect_title">What the app collects</string>
     <string name="privacy_collect_body">The list of installed apps, their usage time and open counts for today and up to the last 90 days, the limits and schedules you set, the daily score, streaks and achievements. All of it to show you the pet and the statistics.</string>
     <string name="privacy_network_title">Where it goes</string>
-    <string name="privacy_network_body">Nowhere, by default: no server, no account, no device identifier. One exception you control: with the AI brain on (Settings → Pet → AI brain, your own Anthropic key), what you say to the pet and its context (its name, your score, the app closest to its limit and the minutes left) are sent to Anthropic\'s API to write the pet\'s reply, under Anthropic\'s privacy policy. Nothing else is ever sent, and removing the key stops it.</string>
+    <string name="privacy_network_body">Nowhere, by default: no server, no account, no device identifier. One exception you control: with the AI brain on (Settings → Pet → AI brain, your own Anthropic key), what you say to the pet and its context (its name, your score, the app closest to its limit and the minutes left) are sent to Anthropic\'s API to write the pet\'s reply, under Anthropic\'s privacy policy. The realistic voice works the same way: with your own ElevenLabs key entered, the lines the pet says (and nothing you say) are sent to ElevenLabs to be turned into sound. Nothing else is ever sent, and removing a key stops it.</string>
     <string name="privacy_permissions_title">Why the permissions</string>
     <string name="privacy_permissions_body">Usage access: to measure minutes and opens. Display over other apps: to show the block screen. Query all packages: so you can choose what to limit. Notifications: the service\'s silent notification and an optional evening summary.</string>
     <string name="privacy_storage_title">Where it is stored</string>
@@ -230,6 +230,12 @@
     <string name="settings_ai_save">Save</string>
     <string name="settings_ai_remove">Remove key</string>
     <string name="settings_ai_cancel">Cancel</string>
+    <string name="settings_realistic_voice">Realistic voice</string>
+    <string name="settings_realistic_voice_on">On: a natural ElevenLabs voice per pet, with your own key</string>
+    <string name="settings_realistic_voice_off">Off: the device\'s own text-to-speech</string>
+    <string name="settings_voice_dialog_title">Realistic voice</string>
+    <string name="settings_voice_dialog_body">Paste your own ElevenLabs API key and the pet speaks with a natural, human-sounding voice: a different one per pet, in Hebrew and English. While it is on, only the lines the pet says are sent to ElevenLabs to be turned into sound; nothing you say is. The key stays on this phone and is never backed up. Whenever the voice cannot be reached, the device\'s own voice reads the line instead.</string>
+    <string name="settings_voice_key_hint">ElevenLabs API key</string>
 
     <!-- Nudge, PIN, websites -->
     <string name="settings_reminder">Nudge inside apps</string>

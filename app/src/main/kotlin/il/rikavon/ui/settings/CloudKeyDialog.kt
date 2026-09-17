@@ -18,28 +18,45 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import il.rikavon.R
+import il.rikavon.core.data.repo.CloudKey
 import il.rikavon.core.ui.theme.Spacing
 
-/** Where the user pastes (or removes) their own API key for the AI brain, with what that means spelled out. */
+/** Where the user pastes (or removes) their own API key for a cloud feature, with what that means spelled out. */
 @Composable
-fun AiKeyDialog(configured: Boolean, onSave: (String) -> Unit, onRemove: () -> Unit, onDismiss: () -> Unit) {
-    var key by rememberSaveable { mutableStateOf("") }
+fun CloudKeyDialog(
+    kind: CloudKey,
+    configured: Boolean,
+    onSave: (String) -> Unit,
+    onRemove: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var key by rememberSaveable(kind) { mutableStateOf("") }
+    val title =
+        when (kind) {
+            CloudKey.BRAIN -> R.string.settings_ai_dialog_title
+            CloudKey.VOICE -> R.string.settings_voice_dialog_title
+        }
+    val body =
+        when (kind) {
+            CloudKey.BRAIN -> R.string.settings_ai_dialog_body
+            CloudKey.VOICE -> R.string.settings_voice_dialog_body
+        }
+    val hint =
+        when (kind) {
+            CloudKey.BRAIN -> R.string.settings_ai_key_hint
+            CloudKey.VOICE -> R.string.settings_voice_key_hint
+        }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                stringResource(R.string.settings_ai_dialog_title),
-                style = MaterialTheme.typography.titleLarge,
-            )
-        },
+        title = { Text(stringResource(title), style = MaterialTheme.typography.titleLarge) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                Text(stringResource(R.string.settings_ai_dialog_body), style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(body), style = MaterialTheme.typography.bodyMedium)
                 OutlinedTextField(
                     value = key,
                     onValueChange = { key = it.trim() },
                     singleLine = true,
-                    placeholder = { Text(stringResource(R.string.settings_ai_key_hint)) },
+                    placeholder = { Text(stringResource(hint)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii, autoCorrectEnabled = false),
                     modifier = Modifier.fillMaxWidth(),
                 )

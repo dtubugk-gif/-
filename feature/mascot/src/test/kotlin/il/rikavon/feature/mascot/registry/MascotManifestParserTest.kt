@@ -141,12 +141,23 @@ class MascotManifestParserTest {
     @Test
     fun `voice falls back to the personality preset and is clamped when present`() {
         assertEquals(VoiceProfile.forPersonality("cynical"), parser.parse("brain", manifest(), allAssetsExist).voice)
+        val cynical = VoiceProfile.forPersonality("cynical").neuralVoiceId
         assertEquals(
-            VoiceProfile(pitch = 1.3f, rate = 0.9f),
+            VoiceProfile(pitch = 1.3f, rate = 0.9f, neuralVoiceId = cynical),
             parser.parse("brain", manifest(voice = """{ "pitch": 1.3, "rate": 0.9 }"""), allAssetsExist).voice,
         )
         assertEquals(
-            VoiceProfile(pitch = 2f, rate = 0.5f),
+            "custom",
+            parser
+                .parse(
+                    "brain",
+                    manifest(voice = """{ "pitch": 1.3, "rate": 0.9, "neural": "custom" }"""),
+                    allAssetsExist,
+                ).voice
+                .neuralVoiceId,
+        )
+        assertEquals(
+            VoiceProfile(pitch = 2f, rate = 0.5f, neuralVoiceId = cynical),
             parser.parse("brain", manifest(voice = """{ "pitch": 9, "rate": 0.1 }"""), allAssetsExist).voice,
         )
     }

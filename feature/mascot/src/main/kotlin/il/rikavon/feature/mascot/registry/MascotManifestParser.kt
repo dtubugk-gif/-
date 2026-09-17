@@ -39,7 +39,7 @@ internal data class ManifestDto(
 internal data class StageDto(val asset: String? = null, val texts: Map<String, List<String>>)
 
 @Serializable
-internal data class VoiceDto(val pitch: Float = 1f, val rate: Float = 1f)
+internal data class VoiceDto(val pitch: Float = 1f, val rate: Float = 1f, val neural: String? = null)
 
 class MascotManifestException(message: String) : IllegalArgumentException(message)
 
@@ -123,8 +123,13 @@ class MascotManifestParser(private val json: Json = Json { ignoreUnknownKeys = t
             reaction = reaction,
             soundAsset = dto.sound?.takeIf(assetExists)?.let { "$ASSET_ROOT/$folder/$it" },
             voice =
-                dto.voice?.let { VoiceProfile.clamped(it.pitch, it.rate) }
-                    ?: VoiceProfile.forPersonality(dto.personality),
+                dto.voice?.let {
+                    VoiceProfile.clamped(
+                        it.pitch,
+                        it.rate,
+                        it.neural ?: VoiceProfile.forPersonality(dto.personality).neuralVoiceId,
+                    )
+                } ?: VoiceProfile.forPersonality(dto.personality),
             stages = stages,
             blockMessages = blockMessages,
             summaries = summaries,
