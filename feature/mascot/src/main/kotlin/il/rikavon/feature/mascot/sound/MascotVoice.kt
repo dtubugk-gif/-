@@ -9,7 +9,9 @@ import android.speech.tts.UtteranceProgressListener
 import dagger.hilt.android.qualifiers.ApplicationContext
 import il.rikavon.core.data.repo.CloudKey
 import il.rikavon.core.data.repo.CloudKeysRepository
+import il.rikavon.core.data.repo.VoiceChoicesRepository
 import il.rikavon.feature.mascot.model.VoiceProfile
+import il.rikavon.feature.mascot.registry.SelectedMascot
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -26,7 +28,8 @@ import javax.inject.Singleton
 /**
  * The pet's voice. By default the device's own text-to-speech engine, tuned per mascot (pitch and rate), so
  * every line the pet says on screen can also be said out loud and nothing leaves the device. With the user's
- * own ElevenLabs key ([CloudKey.VOICE]) the lines are spoken by a natural voice instead, one per mascot, the
+ * own ElevenLabs key ([CloudKey.VOICE]) the lines are spoken by a natural voice instead, one per mascot from the
+ * account's own voices ([VoiceCatalog]: the user's pick, the manifest's, or the one that fits the personality), the
  * next line synthesised while the current one plays; the device engine takes over the moment the cloud voice
  * fails, mid-sentence-list if need be. Ambient lines go out on the media stream (the one users actually turn
  * up); call lines go out on the voice-call stream so they follow the earpiece / speaker routing and the call
@@ -36,6 +39,9 @@ import javax.inject.Singleton
 class MascotVoice @Inject constructor(
     @ApplicationContext private val context: Context,
     keys: CloudKeysRepository,
+    private val catalog: VoiceCatalog,
+    private val choices: VoiceChoicesRepository,
+    private val selectedMascot: SelectedMascot,
 ) : VoiceOutput {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val player = ClipPlayer()
@@ -43,6 +49,9 @@ class MascotVoice @Inject constructor(
 
     @Volatile
     private var synthesizer: SpeechSynthesizer? = null
+
+    @Volatile
+    private var voiceKey: String? = null
     private var engine: TextToSpeech? = null
     private var ready = false
     private var pending: (() -> Unit)? = null
@@ -70,7 +79,10 @@ class MascotVoice @Inject constructor(
 
     init {
         scope.launch {
-            keys.key(CloudKey.VOICE).collect { key -> synthesizer = key?.let { ElevenLabsSynthesizer(it) } }
+            keys.key(CloudKey.VOICE).collect { key ->
+                voiceKey = key
+                synthesizer = key?.let { ElevenLabsSynthesizer(it) }
+            }
         }
     }
 
@@ -88,9 +100,9 @@ class MascotVoice @Inject constructor(
         val spoken = lines.filter { it.isNotBlank() }
         if (spoken.isEmpty() || (!prompted && !ringerAllowsSound())) return
         val cloud = synthesizer
-        val voiceId = profile.neuralVoiceId
-        if (cloud != null && voiceId != null) {
-            speakNeural(spoken, profile, languageTag, inCall, cloud, voiceId)
+        val key = voiceKey
+        if (cloud != null && key != null) {
+            speakNeural(spoken, profile, languageTag, inCall, cloud, key)
         } else {
             sayWithEngine(spoken, profile, languageTag, inCall, offset = 0)
         }
@@ -105,8 +117,9 @@ class MascotVoice @Inject constructor(
     }
 
     /**
-     * The realistic voice: each line is fetched as a clip and played, the next one fetched meanwhile so the
-     * gaps stay short. The first clip that cannot be fetched hands the rest of the lines to the device engine.
+     * The realistic voice: the account's voice for this pet is looked up, then each line is fetched as a clip
+     * and played, the next one fetched meanwhile so the gaps stay short. No usable voice, or the first clip
+     * that cannot be fetched, hands the rest of the lines to the device engine.
      */
     private fun speakNeural(
         lines: List<String>,
@@ -114,7 +127,7 @@ class MascotVoice @Inject constructor(
         languageTag: String,
         inCall: Boolean,
         cloud: SpeechSynthesizer,
-        voiceId: String,
+        key: String,
     ) {
         neuralJob?.cancel()
         runCatching { engine?.stop() }
@@ -124,6 +137,11 @@ class MascotVoice @Inject constructor(
         val attributes = if (inCall) callAttributes else mediaAttributes
         neuralJob =
             scope.launch {
+                val voiceId =
+                    resolveVoice(key, profile) ?: run {
+                        sayWithEngine(lines, profile, languageTag, inCall, offset = 0)
+                        return@launch
+                    }
                 var next = async { cloud.synthesize(lines[0], voiceId, languageTag, profile.rate) }
                 for ((index, line) in lines.withIndex()) {
                     val clip = next.await()
@@ -142,6 +160,12 @@ class MascotVoice @Inject constructor(
                 }
                 finished()
             }
+    }
+
+    /** The user's pick for the selected pet, else the manifest's voice, else the account's best fit. */
+    private suspend fun resolveVoice(key: String, profile: VoiceProfile): String? {
+        val choice = selectedMascot.current()?.id?.let { choices.current(it) }
+        return catalog.resolve(key, profile, choice)
     }
 
     private fun sayWithEngine(

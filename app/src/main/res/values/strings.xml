@@ -240,6 +240,9 @@
     <string name="settings_voice_test_running">Asking ElevenLabs…</string>
     <string name="settings_voice_test_ok">It works. That is the pet\'s new voice.</string>
     <string name="settings_voice_test_failed">ElevenLabs refused: %1$s. Until this works, the pet keeps the device\'s voice.</string>
+    <string name="settings_voice_pick">Voice: %1$s</string>
+    <string name="settings_voice_auto">Automatic (by personality)</string>
+    <string name="settings_voice_test_none">Your ElevenLabs account lists no voice the app may use.</string>
     <string name="settings_voice_test_line">Hello. This is how I sound from now on. Better, no?</string>
 
     <!-- Nudge, PIN, websites -->

@@ -240,6 +240,9 @@
     <string name="settings_voice_test_running">שואל את ElevenLabs…</string>
     <string name="settings_voice_test_ok">עובד. זה הקול החדש של המחמד.</string>
     <string name="settings_voice_test_failed">ElevenLabs סירב: %1$s. עד שזה יעבוד, המחמד ממשיך בקול של המכשיר.</string>
+    <string name="settings_voice_pick">קול: %1$s</string>
+    <string name="settings_voice_auto">אוטומטי (לפי האישיות)</string>
+    <string name="settings_voice_test_none">בחשבון ה-ElevenLabs שלכם אין קול שהאפליקציה יכולה להשתמש בו.</string>
     <string name="settings_voice_test_line">שלום. ככה אני נשמע מעכשיו. יותר טוב, לא?</string>
 
     <!-- Nudge, PIN, websites -->

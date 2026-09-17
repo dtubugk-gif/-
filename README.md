@@ -178,9 +178,12 @@ BlockerService loop (2s/5s/15s, off when screen off) ◄────────
   talk screen each keep their own short memory.
 * **The realistic voice (optional)** – with an ElevenLabs API key entered in Settings (`CloudKeysRepository`,
   the same place as the brain's key), `MascotVoice` speaks through `ElevenLabsSynthesizer` instead of the
-  device engine: `eleven_flash_v2_5` (Hebrew and English, low latency), a premade voice per personality in
-  `VoiceProfile.forPersonality` (a manifest can name its own under `voice.neural`), the pet's pace mapped to
-  the voice's speed, and each clip played by `ClipPlayer` on the same media / voice-call attributes as before.
+  device engine: `eleven_flash_v2_5` (Hebrew and English, low latency), the voice taken from the account's own
+  list (`VoiceCatalog` reads `GET /v1/voices` once per key: the user's pick for this pet from the Settings
+  dialog, else the manifest's `voice.neural`, else the premade voice whose gender and age fit the personality;
+  a free plan may only call the voices in its own list, never an arbitrary library voice), the pet's pace
+  mapped to the voice's speed, and each clip played by `ClipPlayer` on the same media / voice-call attributes
+  as before. The dialog's "Test the voice" makes one real request and shows a refusal verbatim.
   The next line is synthesised while the current one plays; the first clip that fails hands the rest of the
   lines to the device engine, so the pet is never silent for want of a network. Only the pet's own lines
   travel; nothing the user says does.

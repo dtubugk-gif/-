@@ -1,10 +1,13 @@
 package il.rikavon.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -12,6 +15,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -37,6 +41,9 @@ fun CloudKeyDialog(
 ) {
     var key by rememberSaveable(kind) { mutableStateOf("") }
     val test by viewModel.test.collectAsStateWithLifecycle()
+    val voices by viewModel.voices.collectAsStateWithLifecycle()
+    val choice by viewModel.choice.collectAsStateWithLifecycle()
+    var picking by remember { mutableStateOf(false) }
     val language = UiLanguage.current()
     val testLine = stringResource(R.string.settings_voice_test_line)
     val title =
@@ -69,6 +76,38 @@ fun CloudKeyDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (configured && kind == CloudKey.VOICE) {
+                    val automatic = stringResource(R.string.settings_voice_auto)
+                    val chosen = voices.firstOrNull { it.id == choice }?.name ?: automatic
+                    Box {
+                        TextButton(onClick = { picking = true }, enabled = voices.isNotEmpty()) {
+                            Text(stringResource(R.string.settings_voice_pick, chosen))
+                        }
+                        DropdownMenu(expanded = picking, onDismissRequest = { picking = false }) {
+                            DropdownMenuItem(
+                                text = { Text(automatic) },
+                                onClick = {
+                                    viewModel.chooseVoice(null)
+                                    picking = false
+                                },
+                            )
+                            voices.forEach { voice ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text(voice.name)
+                                            if (voice.description.isNotEmpty()) {
+                                                Text(voice.description, style = MaterialTheme.typography.bodySmall)
+                                            }
+                                        }
+                                    },
+                                    onClick = {
+                                        viewModel.chooseVoice(voice.id)
+                                        picking = false
+                                    },
+                                )
+                            }
+                        }
+                    }
                     TextButton(
                         onClick = { viewModel.testVoice(testLine, language) },
                         enabled = test != VoiceTest.Running,
@@ -79,12 +118,13 @@ fun CloudKeyDialog(
                                 when (outcome) {
                                     VoiceTest.Running -> stringResource(R.string.settings_voice_test_running)
                                     VoiceTest.Ok -> stringResource(R.string.settings_voice_test_ok)
+                                    VoiceTest.NoVoice -> stringResource(R.string.settings_voice_test_none)
                                     is VoiceTest.Failed ->
                                         stringResource(R.string.settings_voice_test_failed, outcome.detail)
                                 },
                             style = MaterialTheme.typography.bodySmall,
                             color =
-                                if (outcome is VoiceTest.Failed) {
+                                if (outcome is VoiceTest.Failed || outcome == VoiceTest.NoVoice) {
                                     MaterialTheme.colorScheme.error
                                 } else {
                                     MaterialTheme.colorScheme.onSurfaceVariant

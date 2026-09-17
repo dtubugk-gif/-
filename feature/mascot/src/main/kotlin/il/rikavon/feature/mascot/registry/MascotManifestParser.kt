@@ -123,13 +123,8 @@ class MascotManifestParser(private val json: Json = Json { ignoreUnknownKeys = t
             reaction = reaction,
             soundAsset = dto.sound?.takeIf(assetExists)?.let { "$ASSET_ROOT/$folder/$it" },
             voice =
-                dto.voice?.let {
-                    VoiceProfile.clamped(
-                        it.pitch,
-                        it.rate,
-                        it.neural ?: VoiceProfile.forPersonality(dto.personality).neuralVoiceId,
-                    )
-                } ?: VoiceProfile.forPersonality(dto.personality),
+                dto.voice?.let { VoiceProfile.clamped(it.pitch, it.rate, it.neural, dto.personality) }
+                    ?: VoiceProfile.forPersonality(dto.personality),
             stages = stages,
             blockMessages = blockMessages,
             summaries = summaries,

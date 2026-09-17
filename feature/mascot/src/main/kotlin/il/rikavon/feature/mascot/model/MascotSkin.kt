@@ -129,38 +129,33 @@ data class MascotSkin(
 
 /**
  * The pet's voice: for the device engine, [pitch] 0.5–2.0 (1 = neutral) and [rate] 0.5–2.0 (1 = normal); for
- * the optional realistic voice, [neuralVoiceId], an ElevenLabs voice (one of the premade ones every account
- * has, unless a manifest names another).
+ * the realistic voice, the [personality] a cloud voice is chosen for from the user's own account, unless a
+ * manifest names an ElevenLabs voice outright in [neuralVoiceId].
  */
-data class VoiceProfile(val pitch: Float, val rate: Float, val neuralVoiceId: String? = null) {
+data class VoiceProfile(
+    val pitch: Float,
+    val rate: Float,
+    val neuralVoiceId: String? = null,
+    val personality: String = "",
+) {
     companion object {
-        val NEUTRAL = VoiceProfile(pitch = 1f, rate = 1f, neuralVoiceId = VOICE_ROGER)
+        val NEUTRAL = VoiceProfile(pitch = 1f, rate = 1f)
         private const val MIN = 0.5f
         private const val MAX = 2f
-
-        // ElevenLabs premade voices: a dry Englishman, a theatrical woman, a bright young woman, a poised
-        // Englishwoman, a clipped announcer, an old man who has seen it all, and a plain default.
-        private const val VOICE_GEORGE = "JBFqnCBsd6RMkjVDRZzb"
-        private const val VOICE_CHARLOTTE = "XB0fDUnXU5powFXDhCwa"
-        private const val VOICE_LAURA = "FGY2WhTYpPnrIDTdsKH5"
-        private const val VOICE_ALICE = "Xb7hH8MSUJpSbSDYk0k2"
-        private const val VOICE_DANIEL = "onwK4e9ZLuTAKqWW03F9"
-        private const val VOICE_BILL = "pqHfZKP75CvOlQylNhV4"
-        private const val VOICE_ROGER = "CwhRBWXzGAHq8TQ4Fs17"
 
         /** A voice that fits the personality when the manifest does not specify one. */
         fun forPersonality(personality: String): VoiceProfile =
             when (personality) {
-                "cynical" -> VoiceProfile(pitch = 0.75f, rate = 0.95f, neuralVoiceId = VOICE_GEORGE)
-                "dramatic" -> VoiceProfile(pitch = 1.15f, rate = 0.85f, neuralVoiceId = VOICE_CHARLOTTE)
-                "confused" -> VoiceProfile(pitch = 1.35f, rate = 1.05f, neuralVoiceId = VOICE_LAURA)
-                "judgmental" -> VoiceProfile(pitch = 1.2f, rate = 0.9f, neuralVoiceId = VOICE_ALICE)
-                "bureaucratic" -> VoiceProfile(pitch = 0.6f, rate = 1.15f, neuralVoiceId = VOICE_DANIEL)
-                "indifferent" -> VoiceProfile(pitch = 0.8f, rate = 0.8f, neuralVoiceId = VOICE_BILL)
-                else -> NEUTRAL
+                "cynical" -> VoiceProfile(pitch = 0.75f, rate = 0.95f, personality = personality)
+                "dramatic" -> VoiceProfile(pitch = 1.15f, rate = 0.85f, personality = personality)
+                "confused" -> VoiceProfile(pitch = 1.35f, rate = 1.05f, personality = personality)
+                "judgmental" -> VoiceProfile(pitch = 1.2f, rate = 0.9f, personality = personality)
+                "bureaucratic" -> VoiceProfile(pitch = 0.6f, rate = 1.15f, personality = personality)
+                "indifferent" -> VoiceProfile(pitch = 0.8f, rate = 0.8f, personality = personality)
+                else -> NEUTRAL.copy(personality = personality)
             }
 
-        fun clamped(pitch: Float, rate: Float, neuralVoiceId: String? = null): VoiceProfile =
-            VoiceProfile(pitch.coerceIn(MIN, MAX), rate.coerceIn(MIN, MAX), neuralVoiceId)
+        fun clamped(pitch: Float, rate: Float, neuralVoiceId: String? = null, personality: String = ""): VoiceProfile =
+            VoiceProfile(pitch.coerceIn(MIN, MAX), rate.coerceIn(MIN, MAX), neuralVoiceId, personality)
     }
 }

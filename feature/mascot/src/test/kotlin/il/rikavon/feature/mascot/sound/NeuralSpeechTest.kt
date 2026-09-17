@@ -6,6 +6,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -31,13 +32,14 @@ class NeuralSpeechTest {
     }
 
     @Test
-    fun `every personality has its own cloud voice, and a manifest keeps it unless it says otherwise`() {
+    fun `a profile carries its personality for the catalogue, and a manifest may name a voice outright`() {
         val personalities = listOf("cynical", "dramatic", "confused", "judgmental", "bureaucratic", "indifferent")
-        val voices = personalities.map { VoiceProfile.forPersonality(it).neuralVoiceId }
-        voices.forEach { assertNotNull(it) }
-        assertEquals(voices.size, voices.toSet().size)
-        assertEquals(voices[0], VoiceProfile.clamped(0.7f, 1f, voices[0]).neuralVoiceId)
-        assertEquals("custom", VoiceProfile.clamped(0.7f, 1f, "custom").neuralVoiceId)
+        personalities.forEach { assertEquals(it, VoiceProfile.forPersonality(it).personality) }
+        assertNull(VoiceProfile.forPersonality("cynical").neuralVoiceId)
+        assertEquals("mysterious", VoiceProfile.forPersonality("mysterious").personality)
+        val named = VoiceProfile.clamped(0.7f, 1f, "custom", "cynical")
+        assertEquals("custom", named.neuralVoiceId)
+        assertEquals("cynical", named.personality)
         assertTrue(NeuralSpeech.endpoint("abc").contains("/abc?"))
     }
 }
