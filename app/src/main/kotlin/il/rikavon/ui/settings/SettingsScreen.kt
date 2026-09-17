@@ -578,14 +578,6 @@ fun SettingsScreen(
         CloudKeyDialog(
             kind = kind,
             configured = if (kind == CloudKey.BRAIN) state.aiConfigured else state.voiceConfigured,
-            onSave = { key ->
-                viewModel.setCloudKey(kind, key)
-                keyDialog = null
-            },
-            onRemove = {
-                viewModel.setCloudKey(kind, null)
-                keyDialog = null
-            },
             onDismiss = { keyDialog = null },
         )
     }

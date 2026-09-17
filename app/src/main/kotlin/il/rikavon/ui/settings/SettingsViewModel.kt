@@ -202,9 +202,6 @@ class SettingsViewModel @Inject constructor(
     fun setAudio(sounds: Boolean? = null, voice: Boolean? = null) =
         viewModelScope.launch { settings.setAudio(soundsEnabled = sounds, voiceEnabled = voice) }
 
-    /** A cloud feature's key; null or blank switches it off. Never behind the lock: keys only add. */
-    fun setCloudKey(kind: CloudKey, key: String?) = viewModelScope.launch { cloudKeys.set(kind, key) }
-
     fun setPetMessages(enabled: Boolean) = viewModelScope.launch { settings.setPetMessagesEnabled(enabled) }
 
     fun setPetCalls(enabled: Boolean) {

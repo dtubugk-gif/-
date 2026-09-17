@@ -236,6 +236,11 @@
     <string name="settings_voice_dialog_title">Realistic voice</string>
     <string name="settings_voice_dialog_body">Paste your own ElevenLabs API key and the pet speaks with a natural, human-sounding voice: a different one per pet, in Hebrew and English. While it is on, only the lines the pet says are sent to ElevenLabs to be turned into sound; nothing you say is. The key stays on this phone and is never backed up. Whenever the voice cannot be reached, the device\'s own voice reads the line instead.</string>
     <string name="settings_voice_key_hint">ElevenLabs API key</string>
+    <string name="settings_voice_test">Test the voice</string>
+    <string name="settings_voice_test_running">Asking ElevenLabs…</string>
+    <string name="settings_voice_test_ok">It works. That is the pet\'s new voice.</string>
+    <string name="settings_voice_test_failed">ElevenLabs refused: %1$s. Until this works, the pet keeps the device\'s voice.</string>
+    <string name="settings_voice_test_line">Hello. This is how I sound from now on. Better, no?</string>
 
     <!-- Nudge, PIN, websites -->
     <string name="settings_reminder">Nudge inside apps</string>

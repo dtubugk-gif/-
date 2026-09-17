@@ -17,20 +17,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import il.rikavon.R
 import il.rikavon.core.data.repo.CloudKey
 import il.rikavon.core.ui.theme.Spacing
+import il.rikavon.feature.mascot.ui.UiLanguage
 
-/** Where the user pastes (or removes) their own API key for a cloud feature, with what that means spelled out. */
+/**
+ * Where the user pastes (or removes) their own API key for a cloud feature, with what that means spelled out.
+ * The realistic voice can be tried right here, out loud, and a refusal is shown in the service's own words.
+ */
 @Composable
 fun CloudKeyDialog(
     kind: CloudKey,
     configured: Boolean,
-    onSave: (String) -> Unit,
-    onRemove: () -> Unit,
     onDismiss: () -> Unit,
+    viewModel: CloudKeyViewModel = hiltViewModel(),
 ) {
     var key by rememberSaveable(kind) { mutableStateOf("") }
+    val test by viewModel.test.collectAsStateWithLifecycle()
+    val language = UiLanguage.current()
+    val testLine = stringResource(R.string.settings_voice_test_line)
     val title =
         when (kind) {
             CloudKey.BRAIN -> R.string.settings_ai_dialog_title
@@ -60,15 +68,48 @@ fun CloudKeyDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii, autoCorrectEnabled = false),
                     modifier = Modifier.fillMaxWidth(),
                 )
+                if (configured && kind == CloudKey.VOICE) {
+                    TextButton(
+                        onClick = { viewModel.testVoice(testLine, language) },
+                        enabled = test != VoiceTest.Running,
+                    ) { Text(stringResource(R.string.settings_voice_test)) }
+                    test?.let { outcome ->
+                        Text(
+                            text =
+                                when (outcome) {
+                                    VoiceTest.Running -> stringResource(R.string.settings_voice_test_running)
+                                    VoiceTest.Ok -> stringResource(R.string.settings_voice_test_ok)
+                                    is VoiceTest.Failed ->
+                                        stringResource(R.string.settings_voice_test_failed, outcome.detail)
+                                },
+                            style = MaterialTheme.typography.bodySmall,
+                            color =
+                                if (outcome is VoiceTest.Failed) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                        )
+                    }
+                }
                 if (configured) {
-                    TextButton(onClick = onRemove) { Text(stringResource(R.string.settings_ai_remove)) }
+                    TextButton(
+                        onClick = {
+                            viewModel.remove(kind)
+                            onDismiss()
+                        },
+                    ) { Text(stringResource(R.string.settings_ai_remove)) }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(key) }, enabled = key.isNotBlank()) {
-                Text(stringResource(R.string.settings_ai_save))
-            }
+            TextButton(
+                onClick = {
+                    viewModel.save(kind, key)
+                    onDismiss()
+                },
+                enabled = key.isNotBlank(),
+            ) { Text(stringResource(R.string.settings_ai_save)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_ai_cancel)) } },
     )

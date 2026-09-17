@@ -1,5 +1,6 @@
 package il.rikavon.feature.mascot.sound
 
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.buildJsonObject
@@ -58,9 +59,27 @@ object NeuralSpeech {
     private const val MAX_SPEED = 1.15f
 }
 
+/** What one request to the cloud voice came back with; a failure carries what the service said. */
+sealed interface VoiceAttempt {
+    class Clip(val bytes: ByteArray) : VoiceAttempt
+
+    /** [status] is the HTTP status, or 0 when the request never got an answer (no network, a timeout). */
+    data class Failed(val status: Int, val detail: String) : VoiceAttempt
+}
+
 /** [SpeechSynthesizer] on the ElevenLabs API with the user's own key; plain HTTPS, no SDK. */
 class ElevenLabsSynthesizer(private val apiKey: String) : SpeechSynthesizer {
     override suspend fun synthesize(text: String, voiceId: String, languageTag: String, rate: Float): ByteArray? =
+        when (val attempt = attempt(text, voiceId, languageTag, rate)) {
+            is VoiceAttempt.Clip -> attempt.bytes
+            is VoiceAttempt.Failed -> {
+                Log.w(TAG, "ElevenLabs ${attempt.status}: ${attempt.detail}")
+                null
+            }
+        }
+
+    /** One request, with the reason when it fails; the settings screen's voice test shows it to the user. */
+    suspend fun attempt(text: String, voiceId: String, languageTag: String, rate: Float): VoiceAttempt =
         withContext(Dispatchers.IO) {
             runCatching {
                 val connection = URL(NeuralSpeech.endpoint(voiceId)).openConnection() as HttpsURLConnection
@@ -75,16 +94,23 @@ class ElevenLabsSynthesizer(private val apiKey: String) : SpeechSynthesizer {
                     connection.outputStream.use {
                         it.write(NeuralSpeech.requestBody(text, languageTag, rate).toByteArray())
                     }
-                    if (connection.responseCode != HttpURLConnection.HTTP_OK) return@runCatching null
-                    connection.inputStream.use { it.readBytes() }.takeIf { it.isNotEmpty() }
+                    val status = connection.responseCode
+                    if (status != HttpURLConnection.HTTP_OK) {
+                        val detail = connection.errorStream?.use { it.readBytes().decodeToString() }.orEmpty()
+                        return@runCatching VoiceAttempt.Failed(status, detail.take(DETAIL_CHARS))
+                    }
+                    val bytes = connection.inputStream.use { it.readBytes() }
+                    if (bytes.isEmpty()) VoiceAttempt.Failed(status, "empty audio") else VoiceAttempt.Clip(bytes)
                 } finally {
                     connection.disconnect()
                 }
-            }.getOrNull()
+            }.getOrElse { VoiceAttempt.Failed(0, it.toString().take(DETAIL_CHARS)) }
         }
 
     private companion object {
+        const val TAG = "Rikavon"
         const val CONNECT_TIMEOUT_MILLIS = 4_000
         const val READ_TIMEOUT_MILLIS = 8_000
+        const val DETAIL_CHARS = 200
     }
 }

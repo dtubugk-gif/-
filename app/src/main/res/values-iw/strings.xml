@@ -236,6 +236,11 @@
     <string name="settings_voice_dialog_title">קול ריאליסטי</string>
     <string name="settings_voice_dialog_body">הדביקו מפתח API של ElevenLabs משלכם והמחמד ידבר בקול טבעי, אנושי: קול אחר לכל מחמד, בעברית ובאנגלית. כשזה דלוק, רק השורות שהמחמד אומר נשלחות ל-ElevenLabs כדי להפוך לצליל; שום דבר שאתם אומרים לא נשלח. המפתח נשאר בטלפון הזה ולא נכלל בגיבוי. בכל פעם שהקול לא זמין, הקול של המכשיר מקריא את השורה במקום.</string>
     <string name="settings_voice_key_hint">מפתח API של ElevenLabs</string>
+    <string name="settings_voice_test">בדיקת הקול</string>
+    <string name="settings_voice_test_running">שואל את ElevenLabs…</string>
+    <string name="settings_voice_test_ok">עובד. זה הקול החדש של המחמד.</string>
+    <string name="settings_voice_test_failed">ElevenLabs סירב: %1$s. עד שזה יעבוד, המחמד ממשיך בקול של המכשיר.</string>
+    <string name="settings_voice_test_line">שלום. ככה אני נשמע מעכשיו. יותר טוב, לא?</string>
 
     <!-- Nudge, PIN, websites -->
     <string name="settings_reminder">דחיפה בתוך אפליקציות</string>
