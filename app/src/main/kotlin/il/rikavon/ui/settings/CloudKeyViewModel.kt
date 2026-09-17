@@ -113,7 +113,7 @@ class CloudKeyViewModel @Inject constructor(
                     _test.value = VoiceTest.Ok
                     player.play(attempt.bytes, MEDIA)
                 }
-                is VoiceAttempt.Failed -> _test.value = VoiceTest.Failed("${attempt.status} ${attempt.detail}".trim())
+                is VoiceAttempt.Failed -> _test.value = VoiceTest.Failed(attempt.summary())
             }
         }
     }

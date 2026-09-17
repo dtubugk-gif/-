@@ -3,16 +3,20 @@ package il.rikavon.feature.mascot.sound
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 import java.net.HttpURLConnection
 import java.net.URL
 import javax.net.ssl.HttpsURLConnection
 
-/** A cloud voice: one line of text in, a short audio clip out. Null on any failure; the caller falls back. */
+/** A cloud voice: one line of text in, a short audio clip out, or the reason there is none. */
 fun interface SpeechSynthesizer {
-    suspend fun synthesize(text: String, voiceId: String, languageTag: String, rate: Float): ByteArray?
+    suspend fun attempt(text: String, voiceId: String, languageTag: String, rate: Float): VoiceAttempt
 }
 
 /** The request the realistic voice sends, kept pure so it is testable without a network. */
@@ -64,22 +68,28 @@ sealed interface VoiceAttempt {
     class Clip(val bytes: ByteArray) : VoiceAttempt
 
     /** [status] is the HTTP status, or 0 when the request never got an answer (no network, a timeout). */
-    data class Failed(val status: Int, val detail: String) : VoiceAttempt
+    data class Failed(val status: Int, val detail: String) : VoiceAttempt {
+        /**
+         * The status and the service's own sentence ("402 Free users cannot use library voices via the API"),
+         * dug out of its JSON error when it sent one; otherwise the raw detail.
+         */
+        fun summary(): String = "$status ${message()}".trim()
+
+        private fun message(): String =
+            runCatching {
+                when (val error = Json.parseToJsonElement(detail).jsonObject["detail"]) {
+                    is JsonObject -> (error["message"] as? JsonPrimitive)?.content
+                    is JsonPrimitive -> error.content
+                    else -> null
+                }
+            }.getOrNull() ?: detail
+    }
 }
 
 /** [SpeechSynthesizer] on the ElevenLabs API with the user's own key; plain HTTPS, no SDK. */
 class ElevenLabsSynthesizer(private val apiKey: String) : SpeechSynthesizer {
-    override suspend fun synthesize(text: String, voiceId: String, languageTag: String, rate: Float): ByteArray? =
-        when (val attempt = attempt(text, voiceId, languageTag, rate)) {
-            is VoiceAttempt.Clip -> attempt.bytes
-            is VoiceAttempt.Failed -> {
-                Log.w(TAG, "ElevenLabs ${attempt.status}: ${attempt.detail}")
-                null
-            }
-        }
-
-    /** One request, with the reason when it fails; the settings screen's voice test shows it to the user. */
-    suspend fun attempt(text: String, voiceId: String, languageTag: String, rate: Float): VoiceAttempt =
+    /** One request, with the reason when it fails, logged and shown to the user in the service's words. */
+    override suspend fun attempt(text: String, voiceId: String, languageTag: String, rate: Float): VoiceAttempt =
         withContext(Dispatchers.IO) {
             runCatching {
                 val connection = URL(NeuralSpeech.endpoint(voiceId)).openConnection() as HttpsURLConnection
@@ -105,6 +115,7 @@ class ElevenLabsSynthesizer(private val apiKey: String) : SpeechSynthesizer {
                     connection.disconnect()
                 }
             }.getOrElse { VoiceAttempt.Failed(0, it.toString().take(DETAIL_CHARS)) }
+                .also { if (it is VoiceAttempt.Failed) Log.w(TAG, "ElevenLabs ${it.summary()}") }
         }
 
     private companion object {

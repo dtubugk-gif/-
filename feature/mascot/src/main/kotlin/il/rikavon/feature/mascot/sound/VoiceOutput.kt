@@ -15,6 +15,21 @@ enum class VoiceIssue {
     MUTED,
 }
 
+/** Which engine said the pet's last line, so the settings screen can show what is really being heard. */
+sealed interface Speaker {
+    /** The realistic (cloud) voice answered and spoke. */
+    data object Cloud : Speaker
+
+    /** The device's own engine, because no cloud voice is set up. */
+    data object Device : Speaker
+
+    /** The device's own engine, because the account lists no voice the app may use. */
+    data object DeviceNoVoice : Speaker
+
+    /** The device's own engine, because the cloud voice refused; [reason] is its status and what it said. */
+    data class DeviceAfterRefusal(val reason: String) : Speaker
+}
+
 /** Something that can say the pet's lines out loud; [MascotVoice] on a device, a fake in tests. */
 interface VoiceOutput {
     /** The result of the last attempt to speak: null when the pet was heard. */

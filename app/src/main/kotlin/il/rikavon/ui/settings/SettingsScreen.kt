@@ -64,6 +64,7 @@ import il.rikavon.core.ui.theme.LocalExtraColors
 import il.rikavon.core.ui.theme.Sizes
 import il.rikavon.core.ui.theme.Spacing
 import il.rikavon.feature.blocker.ui.common.PinSetup
+import il.rikavon.feature.mascot.sound.Speaker
 import il.rikavon.feature.mascot.ui.UiLanguage
 import java.time.LocalDate
 import il.rikavon.feature.blocker.R as BlockerR
@@ -202,7 +203,7 @@ fun SettingsScreen(
                     )
                     SettingSwitchRow(
                         title = stringResource(R.string.settings_voice),
-                        subtitle = stringResource(R.string.settings_voice_hint),
+                        subtitle = voiceHint(state),
                         checked = prefs.voiceEnabled,
                         onCheckedChange = { viewModel.setAudio(voice = it) },
                         enabled = prefs.soundsEnabled,
@@ -608,6 +609,22 @@ fun SettingsScreen(
         )
     }
 }
+
+/**
+ * Under the voice switch: which engine really spoke the pet's last line. With a cloud key that is the honest
+ * answer to "is the realistic voice on", since the device engine steps in silently whenever the cloud refuses.
+ */
+@Composable
+private fun voiceHint(state: SettingsUiState): String =
+    when (val speaker = state.speaker) {
+        Speaker.Cloud -> stringResource(R.string.settings_voice_hint_cloud)
+        Speaker.DeviceNoVoice -> stringResource(R.string.settings_voice_hint_no_voice)
+        is Speaker.DeviceAfterRefusal -> stringResource(R.string.settings_voice_hint_refused, speaker.reason)
+        Speaker.Device, null ->
+            stringResource(
+                if (state.voiceConfigured) R.string.settings_voice_hint_pending else R.string.settings_voice_hint,
+            )
+    }
 
 private fun ReduceMotionMode.label(): Int =
     when (this) {

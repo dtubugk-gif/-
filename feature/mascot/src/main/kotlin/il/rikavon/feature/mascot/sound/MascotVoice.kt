@@ -63,6 +63,10 @@ class MascotVoice @Inject constructor(
     private var activeFocus: AudioFocusRequest? = null
     private val _issue = MutableStateFlow<VoiceIssue?>(null)
     override val issue: StateFlow<VoiceIssue?> = _issue.asStateFlow()
+    private val _speaker = MutableStateFlow<Speaker?>(null)
+
+    /** Which engine said the last line, and why the device's when the cloud voice was set up; null until one did. */
+    val speaker: StateFlow<Speaker?> = _speaker.asStateFlow()
 
     @Volatile
     override var onSpeakingChanged: ((Boolean) -> Unit)? = null
@@ -104,6 +108,7 @@ class MascotVoice @Inject constructor(
         if (cloud != null && key != null) {
             speakNeural(spoken, profile, languageTag, inCall, cloud, key)
         } else {
+            _speaker.value = Speaker.Device
             sayWithEngine(spoken, profile, languageTag, inCall, offset = 0)
         }
     }
@@ -139,20 +144,24 @@ class MascotVoice @Inject constructor(
             scope.launch {
                 val voiceId =
                     resolveVoice(key, profile) ?: run {
+                        _speaker.value = Speaker.DeviceNoVoice
                         sayWithEngine(lines, profile, languageTag, inCall, offset = 0)
                         return@launch
                     }
-                var next = async { cloud.synthesize(lines[0], voiceId, languageTag, profile.rate) }
-                for ((index, line) in lines.withIndex()) {
-                    val clip = next.await()
+                var next = async { cloud.attempt(lines[0], voiceId, languageTag, profile.rate) }
+                for (index in lines.indices) {
+                    val attempt = next.await()
                     if (index + 1 < lines.size) {
-                        next = async { cloud.synthesize(lines[index + 1], voiceId, languageTag, profile.rate) }
+                        next = async { cloud.attempt(lines[index + 1], voiceId, languageTag, profile.rate) }
                     }
-                    if (clip == null) {
+                    if (attempt is VoiceAttempt.Failed) {
                         next.cancel()
+                        _speaker.value = Speaker.DeviceAfterRefusal(attempt.summary())
                         sayWithEngine(lines.drop(index), profile, languageTag, inCall, offset = index)
                         return@launch
                     }
+                    val clip = (attempt as VoiceAttempt.Clip).bytes
+                    _speaker.value = Speaker.Cloud
                     onLineStarted?.invoke(index)
                     onSpeakingChanged?.invoke(true)
                     _issue.value = if (muted(inCall)) VoiceIssue.MUTED else null

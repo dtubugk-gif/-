@@ -221,6 +221,10 @@
     <string name="language_hebrew">עברית</string>
     <string name="settings_voice">קול</string>
     <string name="settings_voice_hint">המחמד מקריא את השורות שלו בקול (הקראת טקסט של המכשיר)</string>
+    <string name="settings_voice_hint_pending">המחמד מקריא את השורות שלו בקול. ElevenLabs מוגדר; אחרי השורה הבאה שלו יופיע כאן איזה קול דיבר בפועל.</string>
+    <string name="settings_voice_hint_cloud">המחמד מקריא את השורות שלו בקול. את השורה האחרונה שלו אמר ElevenLabs.</string>
+    <string name="settings_voice_hint_refused">המחמד מקריא את השורות שלו בקול. את השורה האחרונה הקריא הקול של המכשיר, כי ElevenLabs סירב: %1$s</string>
+    <string name="settings_voice_hint_no_voice">המחמד מקריא את השורות שלו בקול. את השורה האחרונה הקריא הקול של המכשיר: בחשבון ה-ElevenLabs שלכם אין קול שהאפליקציה יכולה להשתמש בו.</string>
     <string name="settings_ai">מוח AI</string>
     <string name="settings_ai_on">דלוק: Claude כותב כל שורה בקול של המחמד, עם המפתח שלכם</string>
     <string name="settings_ai_off">כבוי: המחמד עונה מהתסריט הקבוע שלו</string>

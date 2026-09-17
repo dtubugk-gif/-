@@ -221,6 +221,10 @@
     <string name="language_hebrew">עברית</string>
     <string name="settings_voice">Voice</string>
     <string name="settings_voice_hint">The pet reads its lines aloud (device text-to-speech)</string>
+    <string name="settings_voice_hint_pending">The pet reads its lines aloud. ElevenLabs is set up; after its next line this shows which voice actually spoke.</string>
+    <string name="settings_voice_hint_cloud">The pet reads its lines aloud. Its last line was spoken by ElevenLabs.</string>
+    <string name="settings_voice_hint_refused">The pet reads its lines aloud. The device\'s voice read the last line, because ElevenLabs refused: %1$s</string>
+    <string name="settings_voice_hint_no_voice">The pet reads its lines aloud. The device\'s voice read the last line: your ElevenLabs account lists no voice the app may use.</string>
     <string name="settings_ai">AI brain</string>
     <string name="settings_ai_on">On: Claude writes every line in the pet\'s voice, with your own key</string>
     <string name="settings_ai_off">Off: the pet answers from its fixed script</string>

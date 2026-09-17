@@ -26,6 +26,8 @@ import il.rikavon.feature.blocker.ui.common.PinGate
 import il.rikavon.feature.blocker.ui.common.StrictCountdown
 import il.rikavon.feature.mascot.model.MascotSkin
 import il.rikavon.feature.mascot.registry.SelectedMascot
+import il.rikavon.feature.mascot.sound.MascotVoice
+import il.rikavon.feature.mascot.sound.Speaker
 import il.rikavon.notifications.DailySummaryScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,6 +61,15 @@ data class SettingsUiState(
     val aiConfigured: Boolean = false,
     /** The realistic voice has a key, so the pet speaks through ElevenLabs. */
     val voiceConfigured: Boolean = false,
+    /** Which engine actually said the pet's last line; null until it said one this session. */
+    val speaker: Speaker? = null,
+)
+
+private data class CloudState(
+    val message: BackupMessage?,
+    val ai: Boolean,
+    val voice: Boolean,
+    val speaker: Speaker?,
 )
 
 @HiltViewModel
@@ -73,6 +84,7 @@ class SettingsViewModel @Inject constructor(
     private val summaryScheduler: DailySummaryScheduler,
     private val focusProfile: FocusProfileManager,
     selectedMascot: SelectedMascot,
+    voice: MascotVoice,
 ) : ViewModel() {
     private val permissionState = MutableStateFlow(permissions.state())
     private val profileState = MutableStateFlow(focusProfile.state())
@@ -97,22 +109,24 @@ class SettingsViewModel @Inject constructor(
                 backupMessage,
                 cloudKeys.key(CloudKey.BRAIN),
                 cloudKeys.key(CloudKey.VOICE),
-            ) { message, brain, voice ->
-                Triple(message, brain != null, voice != null)
+                voice.speaker,
+            ) { message, brain, key, speaker ->
+                CloudState(message, brain != null, key != null, speaker)
             },
-        ) { prefs, skin, (perms, profile, apps), c, (message, ai, voice) ->
+        ) { prefs, skin, (perms, profile, apps), c, cloud ->
             SettingsUiState(
                 prefs,
                 skin,
                 perms,
                 Tier.of(prefs.premium),
                 c,
-                message,
+                cloud.message,
                 versionName,
                 profile,
                 apps,
-                ai,
-                voice,
+                cloud.ai,
+                cloud.voice,
+                cloud.speaker,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), SettingsUiState())
 
