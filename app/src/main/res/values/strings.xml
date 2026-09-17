@@ -245,6 +245,9 @@
     <string name="settings_voice_test_failed">OpenAI refused: %1$s. Until this works, the pet keeps the device\'s voice.</string>
     <string name="settings_voice_pick">Voice: %1$s</string>
     <string name="settings_voice_auto">Automatic (by personality)</string>
+    <string name="settings_key_anthropic_for_voice">This is an Anthropic key (the AI brain\'s). The realistic voice needs an OpenAI key, from platform.openai.com → API keys.</string>
+    <string name="settings_key_not_anthropic_for_brain">An Anthropic key starts with sk-ant-. This looks like another provider\'s key; get one at console.anthropic.com.</string>
+    <string name="settings_voice_test_wrong_provider">The saved key is an Anthropic key, not OpenAI\'s. Paste a key from platform.openai.com → API keys; until then the pet keeps the device\'s voice.</string>
     <string name="settings_voice_test_line">Hello. This is how I sound from now on. Better, no?</string>
 
     <!-- Nudge, PIN, websites -->

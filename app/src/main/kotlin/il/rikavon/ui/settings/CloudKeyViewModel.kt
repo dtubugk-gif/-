@@ -29,6 +29,9 @@ sealed interface VoiceTest {
 
     data object Ok : VoiceTest
 
+    /** The saved key is an Anthropic key (the AI brain's), so there was no point asking OpenAI. */
+    data object WrongProvider : VoiceTest
+
     data class Failed(val detail: String) : VoiceTest
 }
 
@@ -71,6 +74,10 @@ class CloudKeyViewModel @Inject constructor(
     fun testVoice(line: String, languageTag: String) {
         viewModelScope.launch {
             val key = keys.current(CloudKey.VOICE) ?: return@launch
+            if (KeyWarning.of(CloudKey.VOICE, key) != null) {
+                _test.value = VoiceTest.WrongProvider
+                return@launch
+            }
             _test.value = VoiceTest.Running
             val skin = selectedMascot.current()
             val profile = skin?.voice ?: VoiceProfile.NEUTRAL

@@ -74,6 +74,19 @@ fun CloudKeyDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii, autoCorrectEnabled = false),
                     modifier = Modifier.fillMaxWidth(),
                 )
+                KeyWarning.of(kind, key)?.let { warning ->
+                    Text(
+                        text =
+                            stringResource(
+                                when (warning) {
+                                    KeyWarning.ANTHROPIC_FOR_VOICE -> R.string.settings_key_anthropic_for_voice
+                                    KeyWarning.NOT_ANTHROPIC_FOR_BRAIN -> R.string.settings_key_not_anthropic_for_brain
+                                },
+                            ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
                 if (configured && kind == CloudKey.VOICE) {
                     val automatic = stringResource(R.string.settings_voice_auto)
                     Box {
@@ -109,12 +122,14 @@ fun CloudKeyDialog(
                                 when (outcome) {
                                     VoiceTest.Running -> stringResource(R.string.settings_voice_test_running)
                                     VoiceTest.Ok -> stringResource(R.string.settings_voice_test_ok)
+                                    VoiceTest.WrongProvider ->
+                                        stringResource(R.string.settings_voice_test_wrong_provider)
                                     is VoiceTest.Failed ->
                                         stringResource(R.string.settings_voice_test_failed, outcome.detail)
                                 },
                             style = MaterialTheme.typography.bodySmall,
                             color =
-                                if (outcome is VoiceTest.Failed) {
+                                if (outcome is VoiceTest.Failed || outcome == VoiceTest.WrongProvider) {
                                     MaterialTheme.colorScheme.error
                                 } else {
                                     MaterialTheme.colorScheme.onSurfaceVariant

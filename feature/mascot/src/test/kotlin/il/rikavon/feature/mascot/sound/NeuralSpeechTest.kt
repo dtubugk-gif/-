@@ -46,6 +46,10 @@ class NeuralSpeechTest {
             VoiceAttempt.Failed(0, "java.net.UnknownHostException").summary(),
         )
         assertEquals("500", VoiceAttempt.Failed(500, "").summary())
+        val wordy = "Incorrect API key provided: sk-abc" + "*".repeat(400) + ". You can find your API key at https://x"
+        val long = VoiceAttempt.Failed(401, "{\"error\":{\"message\":\"$wordy\",\"type\":\"invalid_request_error\"}}")
+        assertTrue(long.summary(), long.summary().startsWith("401 Incorrect API key provided"))
+        assertTrue(long.summary().length < 260)
     }
 
     @Test

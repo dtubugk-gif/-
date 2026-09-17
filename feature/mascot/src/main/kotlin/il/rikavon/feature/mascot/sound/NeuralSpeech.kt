@@ -54,13 +54,16 @@ object NeuralSpeech {
 sealed interface VoiceAttempt {
     class Clip(val bytes: ByteArray) : VoiceAttempt
 
-    /** [status] is the HTTP status, or 0 when the request never got an answer (no network, a timeout). */
+    /**
+     * [status] is the HTTP status, or 0 when the request never got an answer (no network, a timeout); [detail]
+     * is the whole error body, so its JSON still parses when the service writes a long message.
+     */
     data class Failed(val status: Int, val detail: String) : VoiceAttempt {
         /**
          * The status and the service's own sentence ("401 Incorrect API key provided"), dug out of its JSON
          * error when it sent one; otherwise the raw detail.
          */
-        fun summary(): String = "$status ${message()}".trim()
+        fun summary(): String = "$status ${message().take(SUMMARY_CHARS)}".trim()
 
         private fun message(): String =
             runCatching {
@@ -71,6 +74,10 @@ sealed interface VoiceAttempt {
                     else -> null
                 }
             }.getOrNull() ?: detail
+
+        private companion object {
+            const val SUMMARY_CHARS = 240
+        }
     }
 }
 
@@ -110,6 +117,6 @@ class OpenAiSynthesizer(private val apiKey: String) : SpeechSynthesizer {
         const val TAG = "Rikavon"
         const val CONNECT_TIMEOUT_MILLIS = 4_000
         const val READ_TIMEOUT_MILLIS = 12_000
-        const val DETAIL_CHARS = 300
+        const val DETAIL_CHARS = 4_000
     }
 }

@@ -245,6 +245,9 @@
     <string name="settings_voice_test_failed">OpenAI סירב: %1$s. עד שזה יעבוד, המחמד ממשיך בקול של המכשיר.</string>
     <string name="settings_voice_pick">קול: %1$s</string>
     <string name="settings_voice_auto">אוטומטי (לפי האישיות)</string>
+    <string name="settings_key_anthropic_for_voice">זה מפתח של Anthropic (של מוח ה-AI). הקול הריאליסטי צריך מפתח של OpenAI, מ-platform.openai.com ← API keys.</string>
+    <string name="settings_key_not_anthropic_for_brain">מפתח של Anthropic מתחיל ב-sk-ant-. זה נראה כמו מפתח של ספק אחר; מקבלים אחד ב-console.anthropic.com.</string>
+    <string name="settings_voice_test_wrong_provider">המפתח השמור הוא של Anthropic, לא של OpenAI. הדביקו מפתח מ-platform.openai.com ← API keys; עד אז המחמד ממשיך בקול של המכשיר.</string>
     <string name="settings_voice_test_line">שלום. ככה אני נשמע מעכשיו. יותר טוב, לא?</string>
 
     <!-- Nudge, PIN, websites -->
