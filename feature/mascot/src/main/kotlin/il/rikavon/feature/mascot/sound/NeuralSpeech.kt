@@ -1,6 +1,7 @@
 package il.rikavon.feature.mascot.sound
 
 import android.util.Log
+import il.rikavon.feature.mascot.model.VoiceProfile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -13,13 +14,41 @@ import java.net.HttpURLConnection
 import java.net.URL
 import javax.net.ssl.HttpsURLConnection
 
-/** A cloud voice: one line of text in, a short audio clip out, or the reason there is none. */
-fun interface SpeechSynthesizer {
-    suspend fun attempt(text: String, voice: String, instructions: String): VoiceAttempt
+/**
+ * A cloud voice: one line of text in, a short audio clip out, or the reason there is none. Each provider casts
+ * the pet itself from its [VoiceProfile], the language and the user's pick, since their voices differ.
+ */
+interface SpeechSynthesizer {
+    /** The voices the user may pick from on this provider. */
+    val voices: List<String>
+
+    suspend fun attempt(text: String, profile: VoiceProfile, languageTag: String, choice: String?): VoiceAttempt
+}
+
+/** The two cloud voices a key can belong to, told apart by the key itself. */
+enum class SpeechProvider {
+    /** Azure Speech: native Hebrew voices, and free up to half a million characters a month. */
+    AZURE,
+
+    /** OpenAI's speech model: steerable, paid per character. */
+    OPENAI,
 }
 
 /** The request the realistic voice sends, kept pure so it is testable without a network. */
 object NeuralSpeech {
+    /** OpenAI keys start with `sk-`; anything else is taken for an Azure resource key. */
+    fun provider(key: String): SpeechProvider =
+        if (key.trim().startsWith(OPENAI_PREFIX)) SpeechProvider.OPENAI else SpeechProvider.AZURE
+
+    /** The synthesizer for a saved key; [region] is only Azure's, and may be empty until the user enters it. */
+    fun synthesizer(key: String, region: String?): SpeechSynthesizer =
+        when (provider(key)) {
+            SpeechProvider.OPENAI -> OpenAiSynthesizer(key.trim())
+            SpeechProvider.AZURE -> AzureSynthesizer(key.trim(), region.orEmpty())
+        }
+
+    private const val OPENAI_PREFIX = "sk-"
+
     /** OpenAI's steerable speech model: Hebrew and English, and it takes directions on tone, accent and pace. */
     const val MODEL = "gpt-4o-mini-tts"
 
@@ -83,9 +112,18 @@ sealed interface VoiceAttempt {
 
 /** [SpeechSynthesizer] on OpenAI's speech endpoint with the user's own key; plain HTTPS, no SDK. */
 class OpenAiSynthesizer(private val apiKey: String) : SpeechSynthesizer {
+    override val voices: List<String> get() = VoiceCasting.VOICES
+
     /** One request, with the reason when it fails, logged and shown to the user in the service's words. */
-    override suspend fun attempt(text: String, voice: String, instructions: String): VoiceAttempt =
+    override suspend fun attempt(
+        text: String,
+        profile: VoiceProfile,
+        languageTag: String,
+        choice: String?,
+    ): VoiceAttempt =
         withContext(Dispatchers.IO) {
+            val voice = VoiceCasting.voice(profile, choice)
+            val instructions = VoiceCasting.instructions(profile, languageTag)
             runCatching {
                 val connection = URL(NeuralSpeech.ENDPOINT).openConnection() as HttpsURLConnection
                 try {

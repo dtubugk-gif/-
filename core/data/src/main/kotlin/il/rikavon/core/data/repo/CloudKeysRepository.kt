@@ -15,7 +15,7 @@ enum class CloudKey(internal val pref: Preferences.Key<String>) {
     /** The AI brain: Claude writes the pet's lines. */
     BRAIN(SettingsKeys.AI_KEY),
 
-    /** The realistic voice: OpenAI's speech model says them. */
+    /** The realistic voice: Azure Speech or OpenAI says them. */
     VOICE(SettingsKeys.SPEECH_KEY),
 }
 
@@ -29,6 +29,19 @@ class CloudKeysRepository @Inject constructor(private val store: DataStore<Prefe
         store.data.map { prefs -> prefs[kind.pref]?.takeIf { it.isNotBlank() } }.distinctUntilChanged()
 
     suspend fun current(kind: CloudKey): String? = key(kind).first()
+
+    /** The Azure region of the realistic voice's resource ("westeurope"); meaningless for an OpenAI key. */
+    val voiceRegion: Flow<String?> =
+        store.data.map { prefs -> prefs[SettingsKeys.SPEECH_REGION]?.takeIf { it.isNotBlank() } }.distinctUntilChanged()
+
+    suspend fun currentVoiceRegion(): String? = voiceRegion.first()
+
+    suspend fun setVoiceRegion(value: String?) {
+        val clean = value?.trim().orEmpty()
+        store.edit { prefs ->
+            if (clean.isEmpty()) prefs.remove(SettingsKeys.SPEECH_REGION) else prefs[SettingsKeys.SPEECH_REGION] = clean
+        }
+    }
 
     /** Stores a trimmed key; blank or null removes it. */
     suspend fun set(kind: CloudKey, value: String?) {

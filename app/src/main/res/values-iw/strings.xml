@@ -174,7 +174,7 @@
     <string name="privacy_collect_title">מה האפליקציה אוספת</string>
     <string name="privacy_collect_body">רשימת האפליקציות המותקנות, זמן השימוש ומספר הפתיחות שלהן היום ובעד 90 הימים האחרונים, הגבולות ולוחות הזמנים שהגדרתם, הציון היומי, רצפים והישגים. הכול כדי להציג לכם את המחמד והסטטיסטיקות.</string>
     <string name="privacy_network_title">לאן זה הולך</string>
-    <string name="privacy_network_body">לשום מקום, כברירת מחדל: אין שרת, אין חשבון, אין מזהה מכשיר. חריג אחד שבשליטתכם: כשמוח ה-AI דלוק (הגדרות ← מחמד ← מוח AI, עם מפתח Anthropic משלכם), מה שאתם אומרים למחמד וההקשר שלו (השם שלו, הציון שלכם, האפליקציה הקרובה ביותר לגבול והדקות שנשארו) נשלחים ל-API של Anthropic כדי לכתוב את התשובה של המחמד, לפי מדיניות הפרטיות של Anthropic. הקול הריאליסטי עובד אותו דבר: עם מפתח OpenAI משלכם, השורות שהמחמד אומר (ולא שום דבר שאתם אומרים) נשלחות ל-API של OpenAI כדי להפוך לצליל. שום דבר אחר לא נשלח אף פעם, והסרת מפתח מפסיקה את זה.</string>
+    <string name="privacy_network_body">לשום מקום, כברירת מחדל: אין שרת, אין חשבון, אין מזהה מכשיר. חריג אחד שבשליטתכם: כשמוח ה-AI דלוק (הגדרות ← מחמד ← מוח AI, עם מפתח Anthropic משלכם), מה שאתם אומרים למחמד וההקשר שלו (השם שלו, הציון שלכם, האפליקציה הקרובה ביותר לגבול והדקות שנשארו) נשלחים ל-API של Anthropic כדי לכתוב את התשובה של המחמד, לפי מדיניות הפרטיות של Anthropic. הקול הריאליסטי עובד אותו דבר: עם מפתח Azure Speech או OpenAI משלכם, השורות שהמחמד אומר (ולא שום דבר שאתם אומרים) נשלחות לשירות הזה כדי להפוך לצליל. שום דבר אחר לא נשלח אף פעם, והסרת מפתח מפסיקה את זה.</string>
     <string name="privacy_permissions_title">למה ההרשאות</string>
     <string name="privacy_permissions_body">גישה לנתוני שימוש: כדי למדוד דקות ופתיחות. הצגה מעל אפליקציות: כדי להראות את מסך החסימה. רשימת כל האפליקציות: כדי שתוכלו לבחור מה להגביל. התראות: ההתראה השקטה של השירות וסיכום ערב אופציונלי.</string>
     <string name="privacy_storage_title">איפה זה נשמר</string>
@@ -222,8 +222,8 @@
     <string name="settings_voice">קול</string>
     <string name="settings_voice_hint">המחמד מקריא את השורות שלו בקול (הקראת טקסט של המכשיר)</string>
     <string name="settings_voice_hint_pending">המחמד מקריא את השורות שלו בקול. הקול הריאליסטי מוגדר; אחרי השורה הבאה שלו יופיע כאן איזה קול דיבר בפועל.</string>
-    <string name="settings_voice_hint_cloud">המחמד מקריא את השורות שלו בקול. את השורה האחרונה שלו אמר הקול הריאליסטי (OpenAI).</string>
-    <string name="settings_voice_hint_refused">המחמד מקריא את השורות שלו בקול. את השורה האחרונה הקריא הקול של המכשיר, כי OpenAI סירב: %1$s</string>
+    <string name="settings_voice_hint_cloud">המחמד מקריא את השורות שלו בקול. את השורה האחרונה שלו אמר הקול הריאליסטי.</string>
+    <string name="settings_voice_hint_refused">המחמד מקריא את השורות שלו בקול. את השורה האחרונה הקריא הקול של המכשיר, כי שירות הקול סירב: %1$s</string>
     <string name="settings_ai">מוח AI</string>
     <string name="settings_ai_on">דלוק: Claude כותב כל שורה בקול של המחמד, עם המפתח שלכם</string>
     <string name="settings_ai_off">כבוי: המחמד עונה מהתסריט הקבוע שלו</string>
@@ -234,20 +234,24 @@
     <string name="settings_ai_remove">הסרת המפתח</string>
     <string name="settings_ai_cancel">ביטול</string>
     <string name="settings_realistic_voice">קול ריאליסטי</string>
-    <string name="settings_realistic_voice_on">דלוק: קול טבעי לכל מחמד מ-OpenAI, עם המפתח שלכם</string>
+    <string name="settings_realistic_voice_on">דלוק: קול טבעי לכל מחמד מהענן, עם המפתח שלכם</string>
     <string name="settings_realistic_voice_off">כבוי: הקול הכי טוב שיש להקראת הטקסט של המכשיר</string>
     <string name="settings_voice_dialog_title">קול ריאליסטי</string>
-    <string name="settings_voice_dialog_body">הדביקו מפתח API של OpenAI משלכם והמחמד ידבר בקול טבעי, אנושי, בעברית ובאנגלית, שנבחר ומבוים לפי האישיות שלו (קול שונה לכל מחמד; אפשר לבחור אחר). כשזה דלוק, רק השורות שהמחמד אומר נשלחות ל-OpenAI כדי להפוך לצליל; שום דבר שאתם אומרים לא נשלח. המפתח נשאר בטלפון הזה ולא נכלל בגיבוי. בכל פעם שהקול לא זמין, הקול של המכשיר מקריא את השורה במקום.</string>
-    <string name="settings_voice_key_hint">sk-…</string>
+    <string name="settings_voice_dialog_body">המחמד מדבר בקול טבעי, אנושי, שונה לכל מחמד, בעברית ובאנגלית. חינם: מפתח של Azure Speech (קולות עבריים ישראליים, חצי מיליון תווים בחודש בלי תשלום; פותחים חשבון Azure חינמי, מוסיפים משאב “Speech” בתוכנית החינמית F0, ומעתיקים את המפתח והאזור). בתשלום: מפתח OpenAI (מתחיל ב-sk-). רק השורות שהמחמד אומר נשלחות כדי להפוך לצליל; שום דבר שאתם אומרים לא נשלח. המפתח נשאר בטלפון הזה ולא נכלל בגיבוי. בכל פעם שהקול לא זמין, הקול של המכשיר מקריא את השורה במקום.</string>
+    <string name="settings_voice_key_hint">מפתח Azure Speech, או מפתח OpenAI שמתחיל ב-sk-</string>
+    <string name="settings_voice_region_hint">אזור Azure, למשל westeurope</string>
+    <string name="settings_voice_provider_azure">Azure Speech (תוכנית חינמית)</string>
+    <string name="settings_voice_provider_openai">OpenAI (בתשלום)</string>
+    <string name="settings_voice_test_no_region">מפתח Azure צריך גם את האזור שלו (מעמוד Keys and Endpoint של המשאב, למשל westeurope). הזינו אותו למעלה ושמרו.</string>
     <string name="settings_voice_test">בדיקת הקול</string>
-    <string name="settings_voice_test_running">שואל את OpenAI…</string>
+    <string name="settings_voice_test_running">שואל את שירות הקול…</string>
     <string name="settings_voice_test_ok">עובד. זה הקול החדש של המחמד.</string>
-    <string name="settings_voice_test_failed">OpenAI סירב: %1$s. עד שזה יעבוד, המחמד ממשיך בקול של המכשיר.</string>
+    <string name="settings_voice_test_failed">שירות הקול סירב: %1$s. עד שזה יעבוד, המחמד ממשיך בקול של המכשיר.</string>
     <string name="settings_voice_pick">קול: %1$s</string>
     <string name="settings_voice_auto">אוטומטי (לפי האישיות)</string>
-    <string name="settings_key_anthropic_for_voice">זה מפתח של Anthropic (של מוח ה-AI). הקול הריאליסטי צריך מפתח של OpenAI, מ-platform.openai.com ← API keys.</string>
+    <string name="settings_key_anthropic_for_voice">זה מפתח של Anthropic (של מוח ה-AI). הקול הריאליסטי צריך מפתח של Azure Speech (חינם) או של OpenAI.</string>
     <string name="settings_key_not_anthropic_for_brain">מפתח של Anthropic מתחיל ב-sk-ant-. זה נראה כמו מפתח של ספק אחר; מקבלים אחד ב-console.anthropic.com.</string>
-    <string name="settings_voice_test_wrong_provider">המפתח השמור הוא של Anthropic, לא של OpenAI. הדביקו מפתח מ-platform.openai.com ← API keys; עד אז המחמד ממשיך בקול של המכשיר.</string>
+    <string name="settings_voice_test_wrong_provider">המפתח השמור הוא של Anthropic, לא של שירות קול. הדביקו מפתח של Azure Speech או של OpenAI; עד אז המחמד ממשיך בקול של המכשיר.</string>
     <string name="settings_voice_test_line">שלום. ככה אני נשמע מעכשיו. יותר טוב, לא?</string>
 
     <!-- Nudge, PIN, websites -->

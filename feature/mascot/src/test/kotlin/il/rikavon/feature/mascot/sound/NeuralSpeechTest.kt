@@ -27,6 +27,16 @@ class NeuralSpeechTest {
     }
 
     @Test
+    fun `a key's provider is told from its shape`() {
+        assertEquals(SpeechProvider.OPENAI, NeuralSpeech.provider(" sk-proj-abc "))
+        assertEquals(SpeechProvider.AZURE, NeuralSpeech.provider("0123456789abcdef0123456789abcdef"))
+        assertTrue(NeuralSpeech.synthesizer("sk-abc", null) is OpenAiSynthesizer)
+        assertTrue(NeuralSpeech.synthesizer("abc", "westeurope") is AzureSynthesizer)
+        assertEquals(VoiceCasting.VOICES, NeuralSpeech.synthesizer("sk-abc", null).voices)
+        assertEquals(AzureSpeech.VOICES, NeuralSpeech.synthesizer("abc", null).voices)
+    }
+
+    @Test
     fun `a line longer than the endpoint accepts is cut, not refused`() {
         val body = Json.parseToJsonElement(NeuralSpeech.requestBody("x".repeat(5000), "onyx", "")).jsonObject
         assertEquals(NeuralSpeech.MAX_INPUT_CHARS, body["input"]?.jsonPrimitive?.content?.length)

@@ -176,13 +176,17 @@ BlockerService loop (2s/5s/15s, off when screen off) ◄────────
   an 8 s timeout and one retry; any error, refusal or empty answer falls back to the script for that line and
   the conversation carries on. `ConversationEngines` picks the engine per conversation, so a call and the
   talk screen each keep their own short memory.
-* **The realistic voice (optional)** – with an OpenAI API key entered in Settings (`CloudKeysRepository`, the
-  same place as the brain's key), `MascotVoice` speaks through `OpenAiSynthesizer` instead of the device
-  engine: `gpt-4o-mini-tts` (Hebrew and English, and it takes directions), the voice cast per pet by
-  `VoiceCasting` (the user's pick for this pet from the Settings dialog, else the manifest's `voice.neural`,
-  else the one cast for the personality: onyx for the cynic, ballad for the drama queen, and so on) and
-  directed by a character sketch, the language with its accent and the pace, and each clip played by
-  `ClipPlayer` on the same media / voice-call attributes as before. The dialog's "Test the voice" makes one
+* **The realistic voice (optional)** – with a cloud key entered in Settings (`CloudKeysRepository`, the same
+  place as the brain's key), `MascotVoice` speaks through a `SpeechSynthesizer` instead of the device engine;
+  `NeuralSpeech.provider` tells the key's provider apart by its shape. **Azure Speech** (`AzureSynthesizer`,
+  key + region, plain SSML over HTTPS): the only cloud with native Israeli Hebrew voices (Avri, Hila), and
+  free up to half a million characters a month on the F0 plan, which stops rather than bills when it runs
+  out; `AzureSpeech` casts a Hebrew and an English voice per personality and turns the manifest's pitch and
+  rate into SSML prosody. **OpenAI** (`OpenAiSynthesizer`, `gpt-4o-mini-tts`, paid): the voice cast per pet
+  by `VoiceCasting` (onyx for the cynic, ballad for the drama queen, and so on) and directed by a character
+  sketch, the language with its accent and the pace. On either, the user's pick for this pet from the
+  Settings dialog wins, and each clip is played by `ClipPlayer` on the same media / voice-call attributes as
+  before. The dialog's "Test the voice" makes one
   real request and shows a refusal in the service's own words; the "Voice" row in Settings says which engine
   actually spoke the last line.
 * **The device voice, chosen well** – without a key the pet still does not get the engine's default voice:
@@ -249,7 +253,7 @@ Everything lives in `core/ui/.../anim/AnimationSpecs.kt`. `MascotView` implement
 | `RECEIVE_BOOT_COMPLETED` | restart after reboot | service starts on next app open |
 
 `INTERNET` is declared only for the optional AI brain and realistic voice (Settings → Pet, the user's own
-Anthropic and OpenAI keys); nothing touches the network without them.
+Anthropic and Azure Speech / OpenAI keys); nothing touches the network without them.
 
 ---
 
@@ -346,7 +350,7 @@ nothing else changes.
 
 Zero analytics, zero third-party trackers, and no network unless the AI brain or the realistic voice is
 switched on with the user's own keys (then what they say to the pet and its context go to Anthropic's API,
-and the pet's own lines go to OpenAI's speech API to become sound; nothing else). Data lives in
+and the pet's own lines go to Azure Speech or OpenAI to become sound; nothing else). Data lives in
 Room/DataStore inside the app sandbox,
 history is pruned after 90 days, backup is a JSON file the user writes through the system file picker.
 Play-facing text, the publishing checklist and the generated store graphics (`docs/play/`): [docs/PLAY.md](docs/PLAY.md).

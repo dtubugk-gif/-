@@ -23,6 +23,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.util.Locale
 import javax.inject.Inject
@@ -31,13 +32,14 @@ import javax.inject.Singleton
 /**
  * The pet's voice. By default the device's own text-to-speech engine, with the best voice it has for the
  * language ([DeviceVoices]) tuned per mascot (pitch and rate), so every line the pet says on screen can also be
- * said out loud and nothing leaves the device. With the user's own OpenAI key ([CloudKey.VOICE]) the lines are
- * spoken by a natural voice instead, cast per pet ([VoiceCasting]: the user's pick, the manifest's, or the one
- * that fits the personality) and directed by its character, the next line synthesised while the current one
- * plays; the device engine takes over the moment the cloud voice fails, mid-sentence-list if need be. Ambient
- * lines go out on the media stream (the one users actually turn up); call lines go out on the voice-call stream
- * so they follow the earpiece / speaker routing and the call volume. Speech ducks whatever is playing and
- * reports through [issue] instead of failing silently.
+ * said out loud and nothing leaves the device. With the user's own cloud key ([CloudKey.VOICE]: Azure Speech
+ * with its native Hebrew voices, or OpenAI) the lines are spoken by a natural voice instead, cast per pet by the
+ * provider ([AzureSpeech], [VoiceCasting]: the user's pick, the manifest's, or the one that fits the
+ * personality), the next line synthesised while the current one plays; the device engine takes over the
+ * moment the cloud voice fails, mid-sentence-list if need be. Ambient lines go out on the media stream (the
+ * one users actually turn up); call lines go out on the voice-call stream so they follow the earpiece /
+ * speaker routing and the call volume. Speech ducks whatever is playing and reports through [issue] instead
+ * of failing silently.
  */
 @Singleton
 class MascotVoice @Inject constructor(
@@ -83,7 +85,9 @@ class MascotVoice @Inject constructor(
 
     init {
         scope.launch {
-            keys.key(CloudKey.VOICE).collect { key -> synthesizer = key?.let { OpenAiSynthesizer(it) } }
+            combine(keys.key(CloudKey.VOICE), keys.voiceRegion) { key, region ->
+                key?.let { NeuralSpeech.synthesizer(it, region) }
+            }.collect { synthesizer = it }
         }
     }
 
@@ -138,13 +142,11 @@ class MascotVoice @Inject constructor(
         neuralJob =
             scope.launch {
                 val choice = selectedMascot.current()?.id?.let { choices.current(it) }
-                val voice = VoiceCasting.voice(profile, choice)
-                val directions = VoiceCasting.instructions(profile, languageTag)
-                var next = async { cloud.attempt(lines[0], voice, directions) }
+                var next = async { cloud.attempt(lines[0], profile, languageTag, choice) }
                 for (index in lines.indices) {
                     val attempt = next.await()
                     if (index + 1 < lines.size) {
-                        next = async { cloud.attempt(lines[index + 1], voice, directions) }
+                        next = async { cloud.attempt(lines[index + 1], profile, languageTag, choice) }
                     }
                     if (attempt is VoiceAttempt.Failed) {
                         next.cancel()

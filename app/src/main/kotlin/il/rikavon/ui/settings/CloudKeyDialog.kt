@@ -4,7 +4,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -13,6 +15,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -26,11 +29,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import il.rikavon.R
 import il.rikavon.core.data.repo.CloudKey
 import il.rikavon.core.ui.theme.Spacing
+import il.rikavon.feature.mascot.sound.NeuralSpeech
+import il.rikavon.feature.mascot.sound.SpeechProvider
 import il.rikavon.feature.mascot.ui.UiLanguage
 
 /**
  * Where the user pastes (or removes) their own API key for a cloud feature, with what that means spelled out.
- * The realistic voice can be tried right here, out loud, and a refusal is shown in the service's own words.
+ * The realistic voice takes an Azure Speech key (with its region) or an OpenAI key, can be tried right here,
+ * out loud, and a refusal is shown in the service's own words.
  */
 @Composable
 fun CloudKeyDialog(
@@ -40,11 +46,14 @@ fun CloudKeyDialog(
     viewModel: CloudKeyViewModel = hiltViewModel(),
 ) {
     var key by rememberSaveable(kind) { mutableStateOf("") }
+    var region by rememberSaveable(kind) { mutableStateOf("") }
     val test by viewModel.test.collectAsStateWithLifecycle()
     val choice by viewModel.choice.collectAsStateWithLifecycle()
+    val setup by viewModel.setup.collectAsStateWithLifecycle()
     var picking by remember { mutableStateOf(false) }
     val language = UiLanguage.current()
     val testLine = stringResource(R.string.settings_voice_test_line)
+    LaunchedEffect(setup?.region) { if (region.isEmpty()) region = setup?.region.orEmpty() }
     val title =
         when (kind) {
             CloudKey.BRAIN -> R.string.settings_ai_dialog_title
@@ -60,11 +69,16 @@ fun CloudKeyDialog(
             CloudKey.BRAIN -> R.string.settings_ai_key_hint
             CloudKey.VOICE -> R.string.settings_voice_key_hint
         }
+    val typedProvider = key.takeIf { it.isNotBlank() }?.let { NeuralSpeech.provider(it) }
+    val regionWanted = kind == CloudKey.VOICE && (typedProvider ?: setup?.provider) == SpeechProvider.AZURE
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(title), style = MaterialTheme.typography.titleLarge) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(Spacing.md),
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+            ) {
                 Text(stringResource(body), style = MaterialTheme.typography.bodyMedium)
                 OutlinedTextField(
                     value = key,
@@ -87,7 +101,33 @@ fun CloudKeyDialog(
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
-                if (configured && kind == CloudKey.VOICE) {
+                if (regionWanted) {
+                    OutlinedTextField(
+                        value = region,
+                        onValueChange = { region = it.trim() },
+                        singleLine = true,
+                        placeholder = { Text(stringResource(R.string.settings_voice_region_hint)) },
+                        keyboardOptions =
+                            KeyboardOptions(
+                                keyboardType = KeyboardType.Ascii,
+                                autoCorrectEnabled = false,
+                            ),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                val current = setup
+                if (configured && kind == CloudKey.VOICE && current != null) {
+                    Text(
+                        text =
+                            stringResource(
+                                when (current.provider) {
+                                    SpeechProvider.AZURE -> R.string.settings_voice_provider_azure
+                                    SpeechProvider.OPENAI -> R.string.settings_voice_provider_openai
+                                },
+                            ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     val automatic = stringResource(R.string.settings_voice_auto)
                     Box {
                         TextButton(onClick = { picking = true }) {
@@ -101,7 +141,7 @@ fun CloudKeyDialog(
                                     picking = false
                                 },
                             )
-                            viewModel.voices.forEach { voice ->
+                            current.voices.forEach { voice ->
                                 DropdownMenuItem(
                                     text = { Text(voice) },
                                     onClick = {
@@ -124,15 +164,16 @@ fun CloudKeyDialog(
                                     VoiceTest.Ok -> stringResource(R.string.settings_voice_test_ok)
                                     VoiceTest.WrongProvider ->
                                         stringResource(R.string.settings_voice_test_wrong_provider)
+                                    VoiceTest.NoRegion -> stringResource(R.string.settings_voice_test_no_region)
                                     is VoiceTest.Failed ->
                                         stringResource(R.string.settings_voice_test_failed, outcome.detail)
                                 },
                             style = MaterialTheme.typography.bodySmall,
                             color =
-                                if (outcome is VoiceTest.Failed || outcome == VoiceTest.WrongProvider) {
-                                    MaterialTheme.colorScheme.error
-                                } else {
+                                if (outcome is VoiceTest.Ok || outcome == VoiceTest.Running) {
                                     MaterialTheme.colorScheme.onSurfaceVariant
+                                } else {
+                                    MaterialTheme.colorScheme.error
                                 },
                         )
                     }
@@ -150,10 +191,10 @@ fun CloudKeyDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    viewModel.save(kind, key)
+                    viewModel.save(kind, key, region)
                     onDismiss()
                 },
-                enabled = key.isNotBlank(),
+                enabled = key.isNotBlank() && (!regionWanted || region.isNotBlank()),
             ) { Text(stringResource(R.string.settings_ai_save)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.settings_ai_cancel)) } },
