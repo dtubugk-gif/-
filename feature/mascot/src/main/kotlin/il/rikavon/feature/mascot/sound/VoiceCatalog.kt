@@ -54,6 +54,13 @@ class VoiceCatalog @Inject constructor() {
             }
         }
 
+    /** Forgets the list, so the next look-up sees a voice created since. */
+    suspend fun invalidate() =
+        lock.withLock {
+            cachedKey = null
+            cached = emptyList()
+        }
+
     /** The voice id to speak [profile] with, or null when the account has no usable voice at all. */
     suspend fun resolve(apiKey: String, profile: VoiceProfile, choice: String?): String? =
         choice ?: profile.neuralVoiceId ?: pick(voices(apiKey), profile.personality)?.id

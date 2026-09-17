@@ -234,7 +234,7 @@
     <string name="settings_realistic_voice_on">דלוק: קול טבעי של ElevenLabs לכל מחמד, עם המפתח שלכם</string>
     <string name="settings_realistic_voice_off">כבוי: הקראת הטקסט של המכשיר</string>
     <string name="settings_voice_dialog_title">קול ריאליסטי</string>
-    <string name="settings_voice_dialog_body">הדביקו מפתח API של ElevenLabs משלכם והמחמד ידבר בקול טבעי, אנושי: קול אחר לכל מחמד, בעברית ובאנגלית. כשזה דלוק, רק השורות שהמחמד אומר נשלחות ל-ElevenLabs כדי להפוך לצליל; שום דבר שאתם אומרים לא נשלח. המפתח נשאר בטלפון הזה ולא נכלל בגיבוי. בכל פעם שהקול לא זמין, הקול של המכשיר מקריא את השורה במקום.</string>
+    <string name="settings_voice_dialog_body">הדביקו מפתח API של ElevenLabs משלכם והמחמד ידבר בקול טבעי, אנושי, בעברית ובאנגלית: בוחרים קול מהחשבון שלכם, או יוצרים למחמד קול משלו מהאישיות שלו. כשזה דלוק, רק השורות שהמחמד אומר נשלחות ל-ElevenLabs כדי להפוך לצליל; שום דבר שאתם אומרים לא נשלח. המפתח נשאר בטלפון הזה ולא נכלל בגיבוי. בכל פעם שהקול לא זמין, הקול של המכשיר מקריא את השורה במקום.</string>
     <string name="settings_voice_key_hint">מפתח API של ElevenLabs</string>
     <string name="settings_voice_test">בדיקת הקול</string>
     <string name="settings_voice_test_running">שואל את ElevenLabs…</string>
@@ -243,6 +243,11 @@
     <string name="settings_voice_pick">קול: %1$s</string>
     <string name="settings_voice_auto">אוטומטי (לפי האישיות)</string>
     <string name="settings_voice_test_none">בחשבון ה-ElevenLabs שלכם אין קול שהאפליקציה יכולה להשתמש בו.</string>
+    <string name="settings_voice_design">יצירת קול משלו למחמד הזה</string>
+    <string name="settings_voice_design_running">מעצב קול מהאישיות של המחמד… (בערך 20 שניות)</string>
+    <string name="settings_voice_design_ok">נוצר ונבחר: %1$s. הוא חי עכשיו בחשבון ה-ElevenLabs שלכם.</string>
+    <string name="settings_voice_design_failed">ElevenLabs סירב: %1$s</string>
+    <string name="settings_voice_design_sample">שלום, זה אני, המחמד שלכם. אני יודע שאתם שוב באינסטגרם. אני לא כועס, אני רק נרקב בשקט בפינה. אולי נדבר על זה? יש לי הרבה מה להגיד, ורוב הדברים לא נעימים.</string>
     <string name="settings_voice_test_line">שלום. ככה אני נשמע מעכשיו. יותר טוב, לא?</string>
 
     <!-- Nudge, PIN, websites -->

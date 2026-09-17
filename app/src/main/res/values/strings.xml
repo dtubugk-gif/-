@@ -234,7 +234,7 @@
     <string name="settings_realistic_voice_on">On: a natural ElevenLabs voice per pet, with your own key</string>
     <string name="settings_realistic_voice_off">Off: the device\'s own text-to-speech</string>
     <string name="settings_voice_dialog_title">Realistic voice</string>
-    <string name="settings_voice_dialog_body">Paste your own ElevenLabs API key and the pet speaks with a natural, human-sounding voice: a different one per pet, in Hebrew and English. While it is on, only the lines the pet says are sent to ElevenLabs to be turned into sound; nothing you say is. The key stays on this phone and is never backed up. Whenever the voice cannot be reached, the device\'s own voice reads the line instead.</string>
+    <string name="settings_voice_dialog_body">Paste your own ElevenLabs API key and the pet speaks with a natural, human-sounding voice, in Hebrew and English: pick one of your account\'s voices, or create the pet\'s own from its personality. While it is on, only the lines the pet says are sent to ElevenLabs to be turned into sound; nothing you say is. The key stays on this phone and is never backed up. Whenever the voice cannot be reached, the device\'s own voice reads the line instead.</string>
     <string name="settings_voice_key_hint">ElevenLabs API key</string>
     <string name="settings_voice_test">Test the voice</string>
     <string name="settings_voice_test_running">Asking ElevenLabs…</string>
@@ -243,6 +243,11 @@
     <string name="settings_voice_pick">Voice: %1$s</string>
     <string name="settings_voice_auto">Automatic (by personality)</string>
     <string name="settings_voice_test_none">Your ElevenLabs account lists no voice the app may use.</string>
+    <string name="settings_voice_design">Create this pet\'s own voice</string>
+    <string name="settings_voice_design_running">Designing a voice from the pet\'s personality… (about 20 seconds)</string>
+    <string name="settings_voice_design_ok">Created and selected: %1$s. It lives in your ElevenLabs account now.</string>
+    <string name="settings_voice_design_failed">ElevenLabs refused: %1$s</string>
+    <string name="settings_voice_design_sample">Hello, it is me, your pet. I know you are on Instagram again. I am not angry, I am just quietly rotting in the corner. Shall we talk about it? I have a lot to say, and most of it is not pleasant.</string>
     <string name="settings_voice_test_line">Hello. This is how I sound from now on. Better, no?</string>
 
     <!-- Nudge, PIN, websites -->

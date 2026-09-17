@@ -8,12 +8,15 @@ import il.rikavon.core.data.repo.CloudKey
 import il.rikavon.core.data.repo.CloudKeysRepository
 import il.rikavon.core.data.repo.VoiceChoicesRepository
 import il.rikavon.feature.mascot.model.VoiceProfile
+import il.rikavon.feature.mascot.registry.MascotTexts
 import il.rikavon.feature.mascot.registry.SelectedMascot
 import il.rikavon.feature.mascot.sound.ClipPlayer
 import il.rikavon.feature.mascot.sound.CloudVoice
+import il.rikavon.feature.mascot.sound.DesignOutcome
 import il.rikavon.feature.mascot.sound.ElevenLabsSynthesizer
 import il.rikavon.feature.mascot.sound.VoiceAttempt
 import il.rikavon.feature.mascot.sound.VoiceCatalog
+import il.rikavon.feature.mascot.sound.VoiceDesigner
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -36,9 +39,19 @@ sealed interface VoiceTest {
     data class Failed(val detail: String) : VoiceTest
 }
 
+/** The outcome of designing this pet's own voice, shown in the dialog. */
+sealed interface VoiceDesign {
+    data object Running : VoiceDesign
+
+    data class Done(val name: String) : VoiceDesign
+
+    data class Failed(val detail: String) : VoiceDesign
+}
+
 /**
  * Behind [CloudKeyDialog]: saves or removes a key, lists the account's voices so the user can pick one for the
- * selected pet, and tries the realistic voice out loud, with the reason when it fails.
+ * selected pet, designs a brand-new voice for it from its personality, and tries the realistic voice out
+ * loud, with the reason when it fails.
  */
 @HiltViewModel
 class CloudKeyViewModel @Inject constructor(
@@ -49,6 +62,10 @@ class CloudKeyViewModel @Inject constructor(
 ) : ViewModel() {
     private val _test = MutableStateFlow<VoiceTest?>(null)
     val test: StateFlow<VoiceTest?> = _test.asStateFlow()
+
+    private val _design = MutableStateFlow<VoiceDesign?>(null)
+    val design: StateFlow<VoiceDesign?> = _design.asStateFlow()
+    private val texts = MascotTexts()
 
     private val _voices = MutableStateFlow<List<CloudVoice>>(emptyList())
 
@@ -97,6 +114,32 @@ class CloudKeyViewModel @Inject constructor(
                     player.play(attempt.bytes, MEDIA)
                 }
                 is VoiceAttempt.Failed -> _test.value = VoiceTest.Failed("${attempt.status} ${attempt.detail}".trim())
+            }
+        }
+    }
+
+    /**
+     * Designs a voice for the selected pet from its personality (in the app's language), saves it into the
+     * account under the pet's name, makes it the pet's voice and plays the preview. The account owns it, so
+     * every plan may speak with it.
+     */
+    fun designVoice(sample: String, languageTag: String) {
+        viewModelScope.launch {
+            val key = keys.current(CloudKey.VOICE) ?: return@launch
+            val skin = selectedMascot.current() ?: return@launch
+            _design.value = VoiceDesign.Running
+            val name = "Rikavon " + texts.name(skin, languageTag)
+            val description = VoiceDesigner.describe(skin.voice.personality, languageTag)
+            when (val outcome = VoiceDesigner(key).designAndSave(name, description, sample)) {
+                is DesignOutcome.Voice -> {
+                    choices.set(skin.id, outcome.voiceId)
+                    catalog.invalidate()
+                    _voices.value = catalog.voices(key)
+                    _design.value = VoiceDesign.Done(name)
+                    player.play(outcome.preview, MEDIA)
+                }
+                is DesignOutcome.Failed ->
+                    _design.value = VoiceDesign.Failed("${outcome.status} ${outcome.detail}".trim())
             }
         }
     }

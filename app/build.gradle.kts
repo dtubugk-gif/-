@@ -87,6 +87,12 @@ android {
         }
     }
 
+    lint {
+        // Lint over the Robolectric screenshot tests races the Hilt test generator and crashes at random;
+        // the unit tests are not what lint is for here.
+        ignoreTestSources = true
+    }
+
     testOptions {
         unitTests {
             isIncludeAndroidResources = true

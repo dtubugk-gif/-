@@ -43,6 +43,8 @@ fun CloudKeyDialog(
     val test by viewModel.test.collectAsStateWithLifecycle()
     val voices by viewModel.voices.collectAsStateWithLifecycle()
     val choice by viewModel.choice.collectAsStateWithLifecycle()
+    val design by viewModel.design.collectAsStateWithLifecycle()
+    val sample = stringResource(R.string.settings_voice_design_sample)
     var picking by remember { mutableStateOf(false) }
     val language = UiLanguage.current()
     val testLine = stringResource(R.string.settings_voice_test_line)
@@ -107,6 +109,32 @@ fun CloudKeyDialog(
                                 )
                             }
                         }
+                    }
+                    TextButton(
+                        onClick = { viewModel.designVoice(sample, language) },
+                        enabled = design != VoiceDesign.Running,
+                    ) { Text(stringResource(R.string.settings_voice_design)) }
+                    design?.let { outcome ->
+                        Text(
+                            text =
+                                when (outcome) {
+                                    VoiceDesign.Running -> stringResource(R.string.settings_voice_design_running)
+                                    is VoiceDesign.Done ->
+                                        stringResource(
+                                            R.string.settings_voice_design_ok,
+                                            outcome.name,
+                                        )
+                                    is VoiceDesign.Failed ->
+                                        stringResource(R.string.settings_voice_design_failed, outcome.detail)
+                                },
+                            style = MaterialTheme.typography.bodySmall,
+                            color =
+                                if (outcome is VoiceDesign.Failed) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                        )
                     }
                     TextButton(
                         onClick = { viewModel.testVoice(testLine, language) },
