@@ -4,8 +4,11 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.speech.tts.Voice
 import dagger.hilt.android.qualifiers.ApplicationContext
 import il.rikavon.core.data.repo.CloudKey
 import il.rikavon.core.data.repo.CloudKeysRepository
@@ -26,20 +29,20 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * The pet's voice. By default the device's own text-to-speech engine, tuned per mascot (pitch and rate), so
- * every line the pet says on screen can also be said out loud and nothing leaves the device. With the user's
- * own ElevenLabs key ([CloudKey.VOICE]) the lines are spoken by a natural voice instead, one per mascot from the
- * account's own voices ([VoiceCatalog]: the user's pick, the manifest's, or the one that fits the personality), the
- * next line synthesised while the current one plays; the device engine takes over the moment the cloud voice
- * fails, mid-sentence-list if need be. Ambient lines go out on the media stream (the one users actually turn
- * up); call lines go out on the voice-call stream so they follow the earpiece / speaker routing and the call
- * volume. Speech ducks whatever is playing and reports through [issue] instead of failing silently.
+ * The pet's voice. By default the device's own text-to-speech engine, with the best voice it has for the
+ * language ([DeviceVoices]) tuned per mascot (pitch and rate), so every line the pet says on screen can also be
+ * said out loud and nothing leaves the device. With the user's own OpenAI key ([CloudKey.VOICE]) the lines are
+ * spoken by a natural voice instead, cast per pet ([VoiceCasting]: the user's pick, the manifest's, or the one
+ * that fits the personality) and directed by its character, the next line synthesised while the current one
+ * plays; the device engine takes over the moment the cloud voice fails, mid-sentence-list if need be. Ambient
+ * lines go out on the media stream (the one users actually turn up); call lines go out on the voice-call stream
+ * so they follow the earpiece / speaker routing and the call volume. Speech ducks whatever is playing and
+ * reports through [issue] instead of failing silently.
  */
 @Singleton
 class MascotVoice @Inject constructor(
     @ApplicationContext private val context: Context,
     keys: CloudKeysRepository,
-    private val catalog: VoiceCatalog,
     private val choices: VoiceChoicesRepository,
     private val selectedMascot: SelectedMascot,
 ) : VoiceOutput {
@@ -49,9 +52,6 @@ class MascotVoice @Inject constructor(
 
     @Volatile
     private var synthesizer: SpeechSynthesizer? = null
-
-    @Volatile
-    private var voiceKey: String? = null
     private var engine: TextToSpeech? = null
     private var ready = false
     private var pending: (() -> Unit)? = null
@@ -83,10 +83,7 @@ class MascotVoice @Inject constructor(
 
     init {
         scope.launch {
-            keys.key(CloudKey.VOICE).collect { key ->
-                voiceKey = key
-                synthesizer = key?.let { ElevenLabsSynthesizer(it) }
-            }
+            keys.key(CloudKey.VOICE).collect { key -> synthesizer = key?.let { OpenAiSynthesizer(it) } }
         }
     }
 
@@ -104,9 +101,8 @@ class MascotVoice @Inject constructor(
         val spoken = lines.filter { it.isNotBlank() }
         if (spoken.isEmpty() || (!prompted && !ringerAllowsSound())) return
         val cloud = synthesizer
-        val key = voiceKey
-        if (cloud != null && key != null) {
-            speakNeural(spoken, profile, languageTag, inCall, cloud, key)
+        if (cloud != null) {
+            speakNeural(spoken, profile, languageTag, inCall, cloud)
         } else {
             _speaker.value = Speaker.Device
             sayWithEngine(spoken, profile, languageTag, inCall, offset = 0)
@@ -122,9 +118,9 @@ class MascotVoice @Inject constructor(
     }
 
     /**
-     * The realistic voice: the account's voice for this pet is looked up, then each line is fetched as a clip
-     * and played, the next one fetched meanwhile so the gaps stay short. No usable voice, or the first clip
-     * that cannot be fetched, hands the rest of the lines to the device engine.
+     * The realistic voice: each line is fetched as a clip with the pet's voice and directions and played, the
+     * next one fetched meanwhile so the gaps stay short. The first clip that cannot be fetched hands the rest
+     * of the lines to the device engine.
      */
     private fun speakNeural(
         lines: List<String>,
@@ -132,7 +128,6 @@ class MascotVoice @Inject constructor(
         languageTag: String,
         inCall: Boolean,
         cloud: SpeechSynthesizer,
-        key: String,
     ) {
         neuralJob?.cancel()
         runCatching { engine?.stop() }
@@ -142,17 +137,14 @@ class MascotVoice @Inject constructor(
         val attributes = if (inCall) callAttributes else mediaAttributes
         neuralJob =
             scope.launch {
-                val voiceId =
-                    resolveVoice(key, profile) ?: run {
-                        _speaker.value = Speaker.DeviceNoVoice
-                        sayWithEngine(lines, profile, languageTag, inCall, offset = 0)
-                        return@launch
-                    }
-                var next = async { cloud.attempt(lines[0], voiceId, languageTag, profile.rate) }
+                val choice = selectedMascot.current()?.id?.let { choices.current(it) }
+                val voice = VoiceCasting.voice(profile, choice)
+                val directions = VoiceCasting.instructions(profile, languageTag)
+                var next = async { cloud.attempt(lines[0], voice, directions) }
                 for (index in lines.indices) {
                     val attempt = next.await()
                     if (index + 1 < lines.size) {
-                        next = async { cloud.attempt(lines[index + 1], voiceId, languageTag, profile.rate) }
+                        next = async { cloud.attempt(lines[index + 1], voice, directions) }
                     }
                     if (attempt is VoiceAttempt.Failed) {
                         next.cancel()
@@ -169,12 +161,6 @@ class MascotVoice @Inject constructor(
                 }
                 finished()
             }
-    }
-
-    /** The user's pick for the selected pet, else the manifest's voice, else the account's best fit. */
-    private suspend fun resolveVoice(key: String, profile: VoiceProfile): String? {
-        val choice = selectedMascot.current()?.id?.let { choices.current(it) }
-        return catalog.resolve(key, profile, choice)
     }
 
     private fun sayWithEngine(
@@ -196,6 +182,7 @@ class MascotVoice @Inject constructor(
     private fun sayNow(lines: List<String>, profile: VoiceProfile, languageTag: String, inCall: Boolean, offset: Int) {
         val tts = engine ?: return report(VoiceIssue.NO_ENGINE)
         if (tts.setLanguage(localeFor(languageTag)) < TextToSpeech.LANG_AVAILABLE) return report(VoiceIssue.NO_LANGUAGE)
+        bestVoice(tts, languageTag, profile.personality)?.let { runCatching { tts.setVoice(it) } }
         tts.setPitch(profile.pitch)
         tts.setSpeechRate(profile.rate)
         tts.setAudioAttributes(if (inCall) callAttributes else mediaAttributes)
@@ -213,6 +200,28 @@ class MascotVoice @Inject constructor(
             return report(VoiceIssue.NO_ENGINE)
         }
         _issue.value = if (muted(inCall)) VoiceIssue.MUTED else null
+    }
+
+    /**
+     * The engine's best voice for the language rather than its default; engines are allowed to have none, or
+     * to throw while listing them, and then the language set above stands.
+     */
+    private fun bestVoice(tts: TextToSpeech, languageTag: String, personality: String): Voice? {
+        val voices = runCatching { tts.voices?.toList() }.getOrNull().orEmpty()
+        if (voices.isEmpty()) return null
+        val candidates =
+            voices.map {
+                DeviceVoice(it.name, it.locale.language, it.quality, it.latency, it.isNetworkConnectionRequired)
+            }
+        val pick = DeviceVoices.pick(candidates, languageTag, personality, online()) ?: return null
+        return voices.firstOrNull { it.name == pick.name }
+    }
+
+    private fun online(): Boolean {
+        val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
+        val network = manager.activeNetwork ?: return false
+        val capabilities = manager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
     private fun report(issue: VoiceIssue) {

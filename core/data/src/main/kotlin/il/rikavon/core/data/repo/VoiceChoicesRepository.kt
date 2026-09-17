@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Which cloud voice the user picked for each pet; null means the app chooses from the account's voices. */
+/** Which cloud voice the user picked for each pet; null means the one cast for its personality. */
 @Singleton
 class VoiceChoicesRepository @Inject constructor(private val store: DataStore<Preferences>) {
     fun choice(mascotId: String): Flow<String?> =

@@ -23,9 +23,6 @@ sealed interface Speaker {
     /** The device's own engine, because no cloud voice is set up. */
     data object Device : Speaker
 
-    /** The device's own engine, because the account lists no voice the app may use. */
-    data object DeviceNoVoice : Speaker
-
     /** The device's own engine, because the cloud voice refused; [reason] is its status and what it said. */
     data class DeviceAfterRefusal(val reason: String) : Speaker
 }

@@ -174,7 +174,7 @@
     <string name="privacy_collect_title">What the app collects</string>
     <string name="privacy_collect_body">The list of installed apps, their usage time and open counts for today and up to the last 90 days, the limits and schedules you set, the daily score, streaks and achievements. All of it to show you the pet and the statistics.</string>
     <string name="privacy_network_title">Where it goes</string>
-    <string name="privacy_network_body">Nowhere, by default: no server, no account, no device identifier. One exception you control: with the AI brain on (Settings → Pet → AI brain, your own Anthropic key), what you say to the pet and its context (its name, your score, the app closest to its limit and the minutes left) are sent to Anthropic\'s API to write the pet\'s reply, under Anthropic\'s privacy policy. The realistic voice works the same way: with your own ElevenLabs key entered, the lines the pet says (and nothing you say) are sent to ElevenLabs to be turned into sound. Nothing else is ever sent, and removing a key stops it.</string>
+    <string name="privacy_network_body">Nowhere, by default: no server, no account, no device identifier. One exception you control: with the AI brain on (Settings → Pet → AI brain, your own Anthropic key), what you say to the pet and its context (its name, your score, the app closest to its limit and the minutes left) are sent to Anthropic\'s API to write the pet\'s reply, under Anthropic\'s privacy policy. The realistic voice works the same way: with your own OpenAI key entered, the lines the pet says (and nothing you say) are sent to OpenAI\'s API to be turned into sound. Nothing else is ever sent, and removing a key stops it.</string>
     <string name="privacy_permissions_title">Why the permissions</string>
     <string name="privacy_permissions_body">Usage access: to measure minutes and opens. Display over other apps: to show the block screen. Query all packages: so you can choose what to limit. Notifications: the service\'s silent notification and an optional evening summary.</string>
     <string name="privacy_storage_title">Where it is stored</string>
@@ -221,10 +221,9 @@
     <string name="language_hebrew">עברית</string>
     <string name="settings_voice">Voice</string>
     <string name="settings_voice_hint">The pet reads its lines aloud (device text-to-speech)</string>
-    <string name="settings_voice_hint_pending">The pet reads its lines aloud. ElevenLabs is set up; after its next line this shows which voice actually spoke.</string>
-    <string name="settings_voice_hint_cloud">The pet reads its lines aloud. Its last line was spoken by ElevenLabs.</string>
-    <string name="settings_voice_hint_refused">The pet reads its lines aloud. The device\'s voice read the last line, because ElevenLabs refused: %1$s</string>
-    <string name="settings_voice_hint_no_voice">The pet reads its lines aloud. The device\'s voice read the last line: your ElevenLabs account lists no voice the app may use.</string>
+    <string name="settings_voice_hint_pending">The pet reads its lines aloud. The realistic voice is set up; after its next line this shows which voice actually spoke.</string>
+    <string name="settings_voice_hint_cloud">The pet reads its lines aloud. Its last line was spoken by the realistic voice (OpenAI).</string>
+    <string name="settings_voice_hint_refused">The pet reads its lines aloud. The device\'s voice read the last line, because OpenAI refused: %1$s</string>
     <string name="settings_ai">AI brain</string>
     <string name="settings_ai_on">On: Claude writes every line in the pet\'s voice, with your own key</string>
     <string name="settings_ai_off">Off: the pet answers from its fixed script</string>
@@ -235,23 +234,17 @@
     <string name="settings_ai_remove">Remove key</string>
     <string name="settings_ai_cancel">Cancel</string>
     <string name="settings_realistic_voice">Realistic voice</string>
-    <string name="settings_realistic_voice_on">On: a natural ElevenLabs voice per pet, with your own key</string>
-    <string name="settings_realistic_voice_off">Off: the device\'s own text-to-speech</string>
+    <string name="settings_realistic_voice_on">On: a natural voice per pet from OpenAI, with your own key</string>
+    <string name="settings_realistic_voice_off">Off: the best voice the device\'s own text-to-speech has</string>
     <string name="settings_voice_dialog_title">Realistic voice</string>
-    <string name="settings_voice_dialog_body">Paste your own ElevenLabs API key and the pet speaks with a natural, human-sounding voice, in Hebrew and English: pick one of your account\'s voices, or create the pet\'s own from its personality. While it is on, only the lines the pet says are sent to ElevenLabs to be turned into sound; nothing you say is. The key stays on this phone and is never backed up. Whenever the voice cannot be reached, the device\'s own voice reads the line instead.</string>
-    <string name="settings_voice_key_hint">ElevenLabs API key</string>
+    <string name="settings_voice_dialog_body">Paste your own OpenAI API key and the pet speaks with a natural, human-sounding voice, in Hebrew and English, cast and directed by its personality (a different voice per pet; you can pick another). While it is on, only the lines the pet says are sent to OpenAI to be turned into sound; nothing you say is. The key stays on this phone and is never backed up. Whenever the voice cannot be reached, the device\'s own voice reads the line instead.</string>
+    <string name="settings_voice_key_hint">sk-…</string>
     <string name="settings_voice_test">Test the voice</string>
-    <string name="settings_voice_test_running">Asking ElevenLabs…</string>
+    <string name="settings_voice_test_running">Asking OpenAI…</string>
     <string name="settings_voice_test_ok">It works. That is the pet\'s new voice.</string>
-    <string name="settings_voice_test_failed">ElevenLabs refused: %1$s. Until this works, the pet keeps the device\'s voice.</string>
+    <string name="settings_voice_test_failed">OpenAI refused: %1$s. Until this works, the pet keeps the device\'s voice.</string>
     <string name="settings_voice_pick">Voice: %1$s</string>
     <string name="settings_voice_auto">Automatic (by personality)</string>
-    <string name="settings_voice_test_none">Your ElevenLabs account lists no voice the app may use.</string>
-    <string name="settings_voice_design">Create this pet\'s own voice</string>
-    <string name="settings_voice_design_running">Designing a voice from the pet\'s personality… (about 20 seconds)</string>
-    <string name="settings_voice_design_ok">Created and selected: %1$s. It lives in your ElevenLabs account now.</string>
-    <string name="settings_voice_design_failed">ElevenLabs refused: %1$s</string>
-    <string name="settings_voice_design_sample">Hello, it is me, your pet. I know you are on Instagram again. I am not angry, I am just quietly rotting in the corner. Shall we talk about it? I have a lot to say, and most of it is not pleasant.</string>
     <string name="settings_voice_test_line">Hello. This is how I sound from now on. Better, no?</string>
 
     <!-- Nudge, PIN, websites -->

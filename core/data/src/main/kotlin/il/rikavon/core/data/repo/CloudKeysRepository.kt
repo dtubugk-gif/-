@@ -15,8 +15,8 @@ enum class CloudKey(internal val pref: Preferences.Key<String>) {
     /** The AI brain: Claude writes the pet's lines. */
     BRAIN(SettingsKeys.AI_KEY),
 
-    /** The realistic voice: ElevenLabs speaks them. */
-    VOICE(SettingsKeys.VOICE_KEY),
+    /** The realistic voice: OpenAI's speech model says them. */
+    VOICE(SettingsKeys.SPEECH_KEY),
 }
 
 /**

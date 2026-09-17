@@ -129,8 +129,8 @@ data class MascotSkin(
 
 /**
  * The pet's voice: for the device engine, [pitch] 0.5–2.0 (1 = neutral) and [rate] 0.5–2.0 (1 = normal); for
- * the realistic voice, the [personality] a cloud voice is chosen for from the user's own account, unless a
- * manifest names an ElevenLabs voice outright in [neuralVoiceId].
+ * the realistic voice, the [personality] a cloud voice is cast and directed for, unless a manifest names one
+ * of the speech model's voices outright in [neuralVoiceId].
  */
 data class VoiceProfile(
     val pitch: Float,

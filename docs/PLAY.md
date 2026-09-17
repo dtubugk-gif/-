@@ -44,8 +44,8 @@ With it on (the user pastes their own Anthropic API key under Settings → Pet �
 user says to the pet and the pet's context (its name, the focus score, the name of the one app closest to its
 limit and its remaining minutes) are sent over HTTPS to Anthropic's API to write the pet's reply. The app
 stores none of it; Anthropic's API data policy applies on the other side. The optional realistic voice (the
-user's own ElevenLabs key, same place in Settings) sends only the pet's own lines, which are app text and not
-user data, to ElevenLabs to be turned into sound; nothing the user says or does is part of that request.
+user's own OpenAI key, same place in Settings) sends only the pet's own lines, which are app text and not
+user data, to OpenAI's speech API to be turned into sound; nothing the user says or does is part of that request.
 
 Rationale for every category:
 
@@ -198,7 +198,7 @@ Character limits: title 30, short description 80, full description 4000. Both la
 
 פרטיות: אין חשבון, אין אנליטיקס, אין עוקבים של צד שלישי, ובלי רשת כברירת מחדל. רק אם תדליקו את מוח ה-AI
 עם מפתח Anthropic משלכם, מה שאתם אומרים למחמד נשלח ל-Anthropic כדי שיענה; ואם תדליקו את הקול הריאליסטי עם
-מפתח ElevenLabs משלכם, השורות שהמחמד אומר נשלחות ל-ElevenLabs כדי להפוך לקול. כל שאר הנתונים נשארים בטלפון
+מפתח OpenAI משלכם, השורות שהמחמד אומר נשלחות ל-OpenAI כדי להפוך לקול. כל שאר הנתונים נשארים בטלפון
 ונמחקים אחרי 90 יום. שירות הנגישות אופציונלי, ורק אם חסמתם אתר או פיד הוא
 קורא את שורת הכתובת בדפדפן או מזהה את נגן ה-Shorts / Reels, ולא שומר כלום.
 
@@ -239,7 +239,7 @@ What's inside:
 
 Privacy: no account, no analytics, no third-party trackers, and no network by default. Only if you switch on
 the AI brain with your own Anthropic key, what you say to the pet is sent to Anthropic for its reply; and only
-if you switch on the realistic voice with your own ElevenLabs key, the pet's own lines go to ElevenLabs to
+if you switch on the realistic voice with your own OpenAI key, the pet's own lines go to OpenAI to
 become sound. Everything else stays on the phone and is deleted after 90 days. The accessibility service is optional, and
 only if you block a website or a feed does it read the browser's address bar or look for the Shorts / Reels
 player; it stores nothing.

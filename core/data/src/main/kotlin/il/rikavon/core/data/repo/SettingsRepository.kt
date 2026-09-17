@@ -162,5 +162,5 @@ internal object SettingsKeys {
 
     /** The optional cloud features' keys; read and written only by [CloudKeysRepository]. */
     val AI_KEY = stringPreferencesKey("ai_key")
-    val VOICE_KEY = stringPreferencesKey("voice_key")
+    val SPEECH_KEY = stringPreferencesKey("speech_key")
 }

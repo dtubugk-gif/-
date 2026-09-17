@@ -176,14 +176,19 @@ BlockerService loop (2s/5s/15s, off when screen off) ◄────────
   an 8 s timeout and one retry; any error, refusal or empty answer falls back to the script for that line and
   the conversation carries on. `ConversationEngines` picks the engine per conversation, so a call and the
   talk screen each keep their own short memory.
-* **The realistic voice (optional)** – with an ElevenLabs API key entered in Settings (`CloudKeysRepository`,
-  the same place as the brain's key), `MascotVoice` speaks through `ElevenLabsSynthesizer` instead of the
-  device engine: `eleven_flash_v2_5` (Hebrew and English, low latency), the voice taken from the account's own
-  list (`VoiceCatalog` reads `GET /v1/voices` once per key: the user's pick for this pet from the Settings
-  dialog, else the manifest's `voice.neural`, else the premade voice whose gender and age fit the personality;
-  a free plan may only call the voices in its own list, never an arbitrary library voice), the pet's pace
-  mapped to the voice's speed, and each clip played by `ClipPlayer` on the same media / voice-call attributes
-  as before. The dialog's "Test the voice" makes one real request and shows a refusal verbatim.
+* **The realistic voice (optional)** – with an OpenAI API key entered in Settings (`CloudKeysRepository`, the
+  same place as the brain's key), `MascotVoice` speaks through `OpenAiSynthesizer` instead of the device
+  engine: `gpt-4o-mini-tts` (Hebrew and English, and it takes directions), the voice cast per pet by
+  `VoiceCasting` (the user's pick for this pet from the Settings dialog, else the manifest's `voice.neural`,
+  else the one cast for the personality: onyx for the cynic, ballad for the drama queen, and so on) and
+  directed by a character sketch, the language with its accent and the pace, and each clip played by
+  `ClipPlayer` on the same media / voice-call attributes as before. The dialog's "Test the voice" makes one
+  real request and shows a refusal in the service's own words; the "Voice" row in Settings says which engine
+  actually spoke the last line.
+* **The device voice, chosen well** – without a key the pet still does not get the engine's default voice:
+  `DeviceVoices` ranks what the engine offers for the language (highest quality, then the online-only
+  voices when the phone is online, since on Google's engine those are the natural set) and spreads pets
+  across equally good voices by personality, so two pets do not share one.
   The next line is synthesised while the current one plays; the first clip that fails hands the rest of the
   lines to the device engine, so the pet is never silent for want of a network. Only the pet's own lines
   travel; nothing the user says does.
@@ -244,7 +249,7 @@ Everything lives in `core/ui/.../anim/AnimationSpecs.kt`. `MascotView` implement
 | `RECEIVE_BOOT_COMPLETED` | restart after reboot | service starts on next app open |
 
 `INTERNET` is declared only for the optional AI brain and realistic voice (Settings → Pet, the user's own
-Anthropic and ElevenLabs keys); nothing touches the network without them.
+Anthropic and OpenAI keys); nothing touches the network without them.
 
 ---
 
@@ -341,7 +346,7 @@ nothing else changes.
 
 Zero analytics, zero third-party trackers, and no network unless the AI brain or the realistic voice is
 switched on with the user's own keys (then what they say to the pet and its context go to Anthropic's API,
-and the pet's own lines go to ElevenLabs to become sound; nothing else). Data lives in
+and the pet's own lines go to OpenAI's speech API to become sound; nothing else). Data lives in
 Room/DataStore inside the app sandbox,
 history is pruned after 90 days, backup is a JSON file the user writes through the system file picker.
 Play-facing text, the publishing checklist and the generated store graphics (`docs/play/`): [docs/PLAY.md](docs/PLAY.md).

@@ -41,10 +41,7 @@ fun CloudKeyDialog(
 ) {
     var key by rememberSaveable(kind) { mutableStateOf("") }
     val test by viewModel.test.collectAsStateWithLifecycle()
-    val voices by viewModel.voices.collectAsStateWithLifecycle()
     val choice by viewModel.choice.collectAsStateWithLifecycle()
-    val design by viewModel.design.collectAsStateWithLifecycle()
-    val sample = stringResource(R.string.settings_voice_design_sample)
     var picking by remember { mutableStateOf(false) }
     val language = UiLanguage.current()
     val testLine = stringResource(R.string.settings_voice_test_line)
@@ -79,10 +76,9 @@ fun CloudKeyDialog(
                 )
                 if (configured && kind == CloudKey.VOICE) {
                     val automatic = stringResource(R.string.settings_voice_auto)
-                    val chosen = voices.firstOrNull { it.id == choice }?.name ?: automatic
                     Box {
-                        TextButton(onClick = { picking = true }, enabled = voices.isNotEmpty()) {
-                            Text(stringResource(R.string.settings_voice_pick, chosen))
+                        TextButton(onClick = { picking = true }) {
+                            Text(stringResource(R.string.settings_voice_pick, choice ?: automatic))
                         }
                         DropdownMenu(expanded = picking, onDismissRequest = { picking = false }) {
                             DropdownMenuItem(
@@ -92,49 +88,16 @@ fun CloudKeyDialog(
                                     picking = false
                                 },
                             )
-                            voices.forEach { voice ->
+                            viewModel.voices.forEach { voice ->
                                 DropdownMenuItem(
-                                    text = {
-                                        Column {
-                                            Text(voice.name)
-                                            if (voice.description.isNotEmpty()) {
-                                                Text(voice.description, style = MaterialTheme.typography.bodySmall)
-                                            }
-                                        }
-                                    },
+                                    text = { Text(voice) },
                                     onClick = {
-                                        viewModel.chooseVoice(voice.id)
+                                        viewModel.chooseVoice(voice)
                                         picking = false
                                     },
                                 )
                             }
                         }
-                    }
-                    TextButton(
-                        onClick = { viewModel.designVoice(sample, language) },
-                        enabled = design != VoiceDesign.Running,
-                    ) { Text(stringResource(R.string.settings_voice_design)) }
-                    design?.let { outcome ->
-                        Text(
-                            text =
-                                when (outcome) {
-                                    VoiceDesign.Running -> stringResource(R.string.settings_voice_design_running)
-                                    is VoiceDesign.Done ->
-                                        stringResource(
-                                            R.string.settings_voice_design_ok,
-                                            outcome.name,
-                                        )
-                                    is VoiceDesign.Failed ->
-                                        stringResource(R.string.settings_voice_design_failed, outcome.detail)
-                                },
-                            style = MaterialTheme.typography.bodySmall,
-                            color =
-                                if (outcome is VoiceDesign.Failed) {
-                                    MaterialTheme.colorScheme.error
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                        )
                     }
                     TextButton(
                         onClick = { viewModel.testVoice(testLine, language) },
@@ -146,13 +109,12 @@ fun CloudKeyDialog(
                                 when (outcome) {
                                     VoiceTest.Running -> stringResource(R.string.settings_voice_test_running)
                                     VoiceTest.Ok -> stringResource(R.string.settings_voice_test_ok)
-                                    VoiceTest.NoVoice -> stringResource(R.string.settings_voice_test_none)
                                     is VoiceTest.Failed ->
                                         stringResource(R.string.settings_voice_test_failed, outcome.detail)
                                 },
                             style = MaterialTheme.typography.bodySmall,
                             color =
-                                if (outcome is VoiceTest.Failed || outcome == VoiceTest.NoVoice) {
+                                if (outcome is VoiceTest.Failed) {
                                     MaterialTheme.colorScheme.error
                                 } else {
                                     MaterialTheme.colorScheme.onSurfaceVariant

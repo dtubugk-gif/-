@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.VIBRATE" />
-    <!-- Only the optional AI brain uses the network, and only with a key the user entered (ClaudeBrain). -->
+    <!-- Only the optional AI brain and realistic voice use the network, and only with a key the user entered. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Whether the engine's better, online-only voices can be chosen right now (MascotVoice). -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- The pet's voice and ears: the device's text-to-speech engine and speech recogniser must be visible. -->
     <queries>

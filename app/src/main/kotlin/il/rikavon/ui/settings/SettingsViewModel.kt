@@ -59,7 +59,7 @@ data class SettingsUiState(
     val systemApps: List<SystemAppCandidate> = emptyList(),
     /** The AI brain has a key, so the pet's lines come from the model. */
     val aiConfigured: Boolean = false,
-    /** The realistic voice has a key, so the pet speaks through ElevenLabs. */
+    /** The realistic voice has a key, so the pet speaks through OpenAI's speech model. */
     val voiceConfigured: Boolean = false,
     /** Which engine actually said the pet's last line; null until it said one this session. */
     val speaker: Speaker? = null,

@@ -618,7 +618,6 @@ fun SettingsScreen(
 private fun voiceHint(state: SettingsUiState): String =
     when (val speaker = state.speaker) {
         Speaker.Cloud -> stringResource(R.string.settings_voice_hint_cloud)
-        Speaker.DeviceNoVoice -> stringResource(R.string.settings_voice_hint_no_voice)
         is Speaker.DeviceAfterRefusal -> stringResource(R.string.settings_voice_hint_refused, speaker.reason)
         Speaker.Device, null ->
             stringResource(
