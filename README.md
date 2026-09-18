@@ -178,7 +178,12 @@ BlockerService loop (2s/5s/15s, off when screen off) ◄────────
   talk screen each keep their own short memory.
 * **The realistic voice (optional)** – with a cloud key entered in Settings (`CloudKeysRepository`, the same
   place as the brain's key), `MascotVoice` speaks through a `SpeechSynthesizer` instead of the device engine;
-  `NeuralSpeech.provider` tells the key's provider apart by its shape. **Azure Speech** (`AzureSynthesizer`,
+  `NeuralSpeech.provider` tells the key's provider apart by its shape. **The free voice** (`EdgeSynthesizer`,
+  no key: Settings stores the word `edge`): the same Azure voices through the channel the Edge browser's
+  read-aloud uses, over an OkHttp WebSocket with the browser's own message shapes and five-minute clock proof
+  (`EdgeSpeech`, retried once with the service's clock when a phone's is off). It is undocumented and may stop
+  without notice, which is why the device engine stands behind it and why the Play listing describes it as
+  such. **Azure Speech** (`AzureSynthesizer`,
   key + region, plain SSML over HTTPS): the only cloud with native Israeli Hebrew voices (Avri, Hila), and
   free up to half a million characters a month on the F0 plan, which stops rather than bills when it runs
   out; `AzureSpeech` casts a Hebrew and an English voice per personality and turns the manifest's pitch and
@@ -350,7 +355,7 @@ nothing else changes.
 
 Zero analytics, zero third-party trackers, and no network unless the AI brain or the realistic voice is
 switched on with the user's own keys (then what they say to the pet and its context go to Anthropic's API,
-and the pet's own lines go to Azure Speech or OpenAI to become sound; nothing else). Data lives in
+and the pet's own lines go to Microsoft's read-aloud channel, Azure Speech or OpenAI to become sound; nothing else). Data lives in
 Room/DataStore inside the app sandbox,
 history is pruned after 90 days, backup is a JSON file the user writes through the system file picker.
 Play-facing text, the publishing checklist and the generated store graphics (`docs/play/`): [docs/PLAY.md](docs/PLAY.md).

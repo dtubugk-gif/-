@@ -174,7 +174,7 @@
     <string name="privacy_collect_title">What the app collects</string>
     <string name="privacy_collect_body">The list of installed apps, their usage time and open counts for today and up to the last 90 days, the limits and schedules you set, the daily score, streaks and achievements. All of it to show you the pet and the statistics.</string>
     <string name="privacy_network_title">Where it goes</string>
-    <string name="privacy_network_body">Nowhere, by default: no server, no account, no device identifier. One exception you control: with the AI brain on (Settings → Pet → AI brain, your own Anthropic key), what you say to the pet and its context (its name, your score, the app closest to its limit and the minutes left) are sent to Anthropic\'s API to write the pet\'s reply, under Anthropic\'s privacy policy. The realistic voice works the same way: with your own Azure Speech or OpenAI key entered, the lines the pet says (and nothing you say) are sent to that service to be turned into sound. Nothing else is ever sent, and removing a key stops it.</string>
+    <string name="privacy_network_body">Nowhere, by default: no server, no account, no device identifier. One exception you control: with the AI brain on (Settings → Pet → AI brain, your own Anthropic key), what you say to the pet and its context (its name, your score, the app closest to its limit and the minutes left) are sent to Anthropic\'s API to write the pet\'s reply, under Anthropic\'s privacy policy. The realistic voice works the same way: with the free voice or your own Azure Speech or OpenAI key, the lines the pet says (and nothing you say) are sent to that service (Microsoft\'s read-aloud channel, Azure, or OpenAI) to be turned into sound. Nothing else is ever sent, and removing a key stops it.</string>
     <string name="privacy_permissions_title">Why the permissions</string>
     <string name="privacy_permissions_body">Usage access: to measure minutes and opens. Display over other apps: to show the block screen. Query all packages: so you can choose what to limit. Notifications: the service\'s silent notification and an optional evening summary.</string>
     <string name="privacy_storage_title">Where it is stored</string>
@@ -234,11 +234,14 @@
     <string name="settings_ai_remove">Remove key</string>
     <string name="settings_ai_cancel">Cancel</string>
     <string name="settings_realistic_voice">Realistic voice</string>
-    <string name="settings_realistic_voice_on">On: a natural voice per pet from the cloud, with your own key</string>
+    <string name="settings_realistic_voice_on">On: a natural voice per pet from the cloud</string>
     <string name="settings_realistic_voice_off">Off: the best voice the device\'s own text-to-speech has</string>
     <string name="settings_voice_dialog_title">Realistic voice</string>
-    <string name="settings_voice_dialog_body">The pet speaks with a natural, human voice, a different one per pet, in Hebrew and English. Free: an Azure Speech key (native Israeli Hebrew voices, half a million characters a month at no charge; create a free Azure account, add a “Speech” resource on the Free F0 plan, and copy its key and region). Paid: an OpenAI key (starts with sk-). Only the lines the pet says are sent to be turned into sound; nothing you say is. The key stays on this phone and is never backed up. Whenever the voice cannot be reached, the device\'s own voice reads the line instead.</string>
+    <string name="settings_voice_dialog_body">The pet speaks with a natural, human voice, a different one per pet, in Hebrew and English. Free and without any account: the button below. Free with an account: an Azure Speech key (native Israeli Hebrew voices, half a million characters a month at no charge; create a free Azure account, add a “Speech” resource on the Free F0 plan, and copy its key and region). Paid: an OpenAI key (starts with sk-). Only the lines the pet says are sent to be turned into sound; nothing you say is. The key stays on this phone and is never backed up. Whenever the voice cannot be reached, the device\'s own voice reads the line instead.</string>
     <string name="settings_voice_key_hint">Azure Speech key, or an OpenAI sk-… key</string>
+    <string name="settings_voice_free">Use the free voice (no key, no account)</string>
+    <string name="settings_voice_free_note">The same native Hebrew voices, through the channel the Edge browser\'s read-aloud uses. It is not an official service: it works today and may stop without notice; then the device\'s voice takes over by itself.</string>
+    <string name="settings_voice_provider_edge">Free voice via Edge read-aloud (no key)</string>
     <string name="settings_voice_region_hint">Azure region, e.g. westeurope</string>
     <string name="settings_voice_provider_azure">Azure Speech (free tier)</string>
     <string name="settings_voice_provider_openai">OpenAI (paid)</string>

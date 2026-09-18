@@ -29,6 +29,8 @@ class NeuralSpeechTest {
     @Test
     fun `a key's provider is told from its shape`() {
         assertEquals(SpeechProvider.OPENAI, NeuralSpeech.provider(" sk-proj-abc "))
+        assertEquals(SpeechProvider.EDGE, NeuralSpeech.provider(" edge "))
+        assertTrue(NeuralSpeech.synthesizer("edge", null) is EdgeSynthesizer)
         assertEquals(SpeechProvider.AZURE, NeuralSpeech.provider("0123456789abcdef0123456789abcdef"))
         assertTrue(NeuralSpeech.synthesizer("sk-abc", null) is OpenAiSynthesizer)
         assertTrue(NeuralSpeech.synthesizer("abc", "westeurope") is AzureSynthesizer)

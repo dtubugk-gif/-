@@ -25,8 +25,11 @@ interface SpeechSynthesizer {
     suspend fun attempt(text: String, profile: VoiceProfile, languageTag: String, choice: String?): VoiceAttempt
 }
 
-/** The two cloud voices a key can belong to, told apart by the key itself. */
+/** The cloud voices a key can belong to, told apart by the key itself. */
 enum class SpeechProvider {
+    /** The Edge browser's read-aloud channel: the Azure voices, no key, no account, and no promises. */
+    EDGE,
+
     /** Azure Speech: native Hebrew voices, and free up to half a million characters a month. */
     AZURE,
 
@@ -36,13 +39,18 @@ enum class SpeechProvider {
 
 /** The request the realistic voice sends, kept pure so it is testable without a network. */
 object NeuralSpeech {
-    /** OpenAI keys start with `sk-`; anything else is taken for an Azure resource key. */
+    /** [EdgeSpeech.KEY] is the free voice; OpenAI keys start with `sk-`; anything else is an Azure resource key. */
     fun provider(key: String): SpeechProvider =
-        if (key.trim().startsWith(OPENAI_PREFIX)) SpeechProvider.OPENAI else SpeechProvider.AZURE
+        when {
+            key.trim() == EdgeSpeech.KEY -> SpeechProvider.EDGE
+            key.trim().startsWith(OPENAI_PREFIX) -> SpeechProvider.OPENAI
+            else -> SpeechProvider.AZURE
+        }
 
     /** The synthesizer for a saved key; [region] is only Azure's, and may be empty until the user enters it. */
     fun synthesizer(key: String, region: String?): SpeechSynthesizer =
         when (provider(key)) {
+            SpeechProvider.EDGE -> EdgeSynthesizer()
             SpeechProvider.OPENAI -> OpenAiSynthesizer(key.trim())
             SpeechProvider.AZURE -> AzureSynthesizer(key.trim(), region.orEmpty())
         }

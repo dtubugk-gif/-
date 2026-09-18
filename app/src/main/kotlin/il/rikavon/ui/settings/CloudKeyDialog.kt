@@ -29,6 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import il.rikavon.R
 import il.rikavon.core.data.repo.CloudKey
 import il.rikavon.core.ui.theme.Spacing
+import il.rikavon.feature.mascot.sound.EdgeSpeech
 import il.rikavon.feature.mascot.sound.NeuralSpeech
 import il.rikavon.feature.mascot.sound.SpeechProvider
 import il.rikavon.feature.mascot.ui.UiLanguage
@@ -80,6 +81,16 @@ fun CloudKeyDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
                 Text(stringResource(body), style = MaterialTheme.typography.bodyMedium)
+                if (kind == CloudKey.VOICE && setup?.provider != SpeechProvider.EDGE) {
+                    TextButton(onClick = { viewModel.save(CloudKey.VOICE, EdgeSpeech.KEY) }) {
+                        Text(stringResource(R.string.settings_voice_free))
+                    }
+                    Text(
+                        stringResource(R.string.settings_voice_free_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 OutlinedTextField(
                     value = key,
                     onValueChange = { key = it.trim() },
@@ -121,6 +132,7 @@ fun CloudKeyDialog(
                         text =
                             stringResource(
                                 when (current.provider) {
+                                    SpeechProvider.EDGE -> R.string.settings_voice_provider_edge
                                     SpeechProvider.AZURE -> R.string.settings_voice_provider_azure
                                     SpeechProvider.OPENAI -> R.string.settings_voice_provider_openai
                                 },

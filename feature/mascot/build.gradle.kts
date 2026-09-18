@@ -45,6 +45,7 @@ dependencies {
     api(libs.lottie)
     // The optional AI brain: the Claude API with the user's own key (ClaudeBrain).
     implementation(libs.anthropic.java)
+    implementation(libs.okhttp)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
