@@ -42,6 +42,7 @@ class PetContactNotifier @Inject constructor(
     private val texts: MascotTexts,
     private val renderer: MascotBitmapRenderer,
     private val overlay: OverlayController,
+    private val health: CallHealth,
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val ringer = CallRinger(context)
@@ -138,6 +139,13 @@ class PetContactNotifier @Inject constructor(
             runCatching { context.startActivity(ringing) }
         }
         mainHandler.postDelayed({ decline() }, RING_TOKEN, AnimationSpecs.CALL_RING_MILLIS)
+        val path =
+            when {
+                ringsHere -> RingPath.OVERLAY
+                permissions.hasNotifications() -> RingPath.NOTIFICATION
+                else -> RingPath.NOTHING
+            }
+        health.rang(contact.packageName, System.currentTimeMillis(), path)
         if (!permissions.hasNotifications()) return
         ensureChannels()
         // The call goes away when it stops ringing; the message stays in the shade and says what it wanted.

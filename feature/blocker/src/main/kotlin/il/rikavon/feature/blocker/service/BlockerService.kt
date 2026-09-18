@@ -36,6 +36,7 @@ import il.rikavon.core.data.time.TimeSource
 import il.rikavon.core.data.usage.InstalledAppsSource
 import il.rikavon.core.ui.anim.AnimationSpecs
 import il.rikavon.feature.blocker.R
+import il.rikavon.feature.blocker.contact.CallHealth
 import il.rikavon.feature.blocker.contact.CallReason
 import il.rikavon.feature.blocker.contact.MessageKind
 import il.rikavon.feature.blocker.contact.PetContact
@@ -115,6 +116,8 @@ class BlockerService : LifecycleService() {
     @Inject lateinit var gate: BreathingGateRepository
 
     @Inject lateinit var contact: PetContactNotifier
+
+    @Inject lateinit var health: CallHealth
 
     @Inject lateinit var score: FocusScoreProvider
 
@@ -217,6 +220,7 @@ class BlockerService : LifecycleService() {
                 }?.let { events.emit(BlockerEvent.DayRolledOver(it.newlyUnlocked)) }
 
             val snapshot = usage.refresh()
+            health.polled(time.nowMillis(), snapshot.foregroundPackage)
             val limitList = limits.all()
             val scheduleList = schedules.all()
             val now = time.now()
@@ -312,6 +316,7 @@ class BlockerService : LifecycleService() {
         val now = time.nowMillis()
         if (now - (lastPleadAt[packageName] ?: 0L) < PLEAD_COOLDOWN_MILLIS) return
         lastPleadAt[packageName] = now
+        health.opened(packageName, now)
         val skin = selectedMascot.current() ?: return
         val language = UiLanguage.fromLocale(resources.configuration.locales)
         val label = installed.label(packageName)

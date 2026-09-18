@@ -63,6 +63,8 @@ import il.rikavon.core.ui.components.rikavonSliderColors
 import il.rikavon.core.ui.theme.LocalExtraColors
 import il.rikavon.core.ui.theme.Sizes
 import il.rikavon.core.ui.theme.Spacing
+import il.rikavon.feature.blocker.contact.CallDiagnosis
+import il.rikavon.feature.blocker.contact.RingPath
 import il.rikavon.feature.blocker.ui.common.PinSetup
 import il.rikavon.feature.mascot.sound.Speaker
 import il.rikavon.feature.mascot.ui.UiLanguage
@@ -338,6 +340,14 @@ fun SettingsScreen(
                         checked = prefs.petCallsEnabled,
                         onCheckedChange = viewModel::setPetCalls,
                     )
+                    val diagnosis = state.callDiagnosis
+                    if (prefs.petCallsEnabled && diagnosis != null) {
+                        SettingNavRow(
+                            title = stringResource(R.string.settings_call_test),
+                            subtitle = callDiagnosisText(diagnosis),
+                            onClick = viewModel::testCall,
+                        )
+                    }
                     val fullScreenOk = state.permissions?.fullScreenIntent != false
                     if (prefs.petCallsEnabled && !fullScreenOk) {
                         val context = LocalContext.current
@@ -625,6 +635,70 @@ private fun voiceHint(state: SettingsUiState): String =
             )
     }
 
+/** One sentence on why the pet is not calling, or what its call machinery last did when it can. */
+@Composable
+private fun callDiagnosisText(diagnosis: CallDiagnosis): String =
+    when (diagnosis) {
+        CallDiagnosis.TrackingOff -> stringResource(R.string.settings_call_tracking_off)
+        CallDiagnosis.NoUsageAccess -> stringResource(R.string.settings_call_no_usage)
+        CallDiagnosis.CallsOff -> stringResource(R.string.settings_call_off)
+        is CallDiagnosis.ServiceAsleep ->
+            stringResource(
+                R.string.settings_call_service_asleep,
+                if (diagnosis.lastPollAt == 0L) {
+                    stringResource(R.string.settings_call_never)
+                } else {
+                    ago(diagnosis.lastPollAt)
+                },
+            )
+        CallDiagnosis.NothingToCallAbout -> stringResource(R.string.settings_call_nothing)
+        is CallDiagnosis.NoOverlay ->
+            stringResource(
+                if (diagnosis.notifications) R.string.settings_call_no_overlay else R.string.settings_call_no_way,
+            )
+        is CallDiagnosis.Ready -> {
+            val ring = diagnosis.health.lastRing
+            val open = diagnosis.health.lastOpen
+            val lastRing =
+                if (ring == null) {
+                    stringResource(R.string.settings_call_none_yet)
+                } else {
+                    stringResource(
+                        R.string.settings_call_last_ring,
+                        diagnosis.ringLabel ?: ring.packageName,
+                        ago(ring.atMillis),
+                        stringResource(
+                            when (ring.path) {
+                                RingPath.OVERLAY -> R.string.settings_call_path_screen
+                                RingPath.NOTIFICATION -> R.string.settings_call_path_notification
+                                RingPath.NOTHING -> R.string.settings_call_path_nothing
+                            },
+                        ),
+                    )
+                }
+            val lastOpen =
+                open?.let {
+                    stringResource(
+                        R.string.settings_call_last_open,
+                        diagnosis.openLabel ?: it.packageName,
+                        ago(it.atMillis),
+                    )
+                }
+            listOfNotNull(stringResource(R.string.settings_call_ready), lastRing, lastOpen).joinToString(" ")
+        }
+    }
+
+/** "just now" or "N min ago", for the diagnosis. */
+@Composable
+private fun ago(atMillis: Long): String {
+    val minutes = ((System.currentTimeMillis() - atMillis) / MILLIS_PER_MINUTE).toInt()
+    return if (minutes < 1) {
+        stringResource(R.string.settings_call_just_now)
+    } else {
+        stringResource(R.string.settings_call_ago, minutes)
+    }
+}
+
 private fun ReduceMotionMode.label(): Int =
     when (this) {
         ReduceMotionMode.SYSTEM -> R.string.settings_reduce_motion_system
@@ -649,3 +723,4 @@ private fun AppLanguage.label(): Int =
 private const val SUMMARY_MIN_HOUR = 17
 private const val SUMMARY_MAX_HOUR = 23
 private const val MIME_ANY = "*/*"
+private const val MILLIS_PER_MINUTE = 60_000L

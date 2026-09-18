@@ -18,6 +18,8 @@ import il.rikavon.core.data.repo.CloudKey
 import il.rikavon.core.data.repo.CloudKeysRepository
 import il.rikavon.core.data.repo.SettingsLockRepository
 import il.rikavon.core.data.repo.SettingsRepository
+import il.rikavon.feature.blocker.contact.CallDiagnosis
+import il.rikavon.feature.blocker.contact.CallDoctor
 import il.rikavon.feature.blocker.profile.FocusProfileManager
 import il.rikavon.feature.blocker.profile.FocusProfileState
 import il.rikavon.feature.blocker.profile.SystemAppCandidate
@@ -63,6 +65,8 @@ data class SettingsUiState(
     val voiceConfigured: Boolean = false,
     /** Which engine actually said the pet's last line; null until it said one this session. */
     val speaker: Speaker? = null,
+    /** Why the pet is or is not calling; null until known. */
+    val callDiagnosis: CallDiagnosis? = null,
 )
 
 private data class CloudState(
@@ -70,6 +74,7 @@ private data class CloudState(
     val ai: Boolean,
     val voice: Boolean,
     val speaker: Speaker?,
+    val calls: CallDiagnosis,
 )
 
 @HiltViewModel
@@ -85,6 +90,7 @@ class SettingsViewModel @Inject constructor(
     private val focusProfile: FocusProfileManager,
     selectedMascot: SelectedMascot,
     voice: MascotVoice,
+    private val callDoctor: CallDoctor,
 ) : ViewModel() {
     private val permissionState = MutableStateFlow(permissions.state())
     private val profileState = MutableStateFlow(focusProfile.state())
@@ -110,8 +116,9 @@ class SettingsViewModel @Inject constructor(
                 cloudKeys.key(CloudKey.BRAIN),
                 cloudKeys.key(CloudKey.VOICE),
                 voice.speaker,
-            ) { message, brain, key, speaker ->
-                CloudState(message, brain != null, key != null, speaker)
+                callDoctor.diagnosis(permissionState),
+            ) { message, brain, key, speaker, calls ->
+                CloudState(message, brain != null, key != null, speaker, calls)
             },
         ) { prefs, skin, (perms, profile, apps), c, cloud ->
             SettingsUiState(
@@ -127,6 +134,7 @@ class SettingsViewModel @Inject constructor(
                 cloud.ai,
                 cloud.voice,
                 cloud.speaker,
+                cloud.calls,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), SettingsUiState())
 
@@ -227,6 +235,9 @@ class SettingsViewModel @Inject constructor(
             offBehindLock { settings.setPetCallsEnabled(false) }
         }
     }
+
+    /** Rings a test call now, through the same path a real one takes. */
+    fun testCall() = viewModelScope.launch { callDoctor.testCall() }
 
     fun setBreathingGate(enabled: Boolean) {
         if (enabled) {
