@@ -80,6 +80,8 @@ sealed class Peek {
         val title: String,
         val text: String,
         val open: PendingIntent?,
+        /** Opening it clears it from the notification shade, as tapping it there would. */
+        val autoCancel: Boolean = false,
     ) : Peek()
     data class Charging(val level: Int) : Peek()
     data class LowBattery(val level: Int) : Peek()
@@ -103,6 +105,14 @@ object LiveBus {
     private val _peeks = MutableSharedFlow<Peek>(extraBufferCapacity = 8)
     val peeks: SharedFlow<Peek> = _peeks.asSharedFlow()
 
+    private val _removed = MutableSharedFlow<String>(extraBufferCapacity = 16)
+    /** Keys of notifications that left the shade (read, dismissed, cancelled by their app). */
+    val removed: SharedFlow<String> = _removed.asSharedFlow()
+
+    /** Set by the listener while connected: removes a notification from the shade. */
+    @Volatile
+    var canceller: ((String) -> Unit)? = null
+
     private val _listenerConnected = MutableStateFlow(false)
     val listenerConnected: StateFlow<Boolean> = _listenerConnected.asStateFlow()
 
@@ -116,6 +126,14 @@ object LiveBus {
 
     fun peek(p: Peek) {
         _peeks.tryEmit(p)
+    }
+
+    fun notificationRemoved(key: String) {
+        _removed.tryEmit(key)
+    }
+
+    fun cancelNotification(key: String) {
+        canceller?.invoke(key)
     }
 
     fun setListenerConnected(connected: Boolean) {

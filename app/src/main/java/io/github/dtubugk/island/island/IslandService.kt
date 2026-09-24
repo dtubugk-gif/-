@@ -210,6 +210,7 @@ class IslandService : AccessibilityService(), IslandDirector.System {
             }
         }
         scope.launch { LiveBus.peeks.collect { d.post(it) } }
+        scope.launch { LiveBus.removed.collect { d.onNotificationRemoved(it) } }
         _running.value = true
     }
 

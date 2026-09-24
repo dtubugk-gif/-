@@ -252,7 +252,7 @@ private fun SetupCard(actions: IslandActions) {
             Spacer(Modifier.height(4.dp))
             Text(
                 "כדי שהאי יופיע מעל שורת הסטטוס צריך להפעיל אותו פעם אחת בהגדרות הנגישות. " +
-                    "האפליקציה לא קוראת את מה שעל המסך, היא רק מציירת את האי.",
+                    "השירות קורא רק את שורת הסטטוס, כדי למצוא את הצ'יפ של סמסונג ולבלוע אותו לתוך האי. הוא לא קורא שום אפליקציה אחרת, ולאפליקציה אין גישה לאינטרנט.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -42,6 +42,7 @@ class IslandNotificationListener : NotificationListenerService() {
     override fun onListenerConnected() {
         super.onListenerConnected()
         LiveBus.setListenerConnected(true)
+        LiveBus.canceller = { key -> runCatching { cancelNotification(key) } }
         val msm = getSystemService(MediaSessionManager::class.java)
         sessions = msm
         runCatching {
@@ -56,6 +57,7 @@ class IslandNotificationListener : NotificationListenerService() {
         runCatching { sessions?.removeOnActiveSessionsChangedListener(sessionsListener) }
         controller?.unregisterCallback(controllerCallback)
         controller = null
+        LiveBus.canceller = null
         LiveBus.setListenerConnected(false)
         super.onListenerDisconnected()
     }
@@ -80,12 +82,15 @@ class IslandNotificationListener : NotificationListenerService() {
                 title = title.ifBlank { appLabel(sbn.packageName) },
                 text = text.lineSequence().firstOrNull().orEmpty(),
                 open = n.contentIntent,
+                autoCancel = n.flags and Notification.FLAG_AUTO_CANCEL != 0,
             ),
         )
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         seenKeys.remove(sbn.key)
+        // Read or dismissed elsewhere: the island must not show it later from its queue.
+        LiveBus.notificationRemoved(sbn.key)
         if (isLiveCandidate(sbn)) publishActivities()
     }
 

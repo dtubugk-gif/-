@@ -152,6 +152,13 @@ class IslandDirector(
         }
     }
 
+    /** A notification left the shade: drop it from the island too, shown or queued. */
+    fun onNotificationRemoved(key: String) {
+        queue.removeAll { it is Peek.Message && it.key == key }
+        val current = peek
+        if (current is Peek.Message && current.key == key) nextPeek()
+    }
+
     fun expand() {
         expanded = true
         peek = null
@@ -220,7 +227,10 @@ class IslandDirector(
             }
             is Tap.Launch -> {
                 tap.intent?.let(system::launch)
-                if (peek != null) nextPeek() else collapse()
+                val current = peek
+                // Opening a message from the island clears it from the shade, like tapping it there.
+                if (current is Peek.Message && current.autoCancel && tap.intent != null) LiveBus.cancelNotification(current.key)
+                if (current != null) nextPeek() else collapse()
             }
         }
     }
