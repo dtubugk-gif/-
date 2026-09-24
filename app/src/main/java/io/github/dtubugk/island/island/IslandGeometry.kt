@@ -79,8 +79,9 @@ object IslandGeometry {
         val cameraX = screen.hole?.centerX ?: (screen.width / 2f)
         val cameraY = screen.hole?.centerY ?: (screen.statusBarHeight / 2f)
 
-        // The island must always swallow the camera, whatever the slider says.
-        val minHeight = holeD + 6f * dp
+        // The island must always swallow the camera, whatever the slider says, with a black
+        // margin wide enough that the lens edge never peeks out if the reported hole is a bit off.
+        val minHeight = holeD + 10f * dp
         val height = max(config.heightDp.coerceIn(IslandConfig.MIN_HEIGHT_DP, IslandConfig.MAX_HEIGHT_DP) * dp, minHeight)
 
         val maxWidth = screen.width - 2f * margin

@@ -262,7 +262,7 @@ class IslandView(
     /** Must match [IdleScene]: the glyph is 56% of the island height. */
     private fun idleTextSize(): Float {
         val d = screen.density
-        val h = max(config.heightDp.coerceIn(IslandConfig.MIN_HEIGHT_DP, IslandConfig.MAX_HEIGHT_DP) * d, (screen.hole?.diameter ?: 0f) + 6f * d)
+        val h = max(config.heightDp.coerceIn(IslandConfig.MIN_HEIGHT_DP, IslandConfig.MAX_HEIGHT_DP) * d, (screen.hole?.diameter ?: 0f) + 10f * d)
         return h * 0.56f
     }
 
@@ -414,14 +414,15 @@ class IslandView(
         if (!frameLoopRunning && refresh != Long.MAX_VALUE) postInvalidateDelayed(refresh)
     }
 
+    /** A camera lens as it really looks inside a black island: barely there. */
     private fun drawLens(canvas: Canvas, x: Float, y: Float) {
-        val r = max(layout.holeRadius, 5f * dp)
-        lensPaint.color = 0xFF16161C.toInt()
+        val r = max(layout.holeRadius, 5f * dp) * 0.8f
+        lensPaint.color = 0xFF07070A.toInt()
         canvas.drawCircle(x, y, r, lensPaint)
-        lensPaint.color = 0xFF232334.toInt()
-        canvas.drawCircle(x, y, r * 0.62f, lensPaint)
-        lensPaint.color = 0x553A4A7A
-        canvas.drawCircle(x - r * 0.22f, y - r * 0.22f, r * 0.2f, lensPaint)
+        lensPaint.color = 0xFF0E0E14.toInt()
+        canvas.drawCircle(x, y, r * 0.55f, lensPaint)
+        lensPaint.color = 0x2A5A6A9A
+        canvas.drawCircle(x - r * 0.24f, y - r * 0.24f, r * 0.14f, lensPaint)
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
