@@ -113,6 +113,7 @@ class IslandView(
 
     private var pulledDown = false
     private var doubleTapped = false
+    private var lastTapWasButton = false
     private val gestures = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent): Boolean = true
 
@@ -120,11 +121,10 @@ class IslandView(
         // app behind what is shown. That second tap's own "single tap" is swallowed, so it can
         // never hit a button on the card the first tap just opened.
         override fun onSingleTapUp(e: MotionEvent): Boolean {
-            if (doubleTapped) {
-                doubleTapped = false
-                return true
-            }
+            if (doubleTapped) return true
             val tap = scene.tap(e.x, e.y, frame())
+            // A tap that pressed a button (answer, play, a tool) is not the start of a double tap.
+            lastTapWasButton = tap !is Tap.Expand && tap !is Tap.Collapse && tap !is Tap.Dismiss
             haptic(HapticFeedbackConstants.VIRTUAL_KEY)
             host?.onTap(tap)
             return true
@@ -133,7 +133,7 @@ class IslandView(
         override fun onDoubleTap(e: MotionEvent): Boolean {
             doubleTapped = true
             val app = scene.app
-            if (app != null) {
+            if (app != null && !lastTapWasButton) {
                 haptic(HapticFeedbackConstants.CONFIRM)
                 host?.onTap(Tap.Launch(app))
             }
@@ -328,8 +328,10 @@ class IslandView(
         Choreographer.getInstance().postFrameCallback(frameCallback)
     }
 
+    // getDurationScale() exists only from Android 13; areAnimatorsEnabled() covers the rest.
     private fun animationsEnabled(): Boolean =
-        ValueAnimator.areAnimatorsEnabled() && ValueAnimator.getDurationScale() > 0f
+        ValueAnimator.areAnimatorsEnabled() &&
+            (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU || ValueAnimator.getDurationScale() > 0f)
 
     // --- window sizing ------------------------------------------------------------------------
 
@@ -371,6 +373,7 @@ class IslandView(
             MotionEvent.ACTION_DOWN -> {
                 if (!hitIsland(event.x, event.y, slop = 8f * dp)) {
                     doubleTapped = false
+                    lastTapWasButton = false
                     host?.onOutsideTouch()
                     return false
                 }
@@ -387,6 +390,9 @@ class IslandView(
             }
         }
         gestures.onTouchEvent(event)
+        // The second tap may end as a drag, a long press or a cancel instead of a tap-up: the
+        // flag must not outlive its gesture, or the next real tap would be swallowed.
+        if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) doubleTapped = false
         return true
     }
 

@@ -46,12 +46,14 @@ class IslandDirector(
 
     var config = IslandConfig()
         set(value) {
+            if (value == field) return
             field = value
             view.setConfig(value)
             resolve()
         }
     var battery = BatteryState(100, false)
         set(value) {
+            if (value == field) return
             field = value
             if (expanded) resolve()
         }
@@ -75,6 +77,10 @@ class IslandDirector(
                 chip = null
                 // A hidden window may never get the finger's UP; don't let that freeze the timers.
                 touching = false
+                // Samples don't survive the screen going off.
+                demoMedia = null
+                demoActivity = null
+                handler.removeCallbacks(endDemo)
                 resolve(animate = false)
             }
         }
@@ -96,10 +102,17 @@ class IslandDirector(
     private var touching = false
 
     private val handler = Handler(Looper.getMainLooper())
-    private val timeout = Runnable { onTimeout() }
+    private val timeout = Runnable {
+        armedFor = null
+        onTimeout()
+    }
+    private val linger = Runnable { resolve() }
+    /** What the pending auto-close was armed for; the same state never restarts the clock. */
+    private var armedFor: String? = null
     private val endDemo = Runnable {
-        // A sample that opened the island (the incoming call) closes it when it ends.
-        if (demoActivity != null) expanded = false
+        // A sample that opened the island (the incoming call) closes it when it ends, unless a
+        // real ringing call has meanwhile opened it for its own reasons.
+        if (demoActivity != null && autoExpandedCall == null) expanded = false
         demoMedia = null
         demoActivity = null
         resolve()
@@ -168,9 +181,10 @@ class IslandDirector(
     fun chipNeedles(): List<String> {
         if (!config.absorbChip) return emptyList()
         val needles = ArrayList<String>()
-        if (config.liveActivities) call()?.let { needles += it.title }
-        if (config.music) currentMedia()?.let { needles += it.title }
-        if (config.liveActivities) timer()?.let { needles += it.title }
+        // Samples have no chip to find; only real content is looked for in the status bar.
+        if (config.liveActivities) call()?.takeIf { it !== demoActivity }?.let { needles += it.title }
+        if (config.music) media?.let { needles += it.title }
+        if (config.liveActivities) timer()?.takeIf { it !== demoActivity }?.let { needles += it.title }
         return needles.filter { it.trim().length >= 2 }
     }
 
@@ -264,14 +278,25 @@ class IslandDirector(
                 peek = null
                 resolve()
             }
-            IslandCommand.MESSAGE -> post(Peek.Message("demo", "הודעות", null, "דני", "נפגשים ב-8? 🙂", null))
-            IslandCommand.SILENT -> post(Peek.Ringer(Peek.RingerMode.SILENT))
-            IslandCommand.CHARGING -> post(Peek.Charging(battery.level, minutesLeft = 42))
+            // Notices asked for by a tap show at once, over whatever is up, and don't touch the
+            // timer of a sample that may be running underneath.
+            IslandCommand.MESSAGE -> return showSample(Peek.Message("demo", "הודעות", null, "דני", "נפגשים ב-8? 🙂", null))
+            IslandCommand.SILENT -> return showSample(Peek.Ringer(Peek.RingerMode.SILENT))
+            IslandCommand.CHARGING -> return showSample(Peek.Charging(battery.level, minutesLeft = 42))
         }
         // Every sample ends on its own, whatever else is tapped meanwhile. A tap on another
         // sample used to cancel this timer without re-arming it, leaving the island stuck.
         handler.removeCallbacks(endDemo)
         if (autoDismiss && (demoMedia != null || demoActivity != null)) handler.postDelayed(endDemo, DEMO_MS)
+    }
+
+    /** Unlike [post], a sample notice is never dropped or queued behind an open card. */
+    private fun showSample(p: Peek) {
+        if (!allowed(p)) return
+        queue.clear()
+        expanded = false
+        peek = p
+        resolve()
     }
 
     // --- IslandView.Host ----------------------------------------------------------------------
@@ -386,8 +411,18 @@ class IslandDirector(
     }
 
     private fun schedule() {
+        handler.removeCallbacks(linger)
+        if (touching || !autoDismiss) {
+            handler.removeCallbacks(timeout)
+            armedFor = null
+            return
+        }
+        // Redraws for a new battery level, chip position or song position must not push the
+        // card's closing time further away each time; only a new state arms a new clock.
+        val state = "$expanded|${peek?.let { it::class.simpleName + it.hashCode() }}|${view.scene.key}"
+        if (state == armedFor) return
         handler.removeCallbacks(timeout)
-        if (touching || !autoDismiss) return
+        armedFor = null
         val ms = when {
             expanded -> when {
                 view.scene is MediaCardScene -> MEDIA_CARD_MS
@@ -402,11 +437,12 @@ class IslandDirector(
                 val m = currentMedia()
                 if (m != null && !m.playing && config.music) {
                     val left = PAUSED_LINGER_MS - (SystemClock.elapsedRealtime() - mediaPausedAt)
-                    if (left > 0) handler.postDelayed({ resolve() }, left + 50)
+                    if (left > 0) handler.postDelayed(linger, left + 50)
                 }
                 return
             }
         }
+        armedFor = state
         handler.postDelayed(timeout, ms)
     }
 

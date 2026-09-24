@@ -468,10 +468,18 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         val spec = screen ?: return
         val x = anchorOffset(view, spec)
         if (lp.width == width && lp.height == height && lp.x == x) return
+        val (oldW, oldH, oldX) = Triple(lp.width, lp.height, lp.x)
         lp.width = width
         lp.height = height
         lp.x = x
-        if (view.isAttachedToWindow) runCatching { windowManager?.updateViewLayout(view, lp) }
+        if (!view.isAttachedToWindow) return
+        // If the system refuses the change, keep the old values so the next request is not
+        // short-circuited as "already applied".
+        runCatching { windowManager?.updateViewLayout(view, lp) }.onFailure {
+            lp.width = oldW
+            lp.height = oldH
+            lp.x = oldX
+        }
     }
 
     override fun onShownChanged(shown: Boolean) {
