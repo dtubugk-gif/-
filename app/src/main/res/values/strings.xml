@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">אי דינמי</string>
+    <string name="a11y_description">מציג אי דינמי שחור סביב המצלמה הקדמית, בדיוק כמו באייפון. האפליקציה לא קוראת את התוכן שעל המסך ולא אוספת שום מידע, השירות רק מצייר את האי מעל שורת הסטטוס.</string>
+</resources>
