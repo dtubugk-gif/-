@@ -26,7 +26,11 @@ data class IslandLayout(
     val centerX: Float,
     val top: Float,
     val idle: IslandShape,
+    /** Island with something on each side of the camera: music, a call, a timer. */
+    val compact: IslandShape,
+    /** Wide pill for short notices: charging, silent mode, headphones. */
     val charging: IslandShape,
+    /** The tap-open info card; other cards share its width and corner radius. */
     val expanded: IslandShape,
     /** Height of the band at the top of the expanded card that holds the camera. */
     val bandHeight: Float,
@@ -37,7 +41,13 @@ data class IslandLayout(
     /** Where the idle text sits: its center, relative to [centerX]. */
     val textCenterX: Float,
     val density: Float,
-)
+) {
+    /** A card as wide as [expanded], with [contentHeight] below the camera band. */
+    fun card(contentHeight: Float): IslandShape {
+        val h = bandHeight + contentHeight
+        return IslandShape(expanded.width, h, min(expanded.radius, h / 2f))
+    }
+}
 
 object IslandGeometry {
     private const val TEXT_GAP_DP = 5f
@@ -47,6 +57,7 @@ object IslandGeometry {
     private const val CARD_BOTTOM_DP = 12f
     private const val CARD_RADIUS_DP = 36f
     private const val CHARGING_MIN_WIDTH_DP = 232f
+    private const val COMPACT_MIN_WIDTH_DP = 168f
 
     /** Gap between the text's outer edge and the island's end. Centers a single glyph in the round cap. */
     fun textInset(height: Float, textWidth: Float): Float = max((height - textWidth) / 2f, 0.3f * height)
@@ -89,6 +100,7 @@ object IslandGeometry {
         val bandHeight = max(height, 30f * dp)
         val cardHeight = bandHeight + (CARD_ROW_DP + CARD_BOTTOM_DP) * dp
         val chargingWidth = min(max(width, CHARGING_MIN_WIDTH_DP * dp), cardWidth)
+        val compactWidth = min(max(width, COMPACT_MIN_WIDTH_DP * dp), cardWidth)
 
         val inset = textInset(height, textWidth)
         val textCenter = width / 2f - inset - textWidth / 2f
@@ -97,6 +109,7 @@ object IslandGeometry {
             centerX = centerX,
             top = top,
             idle = IslandShape(width, height, height / 2f),
+            compact = IslandShape(compactWidth, height, height / 2f),
             charging = IslandShape(chargingWidth, height, height / 2f),
             expanded = IslandShape(cardWidth, cardHeight, min(CARD_RADIUS_DP * dp, cardHeight / 2f)),
             bandHeight = bandHeight,

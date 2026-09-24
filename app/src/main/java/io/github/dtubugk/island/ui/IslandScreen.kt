@@ -67,7 +67,14 @@ import io.github.dtubugk.island.data.IslandColors
 import io.github.dtubugk.island.data.IslandConfig
 import io.github.dtubugk.island.data.TextSide
 import io.github.dtubugk.island.island.BatteryState
+import io.github.dtubugk.island.island.IslandDirector
 import io.github.dtubugk.island.island.IslandView
+import io.github.dtubugk.island.data.IslandCommand
+import android.app.PendingIntent
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import java.time.LocalDateTime
 import kotlin.math.roundToInt
 
@@ -75,15 +82,18 @@ import kotlin.math.roundToInt
 interface IslandActions {
     fun update(transform: (IslandConfig) -> IslandConfig)
     fun enableService()
+    fun enableNotificationAccess()
     fun openAppInfo()
-    fun previewExpanded()
-    fun previewCharging()
+    fun openSettings()
+    /** Plays a sample of a feature on the real island. */
+    fun demo(command: IslandCommand)
 }
 
 @Composable
 fun IslandScreen(
     config: IslandConfig,
     serviceOn: Boolean,
+    notificationAccess: Boolean,
     battery: BatteryState,
     actions: IslandActions,
     clock: () -> LocalDateTime = { LocalDateTime.now() },
@@ -104,7 +114,13 @@ fun IslandScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(20.dp))
-            HeroPreview(config, battery, clock)
+            var preview by remember { mutableStateOf<IslandDirector?>(null) }
+            HeroPreview(config, battery, clock) { preview = it }
+            Spacer(Modifier.height(12.dp))
+            DemoRow { command ->
+                preview?.demo(command)
+                if (serviceOn && config.visible) actions.demo(command)
+            }
             Spacer(Modifier.height(16.dp))
             AnimatedContent(
                 targetState = serviceOn,
@@ -113,6 +129,8 @@ fun IslandScreen(
             ) { on ->
                 if (on) ActiveCard(config, actions) else SetupCard(actions)
             }
+            Spacer(Modifier.height(16.dp))
+            FeaturesCard(config, notificationAccess, actions)
             Spacer(Modifier.height(16.dp))
             TextCard(config, actions)
             Spacer(Modifier.height(16.dp))
@@ -135,12 +153,17 @@ fun IslandScreen(
 // --- hero -------------------------------------------------------------------------------------
 
 @Composable
-private fun HeroPreview(config: IslandConfig, battery: BatteryState, clock: () -> LocalDateTime) {
+private fun HeroPreview(
+    config: IslandConfig,
+    battery: BatteryState,
+    clock: () -> LocalDateTime,
+    onDirector: (IslandDirector) -> Unit,
+) {
     val shape = RoundedCornerShape(28.dp)
     Box(
         Modifier
             .fillMaxWidth()
-            .height(184.dp)
+            .height(236.dp)
             .clip(shape)
             .background(Brush.verticalGradient(listOf(Color(0xFF263F86), Color(0xFF2F5BA6), Color(0xFF3D82C6))))
             .semantics { contentDescription = "תצוגה מקדימה של האי. הקישו כדי להרחיב." },
@@ -154,14 +177,20 @@ private fun HeroPreview(config: IslandConfig, battery: BatteryState, clock: () -
                 .background(Brush.radialGradient(listOf(Brand.Pink.copy(alpha = 0.35f), Color.Transparent)), CircleShape),
         )
         MockStatusBar(battery, clock)
+        var director by remember { mutableStateOf<IslandDirector?>(null) }
         AndroidView(
             factory = { context ->
-                IslandView(context, isOverlay = false).apply { drawLens = true }
+                val view = IslandView(context, isOverlay = false).apply { drawLens = true }
+                IslandDirector(view, PreviewSystem).also {
+                    it.clock = clock
+                    director = it
+                    onDirector(it)
+                }
+                view
             },
-            update = { view ->
-                view.clock = clock
-                view.battery = battery
-                view.setConfig(config.copy(visible = true))
+            update = {
+                director?.battery = battery
+                director?.config = config.copy(visible = true)
             },
             modifier = Modifier.fillMaxSize(),
         )
@@ -310,24 +339,120 @@ private fun ActiveCard(config: IslandConfig, actions: IslandActions) {
                 modifier = Modifier.semantics { contentDescription = "הצגת האי" },
             )
         }
-        Spacer(Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    }
+}
+
+/** The preview has no system to talk to: taps that would open apps simply collapse it. */
+private object PreviewSystem : IslandDirector.System {
+    override fun openSettings() = Unit
+    override fun openNotifications() = Unit
+    override fun launch(intent: PendingIntent) = Unit
+    override fun isLocked() = false
+}
+
+private val demos = listOf(
+    IslandCommand.MUSIC to "מוזיקה",
+    IslandCommand.CALL to "שיחה",
+    IslandCommand.TIMER to "טיימר",
+    IslandCommand.MESSAGE to "הודעה",
+    IslandCommand.SILENT to "מצב שקט",
+    IslandCommand.CHARGING to "טעינה",
+    IslandCommand.EXPANDED to "כרטיס",
+)
+
+/** Try every feature: plays in the preview, and on the real island when it is on. */
+@Composable
+private fun DemoRow(onDemo: (IslandCommand) -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        demos.forEach { (command, label) ->
             FilledTonalButton(
-                onClick = actions::previewExpanded,
-                enabled = config.visible,
+                onClick = { onDemo(command) },
+                modifier = Modifier.heightIn(min = 44.dp),
+                shape = RoundedCornerShape(22.dp),
+            ) { Text(label, style = MaterialTheme.typography.labelLarge) }
+        }
+    }
+}
+
+@Composable
+private fun FeaturesCard(config: IslandConfig, access: Boolean, actions: IslandActions) {
+    SectionCard {
+        SectionTitle("מוזיקה, שיחות והתראות")
+        if (!access) {
+            Text(
+                "כדי שהאי יציג את השיר שמתנגן, שיחות, טיימרים והודעות, צריך לאשר לו גישה להתראות. " +
+                    "הכול נשאר בטלפון, שום דבר לא נשלח לשום מקום.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(16.dp))
+            Button(
+                onClick = actions::enableNotificationAccess,
                 modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 48.dp),
-                shape = RoundedCornerShape(14.dp),
-            ) { Text("נסו הרחבה") }
-            FilledTonalButton(
-                onClick = actions::previewCharging,
-                enabled = config.visible,
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 48.dp),
-                shape = RoundedCornerShape(14.dp),
-            ) { Text("נסו טעינה") }
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+            ) { Text("הפעלת גישה להתראות", style = MaterialTheme.typography.labelLarge) }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "אם כתוב \"הגדרה מוגבלת\", זה אותו פתרון כמו בהפעלת האי: פרטי האפליקציה ← ⋮ ← לאפשר הגדרות מוגבלות.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            AccessGrantedToggles(config, actions)
+        }
+    }
+}
+
+@Composable
+private fun AccessGrantedToggles(config: IslandConfig, actions: IslandActions) {
+    Column {
+        ToggleRow("מוזיקה", "עטיפת האלבום וגלי קול ליד המצלמה, שליטה בנגן בלחיצה", config.music) { v ->
+            actions.update { it.copy(music = v) }
+        }
+        ToggleRow("שיחות וטיימרים", "שיחה פעילה או טיימר רץ נשארים באי עם הזמן", config.liveActivities) { v ->
+            actions.update { it.copy(liveActivities = v) }
+        }
+        ToggleRow("הודעות", "הודעה חדשה נפתחת באי לכמה שניות, לחיצה פותחת אותה", config.notifications) { v ->
+            actions.update { it.copy(notifications = v) }
+        }
+        if (config.notifications) {
+            ToggleRow("תוכן ההודעה", "בלי זה רואים רק ממי. במסך נעילה התוכן אף פעם לא מוצג", config.notificationText) { v ->
+                actions.update { it.copy(notificationText = v) }
+            }
+        }
+        ToggleRow("מצבי מערכת", "מצב שקט, נא לא להפריע, אוזניות וסוללה חלשה", config.systemAlerts) { v ->
+            actions.update { it.copy(systemAlerts = v) }
+        }
+        Spacer(Modifier.height(12.dp))
+        Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(16.dp)) {
+            Column(Modifier.padding(16.dp)) {
+                Text("להעלים את הצ'יפ של סמסונג ליד השעון", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "סמסונג מציגה בעצמה את השיר בשורת הסטטוס, ואף אפליקציה לא יכולה להסתיר אותו. " +
+                        "מכבים אותו פעם אחת, והשיר ימשיך להופיע באי ובלוח ההתראות:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                // English menu names are isolated so they don't scramble the Hebrew around them.
+                Step(1, "הגדרות ← מסך נעילה ו-\u2068AOD\u2069")
+                Step(2, "נכנסים ל-\u2068Now bar\u2069")
+                Step(3, "מכבים את אפליקציית המוזיקה")
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = actions::openSettings,
+                    modifier = Modifier.heightIn(min = 44.dp),
+                    shape = RoundedCornerShape(14.dp),
+                ) { Text("פתיחת ההגדרות") }
+            }
         }
     }
 }

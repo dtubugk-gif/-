@@ -1,6 +1,10 @@
 package io.github.dtubugk.island.island
 
 import android.accessibilityservice.AccessibilityService
+import android.app.ActivityOptions
+import android.app.KeyguardManager
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -11,16 +15,21 @@ import android.graphics.PixelFormat
 import android.graphics.Point
 import android.graphics.RectF
 import android.hardware.display.DisplayManager
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.os.BatteryManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
+import android.os.SystemClock
 import android.view.Display
 import android.view.Gravity
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import androidx.core.content.ContextCompat
 import io.github.dtubugk.island.MainActivity
-import io.github.dtubugk.island.data.IslandCommand
 import io.github.dtubugk.island.data.IslandSettings
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
@@ -35,27 +44,76 @@ import kotlin.math.roundToInt
  * Keeps the island on screen. It is an accessibility service only because that is the one way
  * for an app to draw above the status bar; it reads no screen content and handles no events.
  */
-class IslandService : AccessibilityService(), IslandView.Host {
+class IslandService : AccessibilityService(), IslandDirector.System {
 
     private var windowManager: WindowManager? = null
     private var island: IslandView? = null
+    private var director: IslandDirector? = null
     private var params: WindowManager.LayoutParams? = null
     private var screen: ScreenSpec? = null
     private var scope = MainScope()
+    private val handler = Handler(Looper.getMainLooper())
+
+    private var lastBatteryLevel = -1
+    private val knownAudioDevices = HashSet<Int>()
+    private var audioCallbackPrimed = false
+    private var lastHeadphonesPeek = 0L
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            val view = island ?: return
+            val d = director ?: return
             when (intent.action) {
-                Intent.ACTION_SCREEN_OFF -> view.setShown(false, animate = false)
-                Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> view.setShown(!isLandscape(), animate = true)
-                Intent.ACTION_BATTERY_CHANGED -> view.battery = readBattery(intent)
-                Intent.ACTION_POWER_CONNECTED -> {
-                    view.battery = readBattery(context).copy(charging = true)
-                    if (IslandSettings.config.value.chargingAnimation && isInteractive()) view.showCharging()
+                Intent.ACTION_SCREEN_OFF -> updateVisibility(animate = false)
+                Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> updateVisibility(animate = true)
+                Intent.ACTION_BATTERY_CHANGED -> {
+                    val b = readBattery(intent)
+                    d.battery = b
+                    checkLowBattery(b)
                 }
-                Intent.ACTION_POWER_DISCONNECTED -> view.battery = readBattery(context).copy(charging = false)
+                Intent.ACTION_POWER_CONNECTED -> {
+                    val b = readBattery(context).copy(charging = true)
+                    d.battery = b
+                    d.post(Peek.Charging(b.level))
+                }
+                Intent.ACTION_POWER_DISCONNECTED -> d.battery = readBattery(context).copy(charging = false)
+                AudioManager.RINGER_MODE_CHANGED_ACTION -> {
+                    // Sticky: the copy delivered on registration is old news, not a change.
+                    if (isInitialStickyBroadcast) return
+                    val mode = when (intent.getIntExtra(AudioManager.EXTRA_RINGER_MODE, AudioManager.RINGER_MODE_NORMAL)) {
+                        AudioManager.RINGER_MODE_SILENT -> Peek.RingerMode.SILENT
+                        AudioManager.RINGER_MODE_VIBRATE -> Peek.RingerMode.VIBRATE
+                        else -> Peek.RingerMode.SOUND
+                    }
+                    d.post(Peek.Ringer(mode))
+                }
+                NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED -> {
+                    val filter = getSystemService(NotificationManager::class.java)?.currentInterruptionFilter
+                    d.post(Peek.DoNotDisturb(on = filter != null && filter != NotificationManager.INTERRUPTION_FILTER_ALL))
+                }
             }
+        }
+    }
+
+    /** Headphones: needs no Bluetooth permission, since audio routing already knows the device. */
+    private val audioCallback = object : AudioDeviceCallback() {
+        override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>) {
+            val fresh = added.filter { it.isSink && it.type in HEADPHONE_TYPES && knownAudioDevices.add(it.id) }
+            // The first callback lists what was already connected; only later ones are news.
+            if (!audioCallbackPrimed) {
+                audioCallbackPrimed = true
+                return
+            }
+            val device = fresh.firstOrNull() ?: return
+            // A Bluetooth headset appears as several routes (media + calls) at once: announce one.
+            val now = SystemClock.elapsedRealtime()
+            if (now - lastHeadphonesPeek < 3000) return
+            lastHeadphonesPeek = now
+            val name = device.productName?.toString()?.takeIf { it.isNotBlank() && it != Build.MODEL } ?: "אוזניות"
+            director?.post(Peek.Headphones(name))
+        }
+
+        override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>) {
+            removed.forEach { knownAudioDevices.remove(it.id) }
         }
     }
 
@@ -76,14 +134,18 @@ class IslandService : AccessibilityService(), IslandView.Host {
         scope.cancel()
         scope = MainScope()
 
-        val view = IslandView(this, isOverlay = true).also { it.host = this }
+        val view = IslandView(this, isOverlay = true)
         island = view
         val spec = readScreen()
         screen = spec
         view.setScreen(spec)
-        view.setConfig(IslandSettings.config.value)
-        view.battery = readBattery(this)
-        view.setShown(!isLandscape() && isInteractive(), animate = false)
+        val d = IslandDirector(view, this)
+        director = d
+        d.config = IslandSettings.config.value
+        val battery = readBattery(this)
+        d.battery = battery
+        lastBatteryLevel = battery.level
+        updateVisibility(animate = false)
 
         val (w, h) = view.restingWindowSize()
         val lp = WindowManager.LayoutParams(
@@ -113,6 +175,8 @@ class IslandService : AccessibilityService(), IslandView.Host {
         params = lp
         runCatching { wm.addView(view, lp) }.onFailure {
             island = null
+            director?.release()
+            director = null
             return
         }
 
@@ -123,22 +187,18 @@ class IslandService : AccessibilityService(), IslandView.Host {
             addAction(Intent.ACTION_BATTERY_CHANGED)
             addAction(Intent.ACTION_POWER_CONNECTED)
             addAction(Intent.ACTION_POWER_DISCONNECTED)
+            addAction(AudioManager.RINGER_MODE_CHANGED_ACTION)
+            addAction(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED)
         }
         ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         getSystemService(DisplayManager::class.java)?.registerDisplayListener(displayListener, null)
+        getSystemService(AudioManager::class.java)?.registerAudioDeviceCallback(audioCallback, handler)
 
-        scope.launch { IslandSettings.config.collect { view.setConfig(it) } }
-        scope.launch {
-            IslandSettings.commands.collect {
-                when (it) {
-                    IslandCommand.PREVIEW_EXPANDED -> view.expand()
-                    IslandCommand.PREVIEW_CHARGING -> {
-                        view.battery = readBattery(this@IslandService)
-                        view.showCharging()
-                    }
-                }
-            }
-        }
+        scope.launch { IslandSettings.config.collect { d.config = it } }
+        scope.launch { IslandSettings.commands.collect { d.demo(it) } }
+        scope.launch { LiveBus.media.collect { d.setMedia(it) } }
+        scope.launch { LiveBus.activities.collect { d.setActivities(it) } }
+        scope.launch { LiveBus.peeks.collect { d.post(it) } }
         _running.value = true
     }
 
@@ -154,10 +214,24 @@ class IslandService : AccessibilityService(), IslandView.Host {
             screen = spec
             view.setScreen(spec)
         }
-        view.setShown(!isLandscape() && isInteractive(), animate = true)
+        updateVisibility(animate = true)
     }
 
-    // --- IslandView.Host ----------------------------------------------------------------------
+    private fun updateVisibility(animate: Boolean) {
+        val visible = !isLandscape() && isInteractive()
+        director?.active = visible
+        island?.setShown(visible, animate)
+    }
+
+    private fun checkLowBattery(b: BatteryState) {
+        val previous = lastBatteryLevel
+        lastBatteryLevel = b.level
+        if (b.charging || previous < 0) return
+        // Announce each threshold once, on the way down.
+        if (LOW_THRESHOLDS.any { previous > it && b.level <= it }) director?.post(Peek.LowBattery(b.level))
+    }
+
+    // --- IslandDirector.System ----------------------------------------------------------------
 
     override fun onWindowSizeNeeded(width: Int, height: Int) {
         val view = island ?: return
@@ -184,15 +258,31 @@ class IslandService : AccessibilityService(), IslandView.Host {
         if (view.isAttachedToWindow) runCatching { windowManager?.updateViewLayout(view, lp) }
     }
 
-    override fun onOpenSettings() {
+    override fun openSettings() {
         runCatching {
             startActivity(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     }
 
-    override fun onOpenNotifications() {
+    override fun openNotifications() {
         performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
     }
+
+    override fun launch(intent: PendingIntent) {
+        runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                // Android 14+ only lets a PendingIntent open an app from the background if the
+                // sender opts in; the island is the user's own tap, so it does.
+                val options = ActivityOptions.makeBasic()
+                    .setPendingIntentBackgroundActivityStartMode(ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED)
+                intent.send(this, 0, null, null, null, null, options.toBundle())
+            } else {
+                intent.send()
+            }
+        }
+    }
+
+    override fun isLocked(): Boolean = getSystemService(KeyguardManager::class.java)?.isKeyguardLocked ?: false
 
     // --- lifecycle ----------------------------------------------------------------------------
 
@@ -215,8 +305,11 @@ class IslandService : AccessibilityService(), IslandView.Host {
         scope.cancel()
         val view = island ?: return
         island = null
+        director?.release()
+        director = null
         runCatching { unregisterReceiver(receiver) }
         getSystemService(DisplayManager::class.java)?.unregisterDisplayListener(displayListener)
+        getSystemService(AudioManager::class.java)?.unregisterAudioDeviceCallback(audioCallback)
         runCatching { windowManager?.removeViewImmediate(view) }
     }
 
@@ -269,6 +362,7 @@ class IslandService : AccessibilityService(), IslandView.Host {
                 val hole = Path(path)
                 if (hole.op(clip, Path.Op.INTERSECT)) {
                     val traced = RectF()
+                    @Suppress("DEPRECATION")
                     hole.computeBounds(traced, true)
                     if (!traced.isEmpty) box.set(traced)
                 }
@@ -283,6 +377,15 @@ class IslandService : AccessibilityService(), IslandView.Host {
         private val _running = MutableStateFlow(false)
         /** True while the system has the service bound, i.e. the island is live. */
         val running: StateFlow<Boolean> = _running.asStateFlow()
+
+        private val LOW_THRESHOLDS = listOf(20, 10)
+        private val HEADPHONE_TYPES = setOf(
+            AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+            AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+            AudioDeviceInfo.TYPE_WIRED_HEADSET,
+            AudioDeviceInfo.TYPE_USB_HEADSET,
+            AudioDeviceInfo.TYPE_BLE_HEADSET,
+        )
 
         fun readBattery(context: Context): BatteryState {
             val intent = runCatching {

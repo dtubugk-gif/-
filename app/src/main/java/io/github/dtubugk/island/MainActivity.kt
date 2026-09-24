@@ -18,7 +18,11 @@ import io.github.dtubugk.island.data.IslandCommand
 import io.github.dtubugk.island.data.IslandConfig
 import io.github.dtubugk.island.data.IslandSettings
 import io.github.dtubugk.island.island.BatteryState
+import io.github.dtubugk.island.island.IslandNotificationListener
 import io.github.dtubugk.island.island.IslandService
+import io.github.dtubugk.island.island.LiveBus
+import android.os.Build
+import androidx.core.app.NotificationManagerCompat
 import io.github.dtubugk.island.ui.IslandActions
 import io.github.dtubugk.island.ui.IslandScreen
 import io.github.dtubugk.island.ui.IslandTheme
@@ -26,6 +30,7 @@ import io.github.dtubugk.island.ui.IslandTheme
 class MainActivity : ComponentActivity(), IslandActions {
 
     private var enabledInSettings by mutableStateOf(false)
+    private var notificationAccess by mutableStateOf(false)
     private var battery by mutableStateOf(BatteryState(100, false))
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,10 +40,12 @@ class MainActivity : ComponentActivity(), IslandActions {
         setContent {
             val config by IslandSettings.config.collectAsStateWithLifecycle()
             val running by IslandService.running.collectAsStateWithLifecycle()
+            val listener by LiveBus.listenerConnected.collectAsStateWithLifecycle()
             IslandTheme {
                 IslandScreen(
                     config = config,
                     serviceOn = running || enabledInSettings,
+                    notificationAccess = listener || notificationAccess,
                     battery = battery,
                     actions = this,
                 )
@@ -49,6 +56,7 @@ class MainActivity : ComponentActivity(), IslandActions {
     override fun onResume() {
         super.onResume()
         enabledInSettings = isServiceEnabled()
+        notificationAccess = NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)
         battery = IslandService.readBattery(this)
     }
 
@@ -82,9 +90,22 @@ class MainActivity : ComponentActivity(), IslandActions {
         if (!tryStart(intent)) tryStart(Intent(Settings.ACTION_SETTINGS))
     }
 
-    override fun previewExpanded() = IslandSettings.send(IslandCommand.PREVIEW_EXPANDED)
+    override fun enableNotificationAccess() {
+        val component = ComponentName(this, IslandNotificationListener::class.java)
+        val details = Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
+            .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, component.flattenToString())
+        if (!(Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && tryStart(details)) &&
+            !tryStart(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        ) {
+            Toast.makeText(this, "פתחו הגדרות ← התראות ← גישה להתראות", Toast.LENGTH_LONG).show()
+        }
+    }
 
-    override fun previewCharging() = IslandSettings.send(IslandCommand.PREVIEW_CHARGING)
+    override fun openSettings() {
+        tryStart(Intent(Settings.ACTION_SETTINGS))
+    }
+
+    override fun demo(command: IslandCommand) = IslandSettings.send(command)
 
     private fun tryStart(intent: Intent): Boolean = runCatching { startActivity(intent) }.isSuccess
 

@@ -24,6 +24,16 @@ data class IslandConfig(
     val expandOnTap: Boolean = true,
     val chargingAnimation: Boolean = true,
     val haptics: Boolean = true,
+    /** Now playing: artwork and waveform, controls when opened. */
+    val music: Boolean = true,
+    /** New messages pop the island open for a moment. */
+    val notifications: Boolean = true,
+    /** Show the message text, not just the sender. Never shown on the lock screen. */
+    val notificationText: Boolean = true,
+    /** Ongoing calls and timers live in the island. */
+    val liveActivities: Boolean = true,
+    /** Silent mode, Do Not Disturb, headphones, low battery. */
+    val systemAlerts: Boolean = true,
 ) {
     companion object {
         const val DEFAULT_TEXT = "א"
@@ -58,8 +68,8 @@ object IslandColors {
     fun of(index: Int): Int = swatches.getOrElse(index) { swatches[0] }
 }
 
-/** One-shot requests from the app screen to the running island. */
-enum class IslandCommand { PREVIEW_EXPANDED, PREVIEW_CHARGING }
+/** One-shot requests from the app screen: show a sample of each island feature. */
+enum class IslandCommand { EXPANDED, MUSIC, CALL, TIMER, MESSAGE, SILENT, CHARGING }
 
 /**
  * Process-wide settings store. The app screen and the accessibility service live in the same
@@ -100,6 +110,11 @@ object IslandSettings {
             .putBoolean("expandOnTap", next.expandOnTap)
             .putBoolean("chargingAnimation", next.chargingAnimation)
             .putBoolean("haptics", next.haptics)
+            .putBoolean("music", next.music)
+            .putBoolean("notifications", next.notifications)
+            .putBoolean("notificationText", next.notificationText)
+            .putBoolean("liveActivities", next.liveActivities)
+            .putBoolean("systemAlerts", next.systemAlerts)
             .apply()
     }
 
@@ -121,6 +136,11 @@ object IslandSettings {
             expandOnTap = p.getBoolean("expandOnTap", d.expandOnTap),
             chargingAnimation = p.getBoolean("chargingAnimation", d.chargingAnimation),
             haptics = p.getBoolean("haptics", d.haptics),
+            music = p.getBoolean("music", d.music),
+            notifications = p.getBoolean("notifications", d.notifications),
+            notificationText = p.getBoolean("notificationText", d.notificationText),
+            liveActivities = p.getBoolean("liveActivities", d.liveActivities),
+            systemAlerts = p.getBoolean("systemAlerts", d.systemAlerts),
         )
     }
 }
