@@ -69,8 +69,8 @@ class IslandSnapshotTest {
     }
 
     @Composable
-    private fun Screen(dark: Boolean, on: Boolean) {
-        IslandTheme(dark = dark) {
+    private fun Screen(dark: Boolean, on: Boolean, dynamic: Boolean = false) {
+        IslandTheme(dark = dark, dynamic = dynamic) {
             IslandScreen(IslandConfig(), serviceOn = on, notificationAccess = on, battery = battery, actions = noActions, clock = clock)
         }
     }
@@ -82,6 +82,12 @@ class IslandSnapshotTest {
     fun screenActiveDark() {
         paparazzi.unsafeUpdateConfig(DeviceConfig.PIXEL_5.copy(screenHeight = 9000, softButtons = false, nightMode = NightMode.NIGHT))
         paparazzi.snapshot { Screen(dark = true, on = true) }
+    }
+
+    @Test
+    fun screenDynamicDark() {
+        paparazzi.unsafeUpdateConfig(DeviceConfig.PIXEL_5.copy(screenHeight = 9000, softButtons = false, nightMode = NightMode.NIGHT))
+        paparazzi.snapshot { Screen(dark = true, on = true, dynamic = true) }
     }
 
     @Test

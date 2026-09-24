@@ -105,8 +105,8 @@ class IslandDirector(
     private var selectedKey: String? = null
     /** Swiped up: hidden for a while, or until something urgent (a call, an alarm) arrives. */
     private var snoozed = false
-    /** A duration-0 API island that stepped aside for a notice; restored when the queue is empty. */
-    private var standingCustom: Peek.Custom? = null
+    /** Duration-0 API islands: live content (like a song), kept through screen-off and calls, until HIDE. */
+    private val standing = LinkedHashMap<String, Peek.Custom>()
     private val unsnooze = Runnable { setSnoozed(false) }
     private var peek: Peek? = null
     private val queue = ArrayDeque<Peek>()
@@ -219,7 +219,18 @@ class IslandDirector(
     }
 
     fun post(p: Peek) {
-        if (!active || !allowed(p)) return
+        if (!allowed(p)) return
+        // A standing API island is state, not a notice: stored even while the screen is off.
+        if (p is Peek.Custom && p.durationMs <= 0L) {
+            queue.removeAll { it is Peek.Custom && it.id == p.id }
+            if ((peek as? Peek.Custom)?.id == p.id) peek = null
+            standing[p.id] = p
+            rearm()
+            resolve()
+            return
+        }
+        if (p is Peek.Custom) standing.remove(p.id)
+        if (!active) return
         // Charging is a brief notice: never interrupt a card the user opened on purpose.
         if (p is Peek.Charging && expanded) return
         // A newer message from the same chat replaces the waiting one instead of queueing twice.
@@ -235,21 +246,19 @@ class IslandDirector(
                 return
             }
         }
-        val current = peek
-        // A standing API island (a drive's speed) steps aside for a notice and comes back after it.
-        if (current is Peek.Custom && current.durationMs == 0L && p !is Peek.Custom && !expanded) {
-            standingCustom = current
-            peek = p
-            rearm()
-            resolve()
-            return
-        }
+        // The open-lock flash marks a moment: shown now or never, it is not replayed later.
+        if (p is Peek.Unlocked && (expanded || peek != null)) return
         if (peek == null && !expanded) {
             peek = p
             rearm()
             resolve()
         } else {
-            if (queue.size >= MAX_QUEUE) queue.removeFirst()
+            if (queue.size >= MAX_QUEUE) {
+                // A full line drops an API post, never the phone's own notices.
+                if (p is Peek.Custom) return
+                val i = queue.indexOfFirst { it is Peek.Custom }
+                queue.removeAt(if (i >= 0) i else 0)
+            }
             queue.addLast(p)
         }
     }
@@ -270,7 +279,11 @@ class IslandDirector(
 
     /** An app took back its island. */
     fun hideCustom(id: String) {
-        if (standingCustom?.id == id) standingCustom = null
+        if (standing.remove(id) != null) {
+            if (selectedKey == "custom:$id") selectedKey = null
+            rearm()
+            resolve()
+        }
         queue.removeAll { it is Peek.Custom && it.id == id }
         val current = peek
         if (current is Peek.Custom && current.id == id) nextPeek()
@@ -281,9 +294,14 @@ class IslandDirector(
         handler.removeCallbacks(unsnooze)
         if (on) {
             expanded = false
+            autoExpandedCall = null
             handler.postDelayed(unsnooze, SNOOZE_MS)
         }
         view.setSnoozed(on)
+        // The view must not keep the card that was swiped away: it would come back as a dead
+        // card the director no longer owns. Re-resolve, so it returns collapsed with its clocks.
+        rearm()
+        resolve(animate = on)
     }
 
     // --- concurrent activities ----------------------------------------------------------------
@@ -294,10 +312,11 @@ class IslandDirector(
         val live = listOfNotNull(demoActivity) + activities
         fun add(kind: LiveKind) {
             if (!config.liveActivities) return
-            live.firstOrNull { it.kind == kind }?.let { out += Candidate.Live(it) }
+            live.filter { it.kind == kind }.forEach { out += Candidate.Live(it) }
         }
         add(LiveKind.CALL)
         add(LiveKind.ALARM)
+        if (config.api) standing.values.forEach { out += Candidate.Custom(it) }
         if (config.music) {
             currentMedia()?.let { m ->
                 val recent = SystemClock.elapsedRealtime() - mediaPausedAt < PAUSED_LINGER_MS
@@ -314,6 +333,7 @@ class IslandDirector(
     private sealed class Candidate(val key: String) {
         class Live(val activity: LiveActivity) : Candidate(activity.key)
         class Music(val media: MediaState) : Candidate("music:" + media.packageName)
+        class Custom(val p: Peek.Custom) : Candidate("custom:" + p.id)
     }
 
     /** The one the island shows: the user's pick if still live, else the most important. */
@@ -326,6 +346,7 @@ class IslandDirector(
             val (icon, accent) = when (c) {
                 is Candidate.Music -> R.drawable.ic_music to c.media.accent
                 is Candidate.Live -> c.activity.tabIcon() to c.activity.tabAccent()
+                is Candidate.Custom -> R.drawable.ic_bolt to c.p.color
             }
             IslandTab(c.key, icon, accent, c === current)
         }
@@ -424,7 +445,7 @@ class IslandDirector(
         when (tap) {
             Tap.Expand -> if (config.expandOnTap) expand()
             Tap.Collapse -> collapse()
-            Tap.Dismiss -> nextPeek()
+            Tap.Dismiss -> if (peek != null) nextPeek() else dismissStanding()
             Tap.Settings -> {
                 sys.openSettings()
                 collapse()
@@ -474,10 +495,19 @@ class IslandDirector(
     }
 
     override fun onLongPress() {
-        // On a timer, stopwatch or recording: its own stop/pause button, if it has one.
+        // A notice on top is what the finger is on; holding it dismisses it, like a swipe.
+        if (peek != null) {
+            nextPeek()
+            return
+        }
+        // On a timer, stopwatch or recording: its own pause/stop button, gentlest first, whole
+        // words only ("end" must not match "Send"). Rides and deliveries are never touched here.
         val cur = current()
         if (cur is Candidate.Live && cur.activity.kind in STOPPABLE) {
-            val stop = cur.activity.actions.firstOrNull { a -> STOP_WORDS.any { it in a.title.lowercase() } }
+            val stop = cur.activity.actions
+                .map { a -> a to a.title.lowercase().split(WORD_SPLIT).filter { it.isNotEmpty() } }
+                .filter { (_, words) -> words.any { it in STOP_WORDS } }
+                .minByOrNull { (_, words) -> if (words.any { it in PAUSE_WORDS }) 0 else 1 }?.first
             if (stop?.intent != null) {
                 sys.launch(stop.intent)
                 collapse()
@@ -492,10 +522,19 @@ class IslandDirector(
         collapse()
     }
 
+    private fun dismissStanding() {
+        val cur = current() as? Candidate.Custom ?: return
+        standing.remove(cur.p.id)
+        selectedKey = null
+        rearm()
+        resolve()
+    }
+
     override fun onSwipe(direction: Int) {
         val cur = current()
         when {
             peek != null -> nextPeek()
+            cur is Candidate.Custom && candidates().size < 2 -> dismissStanding()
             cur is Candidate.Music && (view.scene is MediaCompactScene || view.scene is MediaCardScene) && candidates().size < 2 ->
                 onTap(if (direction < 0) Tap.Next else Tap.Previous)
             candidates().size >= 2 -> cycle(if (direction < 0) 1 else -1)
@@ -555,7 +594,7 @@ class IslandDirector(
     }
 
     private fun nextPeek() {
-        peek = queue.removeFirstOrNull() ?: standingCustom.also { standingCustom = null }
+        peek = queue.removeFirstOrNull()
         rearm()
         resolve()
     }
@@ -564,9 +603,9 @@ class IslandDirector(
         when {
             expanded -> {
                 expanded = false
-                peek = queue.removeFirstOrNull() ?: standingCustom.also { standingCustom = null }
+                peek = queue.removeFirstOrNull()
             }
-            peek != null -> peek = queue.removeFirstOrNull() ?: standingCustom.also { standingCustom = null }
+            peek != null -> peek = queue.removeFirstOrNull()
         }
         resolve()
     }
@@ -605,7 +644,7 @@ class IslandDirector(
             peek is Peek.Message -> MESSAGE_MS
             peek is Peek.Charging || peek is Peek.BatteryFull -> CHARGING_MS
             peek is Peek.Unlocked -> UNLOCK_MS
-            peek is Peek.Custom -> (peek as Peek.Custom).durationMs.let { if (it <= 0L) return else it.coerceIn(800L, MAX_CUSTOM_MS) }
+            peek is Peek.Custom -> (peek as Peek.Custom).durationMs.coerceIn(800L, MAX_CUSTOM_MS)
             peek != null -> NOTICE_MS
             else -> {
                 // Paused music leaves the island after a while; re-check when that time comes.
@@ -632,6 +671,7 @@ class IslandDirector(
         return when (val c = current()) {
             is Candidate.Live -> LiveCompactScene(c.activity, cover)
             is Candidate.Music -> MediaCompactScene(c.media, cover)
+            is Candidate.Custom -> peekScene(c.p)
             null -> null
         }
     }
@@ -642,6 +682,7 @@ class IslandDirector(
         val tabs = tabsFor(list, cur)
         when (cur) {
             is Candidate.Live -> return LiveCardScene(cur.activity, system, tabs)
+            is Candidate.Custom -> return CustomCardScene(cur.p, tabs)
             is Candidate.Music -> {
                 // Paused long ago means it is not what the user wants; show the info card.
                 val fresh = cur.media.playing || SystemClock.elapsedRealtime() - mediaPausedAt < RESUMABLE_MS || cur.media === demoMedia
@@ -753,8 +794,10 @@ class IslandDirector(
         const val UNLOCK_MS = 1300L
         const val MAX_CUSTOM_MS = 120_000L
         const val SNOOZE_MS = 60_000L
-        private val STOPPABLE = setOf(LiveKind.TIMER, LiveKind.RECORDING, LiveKind.PROGRESS)
-        private val STOP_WORDS = listOf("עצור", "עצירה", "השהה", "השהיה", "סיים", "סיום", "בטל", "ביטול", "stop", "pause", "cancel", "end")
+        private val STOPPABLE = setOf(LiveKind.TIMER, LiveKind.RECORDING)
+        private val PAUSE_WORDS = setOf("השהה", "השהיה", "pause")
+        private val STOP_WORDS = PAUSE_WORDS + setOf("עצור", "עצירה", "סיים", "סיום", "בטל", "ביטול", "stop", "cancel", "end")
+        private val WORD_SPLIT = Regex("[^\\p{L}]+")
         const val PAUSED_LINGER_MS = 30_000L
         const val RESUMABLE_MS = 30 * 60_000L
         const val DEMO_MS = 12_000L

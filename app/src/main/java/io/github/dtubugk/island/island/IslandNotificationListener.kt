@@ -44,11 +44,9 @@ class IslandNotificationListener : NotificationListenerService() {
         val e = sbn.notification.extras
         val text = (e.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty() + " " +
             e.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()).lowercase()
-        return when {
-            HOTSPOT_WORDS.any { it in text } -> STATUS_HOTSPOT
-            VPN_WORDS.any { it in text } -> STATUS_VPN
-            else -> null
-        }
+        // VPN is read from the network itself (the service), not from notification wording:
+        // the only system VPN notification is "Always-on VPN disconnected".
+        return if (HOTSPOT_WORDS.any { it in text }) STATUS_HOTSPOT else null
     }
 
     /** Keys currently shown as calls/timers, so an update that stops being one still refreshes them. */
@@ -85,7 +83,12 @@ class IslandNotificationListener : NotificationListenerService() {
             msm?.addOnActiveSessionsChangedListener(sessionsListener, ComponentName(this, javaClass), handler)
         }
         runCatching { refreshSessions() }
-        runCatching { activeNotifications }.getOrNull()?.forEach { seen[it.key] = it.notification.`when` to contentHash(it.notification) }
+        statusKeys.clear()
+        runCatching { activeNotifications }.getOrNull()?.forEach {
+            seen[it.key] = it.notification.`when` to contentHash(it.notification)
+            // An already-running hotspot: no notice now, but its later "off" is judged right.
+            statusKind(it)?.let { k -> statusKeys[it.key] = k }
+        }
         runCatching { publishActivities() }
     }
 
@@ -94,6 +97,8 @@ class IslandNotificationListener : NotificationListenerService() {
         controllers.forEach { runCatching { it.unregisterCallback(controllerCallback) } }
         controllers = emptyList()
         controller = null
+        statusKeys.clear()
+        seen.clear()
         LiveBus.canceller = null
         LiveBus.dndSetter = null
         LiveBus.setListenerConnected(false)
@@ -111,7 +116,7 @@ class IslandNotificationListener : NotificationListenerService() {
         statusKind(sbn)?.let { kind ->
             if (sbn.key !in statusKeys) {
                 statusKeys[sbn.key] = kind
-                LiveBus.peek(if (kind == STATUS_HOTSPOT) Peek.Hotspot(true) else Peek.Vpn(true))
+                if (kind == STATUS_HOTSPOT) LiveBus.peek(Peek.Hotspot(true))
             }
             return
         }
@@ -144,7 +149,7 @@ class IslandNotificationListener : NotificationListenerService() {
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         runCatching {
             statusKeys.remove(sbn.key)?.let { kind ->
-                LiveBus.peek(if (kind == STATUS_HOTSPOT) Peek.Hotspot(false) else Peek.Vpn(false))
+                if (kind == STATUS_HOTSPOT) LiveBus.peek(Peek.Hotspot(false))
             }
             seen.remove(sbn.key)
             // Read or dismissed elsewhere: the island must not show it later from its queue.
@@ -396,11 +401,9 @@ class IslandNotificationListener : NotificationListenerService() {
         const val ART_PX = 160
         val DEFAULT_ACCENT = 0xFFFF7EB0.toInt()
         val NAV_PACKAGES = setOf("com.google.android.apps.maps", "com.waze", "com.here.app.maps", "com.sygic.aura")
-        val SYSTEM_PACKAGES = setOf("android", "com.android.systemui", "com.android.settings", "com.android.networkstack.tethering", "com.google.android.networkstack.tethering", "com.samsung.android.net.wifi.wifiguider")
+        val SYSTEM_PACKAGES = setOf("android", "com.android.systemui", "com.android.settings", "com.android.networkstack.tethering", "com.google.android.networkstack.tethering", "com.samsung.android.net.wifi.wifiguider", "com.sec.android.app.wlantest", "com.samsung.android.app.telephonyui")
         val HOTSPOT_WORDS = listOf("hotspot", "נקודה חמה", "tethering", "שיתוף אינטרנט")
-        val VPN_WORDS = listOf("vpn")
         const val STATUS_HOTSPOT = 1
-        const val STATUS_VPN = 2
         // Android 16 keys, spelled out so the app builds against older SDKs too.
         const val EXTRA_REQUEST_PROMOTED_ONGOING = "android.requestPromotedOngoing"
         const val EXTRA_SHORT_CRITICAL_TEXT = "android.shortCriticalText"

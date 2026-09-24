@@ -197,11 +197,14 @@ class IslandView(
             val start = e1 ?: return false
             val dx = e2.x - start.x
             val dy = e2.y - start.y
-            // The dominant axis decides, once the drag is long enough on it.
+            // The dominant axis decides, once the drag is long enough on it. The resting island
+            // hangs at the very top, so an upward drag runs into the edge of the glass after a
+            // few dp: reaching the edge from lower down counts, a nudge does not.
             val threshold = 36f * dp
+            val hitTopEdge = isOverlay && e2.y <= 3f * dp && dy < -14f * dp
             when {
                 abs(dy) >= abs(dx) && dy > threshold -> pullDown()
-                abs(dy) >= abs(dx) * 2f && dy < -64f * dp -> swipeUp()
+                abs(dy) >= abs(dx) * 2f && (dy < -64f * dp || hitTopEdge) -> swipeUp()
                 abs(dx) > abs(dy) && abs(dx) > threshold -> swipeSideways(if (dx < 0f) -1 else 1)
                 else -> return false
             }
@@ -502,9 +505,22 @@ class IslandView(
             islandPaint.clearShadowLayer()
         }
         rect.set(left, top, left + w, top + h)
-        islandPaint.alpha = (255 * config.opacity.coerceIn(IslandConfig.MIN_OPACITY, 1f)).roundToInt()
+        val opacity = config.opacity.coerceIn(IslandConfig.MIN_OPACITY, 1f)
+        islandPaint.alpha = (255 * opacity).roundToInt()
         canvas.drawRoundRect(rect, r, r, islandPaint)
         islandPaint.alpha = 255
+        if (opacity < 1f) {
+            // Transparency is for the card body only: the strip over the status bar and the
+            // collar around the camera stay hardware-black, so nothing shows through them.
+            islandPaint.clearShadowLayer()
+            canvas.save()
+            clipPath.rewind()
+            clipPath.addRoundRect(rect, r, r, Path.Direction.CW)
+            canvas.clipPath(clipPath)
+            canvas.drawRect(left, top, left + w, min(top + layout.bandHeight, top + h), islandPaint)
+            canvas.drawCircle(centerX() + layout.holeOffsetX, top + layout.holeCenterY, layout.holeRadius + 6f * dp, islandPaint)
+            canvas.restore()
+        }
         if (drawLens) drawLens(canvas, centerX() + layout.holeOffsetX, top + layout.holeCenterY)
 
         clipPath.rewind()

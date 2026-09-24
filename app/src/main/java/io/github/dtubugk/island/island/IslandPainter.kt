@@ -262,12 +262,7 @@ class IslandPainter(private val context: Context) {
     }
 
     /** Material You: the phone's own accent color, where Android has one (12+). */
-    fun systemAccent(): Int =
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            runCatching { context.getColor(android.R.color.system_accent1_200) }.getOrDefault(Color.WHITE)
-        } else {
-            Color.WHITE
-        }
+    fun systemAccent(): Int = io.github.dtubugk.island.data.IslandColors.systemAccent(context) ?: Color.WHITE
 
     private fun font(id: Int, fallback: Typeface): Typeface =
         runCatching { ResourcesCompat.getFont(context, id) }.getOrNull() ?: fallback

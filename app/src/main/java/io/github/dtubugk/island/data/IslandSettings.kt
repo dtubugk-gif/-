@@ -39,10 +39,10 @@ data class IslandConfig(
     val absorbChip: Boolean = true,
     /** Island background opacity, 0.5..1. Pure black at 1. */
     val opacity: Float = 1f,
-    /** Which tools the info card offers, in order. */
-    val quickActions: List<IslandAction> = IslandAction.entries.filter { it != IslandAction.SPEAKER && it != IslandAction.MUTE },
-    /** Let other apps (Tasker, MacroDroid) show their own islands through the broadcast API. */
-    val api: Boolean = true,
+    /** Which tools the info card offers, in [QUICK_ACTION_ORDER]. */
+    val quickActions: List<IslandAction> = QUICK_ACTION_ORDER,
+    /** Let other apps (Tasker, MacroDroid) show their own islands through the broadcast API. Opt-in. */
+    val api: Boolean = false,
 ) {
     companion object {
         const val DEFAULT_TEXT = "א"
@@ -56,6 +56,11 @@ data class IslandConfig(
         const val MAX_OFFSET_X_DP = 60f
         const val MAX_OFFSET_Y_DP = 16f
         const val MIN_OPACITY = 0.5f
+        /** The info card's tools in their fixed display order (index 0 is drawn rightmost). */
+        val QUICK_ACTION_ORDER: List<IslandAction> = listOf(
+            IslandAction.FLASHLIGHT, IslandAction.DND, IslandAction.AIRPLANE,
+            IslandAction.SCREENSHOT, IslandAction.LOCK, IslandAction.SETTINGS,
+        )
     }
 }
 
@@ -79,6 +84,14 @@ object IslandColors {
     const val GRADIENT_END = 0xFFFF6FA3.toInt()
 
     fun of(index: Int): Int = swatches.getOrElse(index) { swatches[0] }
+
+    /** Material You accent as the island paints it; null below Android 12. */
+    fun systemAccent(context: android.content.Context): Int? =
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            runCatching { context.getColor(android.R.color.system_accent1_200) }.getOrNull()
+        } else {
+            null
+        }
 }
 
 /** One-shot requests from the app screen: show a sample of each island feature. */

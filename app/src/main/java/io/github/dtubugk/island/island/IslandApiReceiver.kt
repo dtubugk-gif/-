@@ -24,10 +24,19 @@ import io.github.dtubugk.island.data.IslandSettings
  */
 class IslandApiReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        val action = intent.action
+        if (action != ACTION_SHOW && action != ACTION_HIDE) return
+        // Same process as the island; with the service off nothing would show anyway, so a
+        // malformed bundle from a stranger is never even unparcelled.
+        if (!IslandService.running.value) return
         IslandSettings.init(context)
         if (!IslandSettings.config.value.api) return
-        val id = intent.getStringExtra("id")?.take(64)?.ifBlank { null } ?: "default"
-        when (intent.action) {
+        runCatching { handle(intent, action) }
+    }
+
+    private fun handle(intent: Intent, action: String) {
+        val id = intent.extras?.get("id")?.toString()?.trim()?.take(64)?.ifBlank { null } ?: "default"
+        when (action) {
             ACTION_SHOW -> {
                 // Automation apps (Tasker, MacroDroid) send every extra as text, so each value is
                 // read whatever its type.

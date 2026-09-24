@@ -58,6 +58,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -447,13 +448,6 @@ private fun AccessGrantedToggles(config: IslandConfig, actions: IslandActions) {
         ToggleRow("מצבי מערכת", "מצב שקט, נא לא להפריע, אוזניות, סוללה חלשה ומלאה", config.systemAlerts) { v ->
             actions.update { it.copy(systemAlerts = v) }
         }
-        ToggleRow("איים מאפליקציות אחרות", "Tasker, MacroDroid וכל אפליקציה יכולים להציג אי משלהם (למשל מהירות נסיעה ברכב)", config.api) { v ->
-            actions.update { it.copy(api = v) }
-        }
-        Spacer(Modifier.height(8.dp))
-        FieldLabel("פעולות מהירות בכרטיס")
-        QuickActionChips(config, actions)
-        Spacer(Modifier.height(8.dp))
         ToggleRow(
             "בליעת הצ'יפ של סמסונג",
             "כשסמסונג מציגה ליד השעון צ'יפ לשיר או לשיחה, האי מתרחב מעליו והצ'יפ עובר לתוך האי",
@@ -508,9 +502,12 @@ private fun TextCard(config: IslandConfig, actions: IslandActions) {
         )
         Spacer(Modifier.height(12.dp))
         FieldLabel("צבע")
+        val accent = IslandColors.systemAccent(LocalContext.current)
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
             IslandColors.swatches.forEachIndexed { index, color ->
-                Swatch(color, selected = index == config.colorIndex, index = index) {
+                // "System color" exists only where Android has one (12+).
+                if (color == IslandColors.SYSTEM && accent == null) return@forEachIndexed
+                Swatch(color, selected = index == config.colorIndex, index = index, accent = accent) {
                     actions.update { it.copy(colorIndex = index) }
                 }
             }
@@ -534,12 +531,12 @@ private fun TextCard(config: IslandConfig, actions: IslandActions) {
 private val swatchNames = listOf("לבן", "ורוד", "תכלת", "זהב", "מנטה", "סגול", "מעבר צבע", "צבע המערכת")
 
 @Composable
-private fun Swatch(color: Int, selected: Boolean, index: Int, onClick: () -> Unit) {
+private fun Swatch(color: Int, selected: Boolean, index: Int, accent: Int? = null, onClick: () -> Unit) {
     val ring by animateFloatAsState(if (selected) 1f else 0f, spring(stiffness = Spring.StiffnessMedium), label = "ring")
     val fill = when (color) {
         IslandColors.GRADIENT -> Brush.linearGradient(listOf(Color(IslandColors.GRADIENT_START), Color(IslandColors.GRADIENT_END)))
         // Material You: the phone's own accent, as the app theme shows it.
-        IslandColors.SYSTEM -> Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary))
+        IslandColors.SYSTEM -> Color(accent ?: 0xFFFFFFFF.toInt()).let { Brush.linearGradient(listOf(it, it)) }
         else -> Brush.linearGradient(listOf(Color(color), Color(color)))
     }
     Box(
@@ -573,7 +570,7 @@ private fun SizeCard(config: IslandConfig, actions: IslandActions) {
             SectionTitle("גודל ומיקום", Modifier.weight(1f))
             TextButton(onClick = {
                 val d = IslandConfig()
-                actions.update { it.copy(widthDp = d.widthDp, heightDp = d.heightDp, offsetXDp = 0f, offsetYDp = 0f) }
+                actions.update { it.copy(widthDp = d.widthDp, heightDp = d.heightDp, offsetXDp = d.offsetXDp, offsetYDp = d.offsetYDp, opacity = d.opacity) }
             }) { Text("איפוס") }
         }
         LabeledSlider("רוחב", config.widthDp, IslandConfig.MIN_WIDTH_DP..IslandConfig.MAX_WIDTH_DP, suffix = "dp") { v ->
@@ -649,6 +646,12 @@ private fun BehaviorCard(config: IslandConfig, actions: IslandActions) {
         ToggleRow("רטט", "רטט עדין כשנוגעים באי", config.haptics) { v ->
             actions.update { it.copy(haptics = v) }
         }
+        ToggleRow("איים מאפליקציות אחרות", "Tasker, MacroDroid וכל אפליקציה יכולים להציג אי משלהם (למשל מהירות נסיעה ברכב). כבוי עד שמדליקים", config.api) { v ->
+            actions.update { it.copy(api = v) }
+        }
+        Spacer(Modifier.height(8.dp))
+        FieldLabel("פעולות מהירות בכרטיס")
+        QuickActionChips(config, actions)
     }
 }
 
@@ -672,7 +675,7 @@ private fun ToggleRow(title: String, subtitle: String, checked: Boolean, onChang
     }
 }
 
-private val quickActionNames = listOf(
+private val quickActionLabels = mapOf(
     IslandAction.FLASHLIGHT to "פנס",
     IslandAction.DND to "לא להפריע",
     IslandAction.AIRPLANE to "מצב טיסה",
@@ -680,6 +683,7 @@ private val quickActionNames = listOf(
     IslandAction.LOCK to "נעילה",
     IslandAction.SETTINGS to "הגדרות",
 )
+private val quickActionNames = IslandConfig.QUICK_ACTION_ORDER.map { it to quickActionLabels.getValue(it) }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -693,7 +697,7 @@ private fun QuickActionChips(config: IslandConfig, actions: IslandActions) {
                     actions.update { c ->
                         val next = if (on) c.quickActions - action else c.quickActions + action
                         // Keep the row's fixed order and never let it go empty.
-                        c.copy(quickActions = quickActionNames.map { it.first }.filter { it in next }.ifEmpty { listOf(IslandAction.SETTINGS) })
+                        c.copy(quickActions = IslandConfig.QUICK_ACTION_ORDER.filter { it in next }.ifEmpty { listOf(IslandAction.SETTINGS) })
                     }
                 },
                 label = { Text(label) },

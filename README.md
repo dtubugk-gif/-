@@ -57,7 +57,7 @@
 
 דוגמה ב-Tasker: פרופיל "מחובר ל-Bluetooth של הרכב" ← משימה: **Send Intent**, Action `io.github.dtubugk.island.SHOW`, Target `Broadcast Receiver`, Package `io.github.dtubugk.island`, Extras `title:%SPEED קמ״ש`, `text:%LOC`, `id:car`, `duration:0`. וכשמתנתקים: Action `io.github.dtubugk.island.HIDE`, Extra `id:car`.
 
-ה-API מציג טקסט בלבד, ואפשר לכבות אותו בהגדרות ("איים מאפליקציות אחרות").
+ה-API כבוי כברירת מחדל: מדליקים אותו בהגדרות ("איים מאפליקציות אחרות"). הוא מציג טקסט בלבד. אי עם `duration` 0 הוא תוכן חי, כמו שיר: הוא נשאר גם כשהמסך כבה, נכנס ללשוניות לצד פעילויות אחרות, ולא חוסם התראות.
 
 ### מצב טיסה: איך זה עובד
 

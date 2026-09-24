@@ -162,6 +162,39 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         }
     }
 
+    /** VPN on/off from the network itself: exact on every ROM and language. */
+    private var vpnCallback: android.net.ConnectivityManager.NetworkCallback? = null
+    private var vpnUp: Boolean? = null
+
+    private fun watchVpn() {
+        val cm = getSystemService(android.net.ConnectivityManager::class.java) ?: return
+        val request = android.net.NetworkRequest.Builder()
+            .addTransportType(android.net.NetworkCapabilities.TRANSPORT_VPN)
+            .removeCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+            .build()
+        val cb = object : android.net.ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: android.net.Network) {
+                handler.post {
+                    // The first report on registration is the current state, not news.
+                    if (vpnUp == false) director?.post(Peek.Vpn(true))
+                    vpnUp = true
+                }
+            }
+            override fun onLost(network: android.net.Network) {
+                handler.post {
+                    if (vpnUp == true) director?.post(Peek.Vpn(false))
+                    vpnUp = false
+                }
+            }
+        }
+        runCatching {
+            cm.registerNetworkCallback(request, cb)
+            vpnCallback = cb
+            // No VPN now: a later onAvailable is real news.
+            handler.postDelayed({ if (vpnUp == null) vpnUp = false }, 1500)
+        }
+    }
+
     private val displayListener = object : DisplayManager.DisplayListener {
         override fun onDisplayAdded(displayId: Int) = Unit
         override fun onDisplayRemoved(displayId: Int) = Unit
@@ -241,6 +274,7 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         getSystemService(DisplayManager::class.java)?.registerDisplayListener(displayListener, null)
         getSystemService(AudioManager::class.java)?.registerAudioDeviceCallback(audioCallback, handler)
+        watchVpn()
         getSystemService(CameraManager::class.java)?.let { cm ->
             runCatching {
                 // The back camera's flash is the flashlight.
@@ -788,6 +822,9 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         getSystemService(DisplayManager::class.java)?.unregisterDisplayListener(displayListener)
         getSystemService(AudioManager::class.java)?.unregisterAudioDeviceCallback(audioCallback)
         runCatching { getSystemService(CameraManager::class.java)?.unregisterTorchCallback(torchCallback) }
+        vpnCallback?.let { cb -> runCatching { getSystemService(android.net.ConnectivityManager::class.java)?.unregisterNetworkCallback(cb) } }
+        vpnCallback = null
+        vpnUp = null
         runCatching { windowManager?.removeViewImmediate(view) }
     }
 

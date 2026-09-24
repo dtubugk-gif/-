@@ -167,10 +167,14 @@ private object Tabs {
         }
     }
 
-    /** As many tabs as fit before the camera, the current one always among them. */
+    /** As many tabs as fit before the camera, the current one always among them; none if not even one fits. */
     private fun fit(f: Frame, shape: IslandShape, all: List<IslandTab>): List<IslandTab> {
-        val room = f.holeX - f.layout.holeRadius - 14f * f.dp - (f.left(shape) + 32f * f.dp)
-        val max = (room / (26f * f.dp)).toInt().coerceIn(1, all.size)
+        if (all.isEmpty()) return all
+        val first = f.left(shape) + 32f * f.dp
+        val limit = f.holeX - f.layout.holeRadius - 4f * f.dp
+        val room = limit - (first + 10f * f.dp)
+        if (room < 0f) return emptyList()
+        val max = (1 + room / (26f * f.dp)).toInt().coerceIn(1, all.size)
         if (all.size <= max) return all
         val kept = all.take(max).toMutableList()
         all.firstOrNull { it.selected }?.let { if (it !in kept) kept[kept.lastIndex] = it }
@@ -586,14 +590,22 @@ class LiveCardScene(
         val band = f.bandY()
         val inset = 24f * dp
         p.label(c, activity.appLabel, right - inset, band, 13f * dp, SECONDARY, alpha, Paint.Align.RIGHT, p.medium, f.sideRoom(s, inset))
-        when {
-            tabs.isNotEmpty() -> Tabs.draw(c, f, s, tabs, alpha)
-            activity.kind == LiveKind.NAVIGATION && activity.subText.isNotBlank() ->
-                // ETA and remaining time, as the app reports them.
-                p.label(c, activity.subText, left + inset, band, 13f * dp, SECONDARY, alpha, Paint.Align.LEFT, p.medium, f.sideRoom(s, inset))
-            else -> activity.clock(f.nowMs)?.let {
-                p.label(c, it, left + inset, band, 15f * dp, activity.accent(), alpha, Paint.Align.LEFT, p.semibold)
+        val eta = activity.subText.takeIf { activity.kind == LiveKind.NAVIGATION && it.isNotBlank() }
+        val clock = activity.clock(f.nowMs)
+        if (tabs.isNotEmpty()) {
+            // Tabs take the left side; the running value moves next to the app label.
+            Tabs.draw(c, f, s, tabs, alpha)
+            val labelW = p.measure(activity.appLabel, 13f * dp)
+            val x = right - inset - labelW - 10f * dp
+            when {
+                clock != null -> p.label(c, clock, x, band, 14f * dp, activity.accent(), alpha, Paint.Align.RIGHT, p.semibold)
+                eta != null -> p.label(c, eta, x, band, 12f * dp, SECONDARY, alpha, Paint.Align.RIGHT, p.medium, x - f.holeX - f.layout.holeRadius - 8f * dp)
             }
+        } else if (eta != null) {
+            // ETA and remaining time, as the app reports them.
+            p.label(c, eta, left + inset, band, 13f * dp, SECONDARY, alpha, Paint.Align.LEFT, p.medium, f.sideRoom(s, inset))
+        } else if (clock != null) {
+            p.label(c, clock, left + inset, band, 15f * dp, activity.accent(), alpha, Paint.Align.LEFT, p.semibold)
         }
 
         val row = f.top + f.layout.bandHeight + 32f * dp
@@ -667,7 +679,7 @@ class LiveCardScene(
 
 // --- islands from other apps (broadcast API) --------------------------------------------------------
 
-class CustomCardScene(private val p: Peek.Custom) : Scene("custom-card:${p.id}") {
+class CustomCardScene(private val p: Peek.Custom, private val tabs: List<IslandTab> = emptyList()) : Scene("custom-card:${p.id}") {
     override val isCard = true
     override fun shape(l: IslandLayout) = l.card(76f * l.density)
 
@@ -677,6 +689,7 @@ class CustomCardScene(private val p: Peek.Custom) : Scene("custom-card:${p.id}")
         val dp = f.dp
         val left = f.left(s)
         val right = f.right(s)
+        if (tabs.isNotEmpty()) Tabs.draw(c, f, s, tabs, alpha)
         val row = f.top + f.layout.bandHeight + 32f * dp
         val size = 48f * dp
         val ix = right - 18f * dp - size / 2f
@@ -688,7 +701,10 @@ class CustomCardScene(private val p: Peek.Custom) : Scene("custom-card:${p.id}")
         painter.label(c, p.text, textRight, row + 12f * dp, 14f * dp, SECONDARY, alpha, Paint.Align.RIGHT, painter.regular, room)
     }
 
-    override fun tap(x: Float, y: Float, f: Frame) = Tap.Dismiss
+    override fun tap(x: Float, y: Float, f: Frame): Tap {
+        Tabs.hit(x, y, f, shape(f.layout), tabs)?.let { return Tap.Select(it.key) }
+        return Tap.Dismiss
+    }
 }
 
 // --- messages ------------------------------------------------------------------------------------
