@@ -196,10 +196,12 @@ class IslandView(
             val start = e1 ?: return false
             val dx = e2.x - start.x
             val dy = e2.y - start.y
+            // The dominant axis decides, once the drag is long enough on it.
+            val threshold = 36f * dp
             when {
-                dy > 36f * dp && abs(dy) > abs(dx) -> pullDown()
-                dy < -36f * dp && abs(dy) > abs(dx) -> swipeUp()
-                abs(dx) > 48f * dp && abs(dx) > abs(dy) * 1.5f -> swipeSideways(if (dx < 0f) -1 else 1)
+                abs(dy) >= abs(dx) && dy > threshold -> pullDown()
+                abs(dy) >= abs(dx) && dy < -threshold -> swipeUp()
+                abs(dx) > abs(dy) && abs(dx) > threshold -> swipeSideways(if (dx < 0f) -1 else 1)
                 else -> return false
             }
             return true

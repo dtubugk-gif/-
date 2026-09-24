@@ -157,8 +157,9 @@ private object Tabs {
         return List(count) { i -> start + i * step }
     }
 
-    fun draw(c: Canvas, f: Frame, shape: IslandShape, tabs: List<IslandTab>, alpha: Float) {
+    fun draw(c: Canvas, f: Frame, shape: IslandShape, all: List<IslandTab>, alpha: Float) {
         val cy = f.bandY()
+        val tabs = fit(f, shape, all)
         centers(f, shape, tabs.size).forEachIndexed { i, cx ->
             val t = tabs[i]
             f.p.circle(c, cx, cy, 10f * f.dp, if (t.selected) t.accent else 0x33FFFFFF, alpha)
@@ -166,7 +167,18 @@ private object Tabs {
         }
     }
 
-    fun hit(x: Float, y: Float, f: Frame, shape: IslandShape, tabs: List<IslandTab>): IslandTab? {
+    /** As many tabs as fit before the camera, the current one always among them. */
+    private fun fit(f: Frame, shape: IslandShape, all: List<IslandTab>): List<IslandTab> {
+        val room = f.holeX - f.layout.holeRadius - 14f * f.dp - (f.left(shape) + 32f * f.dp)
+        val max = (room / (26f * f.dp)).toInt().coerceIn(1, all.size)
+        if (all.size <= max) return all
+        val kept = all.take(max).toMutableList()
+        all.firstOrNull { it.selected }?.let { if (it !in kept) kept[kept.lastIndex] = it }
+        return kept
+    }
+
+    fun hit(x: Float, y: Float, f: Frame, shape: IslandShape, all: List<IslandTab>): IslandTab? {
+        val tabs = fit(f, shape, all)
         if (tabs.isEmpty() || abs(y - f.bandY()) > 18f * f.dp) return null
         centers(f, shape, tabs.size).forEachIndexed { i, cx -> if (abs(x - cx) <= 14f * f.dp) return tabs[i] }
         return null

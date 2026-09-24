@@ -47,7 +47,10 @@ class IslandDirector(
     var config = IslandConfig()
         set(value) {
             if (value == field) return
+            val visibilityToggled = value.visible != field.visible
             field = value
+            // Switching the island off and on in the app ends a swipe-up hide.
+            if (visibilityToggled && snoozed) setSnoozed(false)
             view.setConfig(value)
             resolve()
         }
@@ -69,6 +72,7 @@ class IslandDirector(
     var active = true
         set(value) {
             field = value
+            if (value && snoozed) setSnoozed(false)
             if (!value) {
                 expanded = false
                 peek = null
@@ -101,6 +105,8 @@ class IslandDirector(
     private var selectedKey: String? = null
     /** Swiped up: hidden for a while, or until something urgent (a call, an alarm) arrives. */
     private var snoozed = false
+    /** A duration-0 API island that stepped aside for a notice; restored when the queue is empty. */
+    private var standingCustom: Peek.Custom? = null
     private val unsnooze = Runnable { setSnoozed(false) }
     private var peek: Peek? = null
     private val queue = ArrayDeque<Peek>()
@@ -229,6 +235,15 @@ class IslandDirector(
                 return
             }
         }
+        val current = peek
+        // A standing API island (a drive's speed) steps aside for a notice and comes back after it.
+        if (current is Peek.Custom && current.durationMs == 0L && p !is Peek.Custom && !expanded) {
+            standingCustom = current
+            peek = p
+            rearm()
+            resolve()
+            return
+        }
         if (peek == null && !expanded) {
             peek = p
             rearm()
@@ -255,6 +270,7 @@ class IslandDirector(
 
     /** An app took back its island. */
     fun hideCustom(id: String) {
+        if (standingCustom?.id == id) standingCustom = null
         queue.removeAll { it is Peek.Custom && it.id == id }
         val current = peek
         if (current is Peek.Custom && current.id == id) nextPeek()
@@ -536,7 +552,7 @@ class IslandDirector(
     }
 
     private fun nextPeek() {
-        peek = queue.removeFirstOrNull()
+        peek = queue.removeFirstOrNull() ?: standingCustom.also { standingCustom = null }
         rearm()
         resolve()
     }
@@ -545,9 +561,9 @@ class IslandDirector(
         when {
             expanded -> {
                 expanded = false
-                peek = queue.removeFirstOrNull()
+                peek = queue.removeFirstOrNull() ?: standingCustom.also { standingCustom = null }
             }
-            peek != null -> peek = queue.removeFirstOrNull()
+            peek != null -> peek = queue.removeFirstOrNull() ?: standingCustom.also { standingCustom = null }
         }
         resolve()
     }

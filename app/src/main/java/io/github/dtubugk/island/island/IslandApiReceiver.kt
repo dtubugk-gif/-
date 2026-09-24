@@ -29,12 +29,29 @@ class IslandApiReceiver : BroadcastReceiver() {
         val id = intent.getStringExtra("id")?.take(64)?.ifBlank { null } ?: "default"
         when (intent.action) {
             ACTION_SHOW -> {
-                val title = intent.getStringExtra("title")?.trim()?.take(60).orEmpty()
+                // Automation apps (Tasker, MacroDroid) send every extra as text, so each value is
+                // read whatever its type.
+                val extras = intent.extras
+                val title = extras?.get("title")?.toString()?.trim()?.take(60).orEmpty()
                 if (title.isEmpty()) return
-                val text = intent.getStringExtra("text")?.trim()?.take(80).orEmpty()
-                val color = runCatching { Color.parseColor(intent.getStringExtra("color") ?: "") }.getOrDefault(IslandPainter.BLUE)
-                val duration = intent.getLongExtra("duration", 4000L).coerceIn(0L, IslandDirector.MAX_CUSTOM_MS)
-                LiveBus.peek(Peek.Custom(id, title, text, color or 0xFF000000.toInt(), duration, intent.getBooleanExtra("card", false)))
+                val text = extras?.get("text")?.toString()?.trim()?.take(80).orEmpty()
+                val color = when (val c = extras?.get("color")) {
+                    is Number -> c.toInt()
+                    is String -> runCatching { Color.parseColor(c.trim()) }.getOrDefault(IslandPainter.BLUE)
+                    else -> IslandPainter.BLUE
+                }
+                val duration = when (val d = extras?.get("duration")) {
+                    is Number -> d.toLong()
+                    is String -> d.trim().toLongOrNull() ?: 4000L
+                    else -> 4000L
+                }.coerceIn(0L, IslandDirector.MAX_CUSTOM_MS)
+                val card = when (val c = extras?.get("card")) {
+                    is Boolean -> c
+                    is String -> c.trim().lowercase() in setOf("true", "1", "yes")
+                    is Number -> c.toInt() != 0
+                    else -> false
+                }
+                LiveBus.peek(Peek.Custom(id, title, text, color or 0xFF000000.toInt(), duration, card))
             }
             ACTION_HIDE -> LiveBus.hideCustom(id)
         }
