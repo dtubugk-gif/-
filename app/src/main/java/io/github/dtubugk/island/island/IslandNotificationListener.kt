@@ -172,6 +172,8 @@ class IslandNotificationListener : NotificationListenerService() {
             n.category == Notification.CATEGORY_CALL -> LiveKind.CALL
             n.category == Notification.CATEGORY_ALARM -> LiveKind.ALARM
             n.category == Notification.CATEGORY_NAVIGATION || (sbn.isOngoing && sbn.packageName in NAV_PACKAGES) -> LiveKind.NAVIGATION
+            // Screen or voice recording: a red dot and the running time, like the iPhone's.
+            sbn.isOngoing && e.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER) && sbn.packageName in RECORDER_PACKAGES -> LiveKind.RECORDING
             sbn.isOngoing && e.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER) -> LiveKind.TIMER
             // A determinate progress bar: download, upload, delivery or ride on its way.
             sbn.isOngoing && e.getInt(Notification.EXTRA_PROGRESS_MAX) > 0 && !e.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE) -> LiveKind.PROGRESS
@@ -358,6 +360,7 @@ class IslandNotificationListener : NotificationListenerService() {
         const val ART_PX = 160
         val DEFAULT_ACCENT = 0xFFFF7EB0.toInt()
         val NAV_PACKAGES = setOf("com.google.android.apps.maps", "com.waze", "com.here.app.maps", "com.sygic.aura")
+        val RECORDER_PACKAGES = setOf("com.samsung.android.app.smartcapture", "com.sec.android.app.voicenote", "com.google.android.apps.recorder")
         val QUIET_CATEGORIES = setOf(
             Notification.CATEGORY_CALL,
             Notification.CATEGORY_ALARM,

@@ -122,6 +122,10 @@ class IslandService : AccessibilityService(), IslandDirector.System {
                     d.post(Peek.DoNotDisturb(on = isDndOn()))
                 }
                 AudioManager.ACTION_SPEAKERPHONE_STATE_CHANGED, AudioManager.ACTION_MICROPHONE_MUTE_CHANGED -> publishSystemState()
+                PowerManager.ACTION_POWER_SAVE_MODE_CHANGED -> {
+                    val on = getSystemService(PowerManager::class.java)?.isPowerSaveMode == true
+                    d.post(Peek.PowerSave(on, d.battery.level))
+                }
             }
         }
     }
@@ -227,6 +231,7 @@ class IslandService : AccessibilityService(), IslandDirector.System {
             addAction(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED)
             addAction(AudioManager.ACTION_SPEAKERPHONE_STATE_CHANGED)
             addAction(AudioManager.ACTION_MICROPHONE_MUTE_CHANGED)
+            addAction(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
         }
         ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         getSystemService(DisplayManager::class.java)?.registerDisplayListener(displayListener, null)

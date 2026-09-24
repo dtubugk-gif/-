@@ -3,6 +3,7 @@ package io.github.dtubugk.island.island
 import android.app.PendingIntent
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.RectF
@@ -408,7 +409,7 @@ class IslandDirector(
     private fun live(kind: LiveKind) = (listOfNotNull(demoActivity) + activities).firstOrNull { it.kind == kind }
     private fun call() = live(LiveKind.CALL) ?: live(LiveKind.ALARM)
     /** Below music: guidance, then a running timer, then a download or delivery in progress. */
-    private fun timer() = live(LiveKind.NAVIGATION) ?: live(LiveKind.TIMER) ?: live(LiveKind.PROGRESS)
+    private fun timer() = live(LiveKind.NAVIGATION) ?: live(LiveKind.RECORDING) ?: live(LiveKind.TIMER) ?: live(LiveKind.PROGRESS)
 
     private fun compactScene(): Scene? {
         val cover = chip.takeIf { config.absorbChip }
@@ -470,6 +471,12 @@ class IslandDirector(
             NoticeScene.Glyph.Battery(p.level, IslandPainter.GREEN, bolt = true), "${p.level}%", IslandPainter.GREEN,
         )
         is Peek.BatteryFull -> NoticeScene("full", "הסוללה מלאה", NoticeScene.Glyph.Battery(100, IslandPainter.GREEN, bolt = false), "100%", IslandPainter.GREEN)
+        is Peek.PowerSave -> NoticeScene(
+            "powersave",
+            if (p.on) "חיסכון בסוללה" else "חיסכון בסוללה כבוי",
+            NoticeScene.Glyph.Battery(p.level, if (p.on) IslandPainter.ORANGE else Color.WHITE, bolt = false), "${p.level}%",
+            if (p.on) IslandPainter.ORANGE else Color.WHITE,
+        )
         is Peek.LowBattery -> NoticeScene("low", "סוללה חלשה", NoticeScene.Glyph.Battery(p.level, IslandPainter.RED, bolt = false), "${p.level}%", IslandPainter.RED)
         is Peek.Ringer -> when (p.mode) {
             Peek.RingerMode.SILENT -> NoticeScene("ringer", "מצב שקט", NoticeScene.Glyph.Icon(R.drawable.ic_bell_off, IslandPainter.RED))
@@ -487,7 +494,7 @@ class IslandDirector(
     private fun allowed(p: Peek) = when (p) {
         is Peek.Message -> config.notifications
         is Peek.Charging, is Peek.BatteryFull -> config.chargingAnimation
-        is Peek.LowBattery, is Peek.Ringer, is Peek.DoNotDisturb, is Peek.Headphones -> config.systemAlerts
+        is Peek.LowBattery, is Peek.Ringer, is Peek.DoNotDisturb, is Peek.Headphones, is Peek.PowerSave -> config.systemAlerts
     }
 
     fun release() {

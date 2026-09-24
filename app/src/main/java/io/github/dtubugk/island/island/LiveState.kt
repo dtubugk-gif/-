@@ -44,7 +44,7 @@ data class MediaState(
 }
 
 /** In priority order: what the island shows first when several are live. */
-enum class LiveKind { CALL, ALARM, NAVIGATION, TIMER, PROGRESS }
+enum class LiveKind { CALL, ALARM, NAVIGATION, RECORDING, TIMER, PROGRESS }
 
 /** Things the island can do to the phone itself, from its cards. */
 enum class IslandAction { SPEAKER, MUTE, AIRPLANE, FLASHLIGHT, DND, SCREENSHOT, LOCK, SETTINGS }
@@ -102,6 +102,7 @@ sealed class Peek {
     /** [minutesLeft] until full, when the phone can tell; else -1. */
     data class Charging(val level: Int, val minutesLeft: Int = -1) : Peek()
     data class BatteryFull(val unit: Unit = Unit) : Peek()
+    data class PowerSave(val on: Boolean, val level: Int) : Peek()
     data class LowBattery(val level: Int) : Peek()
     enum class RingerMode { SILENT, VIBRATE, SOUND }
     data class Ringer(val mode: RingerMode) : Peek()

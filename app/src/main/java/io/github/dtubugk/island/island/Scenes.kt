@@ -420,6 +420,7 @@ private fun LiveActivity.accent() = when (kind) {
     LiveKind.CALL -> GREEN
     LiveKind.ALARM -> RED
     LiveKind.NAVIGATION -> IslandPainter.BLUE
+    LiveKind.RECORDING -> RED
     LiveKind.TIMER -> ORANGE
     LiveKind.PROGRESS -> IslandPainter.BLUE
 }
@@ -428,6 +429,7 @@ private fun LiveActivity.iconRes() = when (kind) {
     LiveKind.CALL -> R.drawable.ic_call
     LiveKind.ALARM -> R.drawable.ic_alarm
     LiveKind.NAVIGATION -> R.drawable.ic_navigation
+    LiveKind.RECORDING -> R.drawable.ic_timer
     LiveKind.TIMER -> R.drawable.ic_timer
     LiveKind.PROGRESS -> R.drawable.ic_download
 }
@@ -435,7 +437,11 @@ private fun LiveActivity.iconRes() = when (kind) {
 /** The badge by the camera: the maneuver arrow / app icon when there is one, else the kind's glyph. */
 private fun drawBadge(c: Canvas, f: Frame, a: LiveActivity, cx: Float, cy: Float, size: Float, alpha: Float) {
     val icon = a.icon
-    if (icon != null && (a.kind == LiveKind.NAVIGATION || a.kind == LiveKind.PROGRESS)) {
+    if (a.kind == LiveKind.RECORDING) {
+        // The recording dot: a red disc in a soft ring.
+        f.p.circle(c, cx, cy, size * 0.5f, 0x40FF453A, alpha)
+        f.p.circle(c, cx, cy, size * 0.3f, RED, alpha)
+    } else if (icon != null && (a.kind == LiveKind.NAVIGATION || a.kind == LiveKind.PROGRESS)) {
         f.p.roundDrawable(c, icon, cx, cy, size, alpha)
     } else {
         f.p.icon(c, a.iconRes(), cx, cy, size, a.accent(), alpha)
@@ -534,7 +540,10 @@ class LiveCardScene(
         val icon = 52f * dp
         val ix = right - 18f * dp - icon / 2f
         val badge = activity.icon
-        if (badge != null && (activity.kind == LiveKind.NAVIGATION || activity.kind == LiveKind.PROGRESS)) {
+        if (activity.kind == LiveKind.RECORDING) {
+            p.circle(c, ix, row, icon / 2f, 0x40FF453A, alpha)
+            p.circle(c, ix, row, icon * 0.28f, RED, alpha)
+        } else if (badge != null && (activity.kind == LiveKind.NAVIGATION || activity.kind == LiveKind.PROGRESS)) {
             p.circle(c, ix, row, icon / 2f, 0x24FFFFFF, alpha)
             p.roundDrawable(c, badge, ix, row, icon * 0.78f, alpha)
         } else {
