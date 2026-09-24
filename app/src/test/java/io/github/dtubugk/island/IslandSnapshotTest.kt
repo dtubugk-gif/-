@@ -167,7 +167,7 @@ class IslandSnapshotTest {
         }
         column.addView(multiNav, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, short))
         // An island another app asked for through the API.
-        val custom = island(IslandConfig(), null)
+        val custom = island(IslandConfig(api = true), null)
         (custom.host as IslandDirector).post(io.github.dtubugk.island.island.Peek.Custom("speed", "87 קמ״ש", "כביש 6 · מגבלה 110", 0xFF34C759.toInt(), 0L, card = true))
         column.addView(custom, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, short))
         paparazzi.snapshot(column)
