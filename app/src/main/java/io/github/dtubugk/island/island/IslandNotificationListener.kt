@@ -55,6 +55,12 @@ class IslandNotificationListener : NotificationListenerService() {
         super.onListenerConnected()
         LiveBus.setListenerConnected(true)
         LiveBus.canceller = { key -> runCatching { cancelNotification(key) } }
+        // A notification listener may switch Do Not Disturb without the separate policy permission.
+        LiveBus.dndSetter = { on ->
+            runCatching {
+                requestInterruptionFilter(if (on) INTERRUPTION_FILTER_PRIORITY else INTERRUPTION_FILTER_ALL)
+            }
+        }
         val msm = getSystemService(MediaSessionManager::class.java)
         sessions = msm
         runCatching {
@@ -71,6 +77,7 @@ class IslandNotificationListener : NotificationListenerService() {
         controllers = emptyList()
         controller = null
         LiveBus.canceller = null
+        LiveBus.dndSetter = null
         LiveBus.setListenerConnected(false)
         super.onListenerDisconnected()
     }
@@ -155,22 +162,37 @@ class IslandNotificationListener : NotificationListenerService() {
 
     // --- calls and timers ---------------------------------------------------------------------
 
-    private fun isLiveCandidate(sbn: StatusBarNotification): Boolean {
+    private fun isLiveCandidate(sbn: StatusBarNotification): Boolean = liveKind(sbn) != null
+
+    /** What kind of live activity a notification is, or null when it is an ordinary one. */
+    private fun liveKind(sbn: StatusBarNotification): LiveKind? {
         val n = sbn.notification
-        return n.category == Notification.CATEGORY_CALL ||
-            (sbn.isOngoing && n.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER))
+        val e = n.extras
+        return when {
+            n.category == Notification.CATEGORY_CALL -> LiveKind.CALL
+            n.category == Notification.CATEGORY_ALARM -> LiveKind.ALARM
+            n.category == Notification.CATEGORY_NAVIGATION || (sbn.isOngoing && sbn.packageName in NAV_PACKAGES) -> LiveKind.NAVIGATION
+            sbn.isOngoing && e.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER) -> LiveKind.TIMER
+            // A determinate progress bar: download, upload, delivery or ride on its way.
+            sbn.isOngoing && e.getInt(Notification.EXTRA_PROGRESS_MAX) > 0 && !e.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE) -> LiveKind.PROGRESS
+            else -> null
+        }
     }
 
     private fun publishActivities() {
         val list = runCatching { activeNotifications }.getOrNull().orEmpty()
             .filter { it.packageName != packageName && isLiveCandidate(it) && !it.notification.extras.containsKey(Notification.EXTRA_MEDIA_SESSION) }
-            .map { sbn ->
+            .mapNotNull { sbn ->
                 val n = sbn.notification
                 val extras = n.extras
+                val kind = liveKind(sbn) ?: return@mapNotNull null
                 val chrono = extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER)
+                val max = extras.getInt(Notification.EXTRA_PROGRESS_MAX)
                 LiveActivity(
                     key = sbn.key,
-                    kind = if (n.category == Notification.CATEGORY_CALL) LiveKind.CALL else LiveKind.TIMER,
+                    kind = kind,
+                    icon = if (kind == LiveKind.NAVIGATION) largeIcon(n) else if (kind == LiveKind.PROGRESS) appIcon(sbn.packageName) else null,
+                    progress = if (kind == LiveKind.PROGRESS && max > 0) (extras.getInt(Notification.EXTRA_PROGRESS).toFloat() / max).coerceIn(0f, 1f) else -1f,
                     appLabel = appLabel(sbn.packageName),
                     title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty(),
                     text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty(),
@@ -184,8 +206,8 @@ class IslandNotificationListener : NotificationListenerService() {
                     },
                 )
             }
-            // Ringing or ongoing calls first, then the most recent timer.
-            .sortedWith(compareBy<LiveActivity> { it.kind != LiveKind.CALL })
+            // In priority order: calls, alarms, guidance, timers, progress.
+            .sortedBy { it.kind.ordinal }
         liveKeys = list.mapTo(HashSet()) { it.key }
         LiveBus.setActivities(list)
     }
@@ -335,8 +357,10 @@ class IslandNotificationListener : NotificationListenerService() {
     private companion object {
         const val ART_PX = 160
         val DEFAULT_ACCENT = 0xFFFF7EB0.toInt()
+        val NAV_PACKAGES = setOf("com.google.android.apps.maps", "com.waze", "com.here.app.maps", "com.sygic.aura")
         val QUIET_CATEGORIES = setOf(
             Notification.CATEGORY_CALL,
+            Notification.CATEGORY_ALARM,
             Notification.CATEGORY_TRANSPORT,
             Notification.CATEGORY_PROGRESS,
             Notification.CATEGORY_SERVICE,

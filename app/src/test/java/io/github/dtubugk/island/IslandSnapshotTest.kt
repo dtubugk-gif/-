@@ -31,7 +31,7 @@ import java.time.LocalDateTime
 class IslandSnapshotTest {
     @get:Rule
     val paparazzi = Paparazzi(
-        deviceConfig = DeviceConfig.PIXEL_5.copy(screenHeight = 5600, softButtons = false),
+        deviceConfig = DeviceConfig.PIXEL_5.copy(screenHeight = 7000, softButtons = false),
         maxPercentDifference = 0.1,
         useDeviceResolution = true,
     )
@@ -79,7 +79,7 @@ class IslandSnapshotTest {
 
     @Test
     fun screenActiveDark() {
-        paparazzi.unsafeUpdateConfig(DeviceConfig.PIXEL_5.copy(screenHeight = 5600, softButtons = false, nightMode = NightMode.NIGHT))
+        paparazzi.unsafeUpdateConfig(DeviceConfig.PIXEL_5.copy(screenHeight = 7000, softButtons = false, nightMode = NightMode.NIGHT))
         paparazzi.snapshot { Screen(dark = true, on = true) }
     }
 
@@ -95,12 +95,19 @@ class IslandSnapshotTest {
             IslandConfig(textSide = TextSide.LEFT, colorIndex = 6, widthDp = 150f) to null,
             IslandConfig() to IslandCommand.MUSIC,
             IslandConfig() to IslandCommand.CALL,
+            IslandConfig() to IslandCommand.NAVIGATION,
             IslandConfig() to IslandCommand.TIMER,
+            IslandConfig() to IslandCommand.PROGRESS,
             IslandConfig() to IslandCommand.SILENT,
             IslandConfig() to IslandCommand.CHARGING,
         )
         val row = (80 * context.resources.displayMetrics.density).toInt()
-        for ((config, command) in states) column.addView(island(config, command), ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, row))
+        for ((config, command) in states) {
+            val view = island(config, command)
+            // Ringing samples open the island by themselves; this row shows them at rest.
+            if (command == IslandCommand.CALL) (view.host as IslandDirector).onTap(io.github.dtubugk.island.island.Tap.Collapse)
+            column.addView(view, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, row))
+        }
         paparazzi.snapshot(column)
     }
 
@@ -111,8 +118,8 @@ class IslandSnapshotTest {
             orientation = android.widget.LinearLayout.VERTICAL
             setBackgroundColor(0xFF2F5BA6.toInt())
         }
-        val tall = (250 * context.resources.displayMetrics.density).toInt()
-        val short = (150 * context.resources.displayMetrics.density).toInt()
+        val tall = (270 * context.resources.displayMetrics.density).toInt()
+        val short = (200 * context.resources.displayMetrics.density).toInt()
         column.addView(island(IslandConfig(), IslandCommand.EXPANDED), ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, short))
         column.addView(island(IslandConfig(), IslandCommand.MESSAGE), ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, short))
         // Open the music card: start the music sample, then "tap" the island.
@@ -120,6 +127,13 @@ class IslandSnapshotTest {
         column.addView(music, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, tall))
         (music.host as IslandDirector).expand()
         column.addView(island(IslandConfig(), IslandCommand.CALL), ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, tall))
+        column.addView(island(IslandConfig(), IslandCommand.ALARM), ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, short))
+        val nav = island(IslandConfig(), IslandCommand.NAVIGATION)
+        column.addView(nav, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, short))
+        (nav.host as IslandDirector).expand()
+        val progress = island(IslandConfig(), IslandCommand.PROGRESS)
+        column.addView(progress, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, short))
+        (progress.host as IslandDirector).expand()
         paparazzi.snapshot(column)
     }
 

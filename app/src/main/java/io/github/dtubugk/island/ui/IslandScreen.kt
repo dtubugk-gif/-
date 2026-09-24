@@ -139,7 +139,8 @@ fun IslandScreen(
             BehaviorCard(config, actions)
             Spacer(Modifier.height(20.dp))
             Text(
-                "לחיצה ארוכה על האי פותחת את המסך הזה. החלקה למטה מהאי פותחת את ההתראות.",
+                "לחיצה על האי פותחת כרטיס עם פנס, מצב טיסה, נא לא להפריע, צילום מסך ונעילה. " +
+                    "בשיחה: רמקול, השתקה ומצב טיסה. לחיצה ארוכה פותחת את המסך הזה. החלקה למטה פותחת את ההתראות.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth(),
@@ -355,7 +356,10 @@ private object PreviewSystem : IslandDirector.System {
 private val demos = listOf(
     IslandCommand.MUSIC to "מוזיקה",
     IslandCommand.CALL to "שיחה",
+    IslandCommand.NAVIGATION to "ניווט",
     IslandCommand.TIMER to "טיימר",
+    IslandCommand.ALARM to "שעון מעורר",
+    IslandCommand.PROGRESS to "הורדה",
     IslandCommand.MESSAGE to "הודעה",
     IslandCommand.SILENT to "מצב שקט",
     IslandCommand.CHARGING to "טעינה",
@@ -418,7 +422,7 @@ private fun AccessGrantedToggles(config: IslandConfig, actions: IslandActions) {
         ToggleRow("מוזיקה", "עטיפת האלבום וגלי קול ליד המצלמה, שליטה בנגן בלחיצה", config.music) { v ->
             actions.update { it.copy(music = v) }
         }
-        ToggleRow("שיחות וטיימרים", "שיחה פעילה או טיימר רץ נשארים באי עם הזמן", config.liveActivities) { v ->
+        ToggleRow("שיחות, ניווט וטיימרים", "שיחה, שעון מעורר, הוראות ניווט, טיימר או הורדה נשארים באי, עם כפתורים", config.liveActivities) { v ->
             actions.update { it.copy(liveActivities = v) }
         }
         ToggleRow("הודעות", "הודעה חדשה נפתחת באי לכמה שניות, לחיצה פותחת אותה", config.notifications) { v ->
@@ -429,7 +433,7 @@ private fun AccessGrantedToggles(config: IslandConfig, actions: IslandActions) {
                 actions.update { it.copy(notificationText = v) }
             }
         }
-        ToggleRow("מצבי מערכת", "מצב שקט, נא לא להפריע, אוזניות וסוללה חלשה", config.systemAlerts) { v ->
+        ToggleRow("מצבי מערכת", "מצב שקט, נא לא להפריע, אוזניות, סוללה חלשה ומלאה", config.systemAlerts) { v ->
             actions.update { it.copy(systemAlerts = v) }
         }
         ToggleRow(

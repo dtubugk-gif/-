@@ -43,7 +43,19 @@ data class MediaState(
     }
 }
 
-enum class LiveKind { CALL, TIMER }
+/** In priority order: what the island shows first when several are live. */
+enum class LiveKind { CALL, ALARM, NAVIGATION, TIMER, PROGRESS }
+
+/** Things the island can do to the phone itself, from its cards. */
+enum class IslandAction { SPEAKER, MUTE, AIRPLANE, FLASHLIGHT, DND, SCREENSHOT, LOCK, SETTINGS }
+
+/** Toggles the island draws as on/off. */
+data class SystemState(
+    val flashlight: Boolean = false,
+    val doNotDisturb: Boolean = false,
+    val speaker: Boolean = false,
+    val muted: Boolean = false,
+)
 
 /** A button from the call's or timer's own notification. Null intent: a sample with nothing to do. */
 data class LiveAction(val title: String, val intent: PendingIntent?)
@@ -69,6 +81,10 @@ data class LiveActivity(
     val countDown: Boolean,
     val openApp: PendingIntent?,
     val actions: List<LiveAction>,
+    /** Navigation: the maneuver arrow; progress: the app icon. */
+    val icon: Drawable? = null,
+    /** 0..1 for [LiveKind.PROGRESS], else -1. */
+    val progress: Float = -1f,
 )
 
 /** Short-lived events that pop the island open for a moment, like on the iPhone. */
@@ -83,7 +99,9 @@ sealed class Peek {
         /** Opening it clears it from the notification shade, as tapping it there would. */
         val autoCancel: Boolean = false,
     ) : Peek()
-    data class Charging(val level: Int) : Peek()
+    /** [minutesLeft] until full, when the phone can tell; else -1. */
+    data class Charging(val level: Int, val minutesLeft: Int = -1) : Peek()
+    data class BatteryFull(val unit: Unit = Unit) : Peek()
     data class LowBattery(val level: Int) : Peek()
     enum class RingerMode { SILENT, VIBRATE, SOUND }
     data class Ringer(val mode: RingerMode) : Peek()
@@ -113,6 +131,10 @@ object LiveBus {
     @Volatile
     var canceller: ((String) -> Unit)? = null
 
+    /** Set by the listener while connected: Do Not Disturb on/off through the listener's own right. */
+    @Volatile
+    var dndSetter: ((Boolean) -> Unit)? = null
+
     private val _listenerConnected = MutableStateFlow(false)
     val listenerConnected: StateFlow<Boolean> = _listenerConnected.asStateFlow()
 
@@ -134,6 +156,10 @@ object LiveBus {
 
     fun cancelNotification(key: String) {
         canceller?.invoke(key)
+    }
+
+    fun setDoNotDisturb(on: Boolean) {
+        dndSetter?.invoke(on)
     }
 
     fun setListenerConnected(connected: Boolean) {

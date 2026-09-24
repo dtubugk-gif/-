@@ -14,7 +14,13 @@ import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.Point
 import android.graphics.RectF
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
 import android.hardware.display.DisplayManager
+import android.provider.Settings
+import android.view.accessibility.AccessibilityNodeInfo
+import android.view.accessibility.AccessibilityWindowInfo
+import android.widget.Toast
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
@@ -56,6 +62,22 @@ class IslandService : AccessibilityService(), IslandDirector.System {
     private val handler = Handler(Looper.getMainLooper())
 
     private var lastBatteryLevel = -1
+    private var torchOn = false
+    private var torchCameraId: String? = null
+    private val torchCallback = object : CameraManager.TorchCallback() {
+        override fun onTorchModeChanged(cameraId: String, enabled: Boolean) {
+            if (cameraId == torchCameraId) {
+                torchOn = enabled
+                publishSystemState()
+            }
+        }
+        override fun onTorchModeUnavailable(cameraId: String) {
+            if (cameraId == torchCameraId) {
+                torchOn = false
+                publishSystemState()
+            }
+        }
+    }
     private val knownAudioDevices = HashSet<Int>()
     private var audioCallbackPrimed = false
     private var lastHeadphonesPeek = 0L
@@ -78,7 +100,11 @@ class IslandService : AccessibilityService(), IslandDirector.System {
                 Intent.ACTION_POWER_CONNECTED -> {
                     val b = readBattery(context).copy(charging = true)
                     d.battery = b
-                    d.post(Peek.Charging(b.level))
+                    // The phone estimates time to full once it has settled into charging.
+                    handler.postDelayed({
+                        val ms = runCatching { getSystemService(android.os.BatteryManager::class.java)?.computeChargeTimeRemaining() }.getOrNull() ?: -1L
+                        director?.post(Peek.Charging(b.level, if (ms > 0) (ms / 60_000L).toInt() else -1))
+                    }, 900)
                 }
                 Intent.ACTION_POWER_DISCONNECTED -> d.battery = readBattery(context).copy(charging = false)
                 AudioManager.RINGER_MODE_CHANGED_ACTION -> {
@@ -92,9 +118,10 @@ class IslandService : AccessibilityService(), IslandDirector.System {
                     d.post(Peek.Ringer(mode))
                 }
                 NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED -> {
-                    val filter = getSystemService(NotificationManager::class.java)?.currentInterruptionFilter
-                    d.post(Peek.DoNotDisturb(on = filter != null && filter != NotificationManager.INTERRUPTION_FILTER_ALL))
+                    publishSystemState()
+                    d.post(Peek.DoNotDisturb(on = isDndOn()))
                 }
+                AudioManager.ACTION_SPEAKERPHONE_STATE_CHANGED, AudioManager.ACTION_MICROPHONE_MUTE_CHANGED -> publishSystemState()
             }
         }
     }
@@ -198,10 +225,24 @@ class IslandService : AccessibilityService(), IslandDirector.System {
             addAction(Intent.ACTION_POWER_DISCONNECTED)
             addAction(AudioManager.RINGER_MODE_CHANGED_ACTION)
             addAction(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED)
+            addAction(AudioManager.ACTION_SPEAKERPHONE_STATE_CHANGED)
+            addAction(AudioManager.ACTION_MICROPHONE_MUTE_CHANGED)
         }
         ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         getSystemService(DisplayManager::class.java)?.registerDisplayListener(displayListener, null)
         getSystemService(AudioManager::class.java)?.registerAudioDeviceCallback(audioCallback, handler)
+        getSystemService(CameraManager::class.java)?.let { cm ->
+            runCatching {
+                // The back camera's flash is the flashlight.
+                torchCameraId = cm.cameraIdList.firstOrNull { id ->
+                    val ch = cm.getCameraCharacteristics(id)
+                    ch.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true &&
+                        ch.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK
+                }
+                cm.registerTorchCallback(torchCallback, handler)
+            }
+        }
+        publishSystemState()
 
         scope.launch { IslandSettings.config.collect { d.config = it } }
         scope.launch { IslandSettings.commands.collect { d.demo(it) } }
@@ -247,9 +288,143 @@ class IslandService : AccessibilityService(), IslandDirector.System {
     private fun checkLowBattery(b: BatteryState) {
         val previous = lastBatteryLevel
         lastBatteryLevel = b.level
+        if (b.charging && b.level == 100 && previous in 0..99) director?.post(Peek.BatteryFull())
         if (b.charging || previous < 0) return
         // Announce each threshold once, on the way down.
         if (LOW_THRESHOLDS.any { previous > it && b.level <= it }) director?.post(Peek.LowBattery(b.level))
+    }
+
+    // --- quick actions ------------------------------------------------------------------------
+
+    private fun isDndOn(): Boolean {
+        val filter = getSystemService(NotificationManager::class.java)?.currentInterruptionFilter ?: return false
+        return filter != NotificationManager.INTERRUPTION_FILTER_ALL && filter != NotificationManager.INTERRUPTION_FILTER_UNKNOWN
+    }
+
+    private fun publishSystemState() {
+        val am = getSystemService(AudioManager::class.java)
+        val speaker = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            am?.communicationDevice?.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER && am.mode != AudioManager.MODE_NORMAL
+        } else {
+            @Suppress("DEPRECATION")
+            am?.isSpeakerphoneOn == true
+        }
+        director?.system = SystemState(
+            flashlight = torchOn,
+            doNotDisturb = isDndOn(),
+            speaker = speaker,
+            muted = am?.isMicrophoneMute == true,
+        )
+    }
+
+    override fun act(action: IslandAction) {
+        runCatching {
+            when (action) {
+                IslandAction.FLASHLIGHT -> {
+                    val id = torchCameraId ?: return
+                    getSystemService(CameraManager::class.java)?.setTorchMode(id, !torchOn)
+                }
+                IslandAction.DND -> LiveBus.setDoNotDisturb(!isDndOn())
+                IslandAction.SCREENSHOT -> {
+                    // Let the island fade first so it isn't in the picture.
+                    island?.setShown(false, animate = true)
+                    handler.postDelayed({
+                        performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)
+                        handler.postDelayed({ updateVisibility(animate = true) }, 600)
+                    }, 260)
+                }
+                IslandAction.LOCK -> performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
+                IslandAction.SPEAKER -> toggleSpeaker()
+                IslandAction.MUTE -> {
+                    val am = getSystemService(AudioManager::class.java) ?: return
+                    am.isMicrophoneMute = !am.isMicrophoneMute
+                }
+                IslandAction.AIRPLANE -> toggleAirplaneMode()
+                IslandAction.SETTINGS -> openSettings()
+            }
+        }
+        // Some toggles have no broadcast; read everything back shortly after.
+        handler.postDelayed({ publishSystemState() }, 350)
+    }
+
+    /**
+     * Speakerphone for the current call. Since Android 12 routing goes through
+     * setCommunicationDevice; some dialers keep the routing to themselves, in which case the
+     * phone simply ignores this and the button stays unlit.
+     */
+    private fun toggleSpeaker() {
+        val am = getSystemService(AudioManager::class.java) ?: return
+        val wantSpeaker = !(director?.system?.speaker ?: false)
+        var ok = false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ok = if (wantSpeaker) {
+                val speaker = am.availableCommunicationDevices.firstOrNull { it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                speaker != null && am.setCommunicationDevice(speaker)
+            } else {
+                am.clearCommunicationDevice()
+                true
+            }
+        }
+        @Suppress("DEPRECATION")
+        am.isSpeakerphoneOn = wantSpeaker
+        handler.postDelayed({
+            publishSystemState()
+            if (wantSpeaker && director?.system?.speaker != true && !ok) {
+                Toast.makeText(this, "הטלפון לא נתן להעביר את השיחה לרמקול מכאן", Toast.LENGTH_SHORT).show()
+            }
+        }, 400)
+    }
+
+    /**
+     * Apps cannot switch airplane mode themselves, so the island does what a finger would: opens
+     * the quick panel, taps the airplane tile, and closes it. If the tile isn't on the first page
+     * it opens the airplane-mode settings instead.
+     */
+    private fun toggleAirplaneMode() {
+        performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
+        var attempts = 0
+        lateinit var tryTap: Runnable
+        tryTap = Runnable {
+            attempts++
+            val tile = runCatching { findAirplaneTile() }.getOrNull()
+            when {
+                tile != null -> {
+                    val clickable = generateSequence(tile) { it.parent }.take(6).firstOrNull { it.isClickable } ?: tile
+                    clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    handler.postDelayed({ performGlobalAction(GLOBAL_ACTION_BACK) }, 700)
+                }
+                attempts < 5 -> handler.postDelayed(tryTap, 300)
+                else -> {
+                    performGlobalAction(GLOBAL_ACTION_BACK)
+                    runCatching {
+                        startActivity(Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                }
+            }
+        }
+        handler.postDelayed(tryTap, 450)
+    }
+
+    private fun findAirplaneTile(): AccessibilityNodeInfo? {
+        for (w in windows) {
+            val root = runCatching { w.root }.getOrNull() ?: continue
+            if (root.packageName?.toString() != SYSTEM_UI) continue
+            findNode(root, 0) { node ->
+                val label = (node.contentDescription ?: node.text)?.toString()?.lowercase().orEmpty()
+                AIRPLANE_LABELS.any { it in label }
+            }?.let { return it }
+        }
+        return null
+    }
+
+    private fun findNode(node: AccessibilityNodeInfo, depth: Int, match: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo? {
+        if (depth > 30) return null
+        if (node.isVisibleToUser && match(node)) return node
+        for (i in 0 until node.childCount) {
+            val child = runCatching { node.getChild(i) }.getOrNull() ?: continue
+            findNode(child, depth + 1, match)?.let { return it }
+        }
+        return null
     }
 
     // --- IslandDirector.System ----------------------------------------------------------------
@@ -430,6 +605,7 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         runCatching { unregisterReceiver(receiver) }
         getSystemService(DisplayManager::class.java)?.unregisterDisplayListener(displayListener)
         getSystemService(AudioManager::class.java)?.unregisterAudioDeviceCallback(audioCallback)
+        runCatching { getSystemService(CameraManager::class.java)?.unregisterTorchCallback(torchCallback) }
         runCatching { windowManager?.removeViewImmediate(view) }
     }
 
@@ -501,6 +677,7 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         private val LOW_THRESHOLDS = listOf(20, 10)
         private const val SYSTEM_UI = "com.android.systemui"
         private const val CHIP_SCAN_INTERVAL_MS = 400L
+        private val AIRPLANE_LABELS = listOf("מצב טיסה", "airplane mode", "aeroplane mode", "flight mode")
         private val HEADPHONE_TYPES = setOf(
             AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
             AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
