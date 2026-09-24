@@ -58,6 +58,7 @@ class MainActivity : ComponentActivity(), IslandActions {
         enabledInSettings = isServiceEnabled()
         notificationAccess = NotificationManagerCompat.getEnabledListenerPackages(this).contains(packageName)
         battery = IslandService.readBattery(this)
+        IslandSettings.send(IslandCommand.WAKE)
     }
 
     private val serviceComponent get() = ComponentName(this, IslandService::class.java)
@@ -106,6 +107,19 @@ class MainActivity : ComponentActivity(), IslandActions {
     }
 
     override fun demo(command: IslandCommand) = IslandSettings.send(command)
+
+    /** The airplane-mode automation's last report, for sending to the developer. */
+    override fun shareDiagnostics() {
+        val report = IslandService.lastAirplaneReport(this)
+        if (report.isBlank()) {
+            Toast.makeText(this, "עדיין אין דוח. לחצו קודם על \"מצב טיסה\" באי", Toast.LENGTH_LONG).show()
+            return
+        }
+        val send = Intent(Intent.ACTION_SEND).setType("text/plain")
+            .putExtra(Intent.EXTRA_SUBJECT, "אי דינמי: דוח מצב טיסה")
+            .putExtra(Intent.EXTRA_TEXT, report)
+        tryStart(Intent.createChooser(send, "שליחת הדוח"))
+    }
 
     private fun tryStart(intent: Intent): Boolean = runCatching { startActivity(intent) }.isSuccess
 

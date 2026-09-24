@@ -91,6 +91,8 @@ interface IslandActions {
     fun openSettings()
     /** Plays a sample of a feature on the real island. */
     fun demo(command: IslandCommand)
+    /** Shares the airplane-mode automation's last report. */
+    fun shareDiagnostics()
 }
 
 @Composable
@@ -141,6 +143,8 @@ fun IslandScreen(
             SizeCard(config, actions)
             Spacer(Modifier.height(16.dp))
             BehaviorCard(config, actions)
+            Spacer(Modifier.height(16.dp))
+            HelpCard(actions)
             Spacer(Modifier.height(20.dp))
             Text(
                 "לחיצה על האי פותחת כרטיס עם פנס, מצב טיסה, נא לא להפריע, צילום מסך ונעילה. " +
@@ -696,6 +700,26 @@ private fun QuickActionChips(config: IslandConfig, actions: IslandActions) {
                 modifier = Modifier.heightIn(min = 40.dp),
             )
         }
+    }
+}
+
+@Composable
+private fun HelpCard(actions: IslandActions) {
+    SectionCard(container = MaterialTheme.colorScheme.secondaryContainer) {
+        Text("משהו לא עובד?", style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "האי נעלם: החלקה למעלה מסתירה אותו לדקה, ופתיחת המסך הזה מחזירה אותו. אם הוא לא חוזר, ייתכן שהעדכון כיבה את שירות הנגישות: הכרטיס למעלה יראה \"האי עוד לא פעיל\".\n" +
+                "מצב טיסה פתח תפריט במקום להידלק: לחצו שוב על הכפתור באי, ואז שלחו את הדוח, שמתאר מה האפליקציה ראתה בפאנל של סמסונג.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(
+            onClick = actions::shareDiagnostics,
+            modifier = Modifier.heightIn(min = 44.dp),
+            shape = RoundedCornerShape(14.dp),
+        ) { Text("שליחת דוח מצב טיסה") }
     }
 }
 

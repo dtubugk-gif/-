@@ -402,11 +402,14 @@ class IslandService : AccessibilityService(), IslandDirector.System {
      */
     /**
      * Apps cannot switch airplane mode themselves, so the island does what a finger would: open
-     * the quick panel, tap the airplane tile, confirm One UI's "Turn on?" dialog if it shows one,
-     * and close the panel. If the tile is on another page it scrolls; if it can't be found at all
-     * it opens the airplane-mode settings and says so.
+     * the quick panel, touch the airplane tile, confirm One UI's "Turn on?" dialog if it shows
+     * one, and close the panel. Touches are real (dispatched gestures), so a tile that isn't
+     * marked clickable still works. If the panel opened half-way it is pulled open; if the tile
+     * is on another page it scrolls. Everything seen is written to a report the user can send.
      */
     private fun toggleAirplaneMode() {
+        airplaneLog.setLength(0)
+        log("start · ${Build.MANUFACTURER} ${Build.MODEL} · Android ${Build.VERSION.RELEASE} · ${resources.configuration.locales[0]}")
         performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
         var attempts = 0
         lateinit var tryTap: Runnable
@@ -415,29 +418,40 @@ class IslandService : AccessibilityService(), IslandDirector.System {
             val tile = runCatching { findAirplaneTile() }.getOrNull()
             when {
                 tile != null -> {
-                    tile.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    log("attempt $attempts: tile found ${describe(tile)}")
+                    touch(tile)
                     confirmThenClose(0)
                 }
-                attempts in setOf(3, 5) -> {
-                    // Maybe on the next page of tiles.
-                    runCatching { scrollPanel() }
-                    handler.postDelayed(tryTap, 450)
+                attempts == 2 -> {
+                    // A half-open panel (One UI's compact quick bar): pull it fully open.
+                    log("attempt $attempts: no tile; pulling the panel open. ${panelSummary()}")
+                    val h = realSize().y
+                    swipe(realSize().x / 2f, h * 0.3f, realSize().x / 2f, h * 0.75f)
+                    handler.postDelayed(tryTap, 600)
                 }
-                attempts < 7 -> handler.postDelayed(tryTap, 300)
+                attempts in setOf(4, 6) -> {
+                    log("attempt $attempts: no tile; scrolling")
+                    runCatching { scrollPanel() }
+                    handler.postDelayed(tryTap, 500)
+                }
+                attempts < 8 -> handler.postDelayed(tryTap, 300)
                 else -> {
+                    log("gave up. ${panelSummary()}")
+                    dumpPanel()
+                    saveAirplaneReport()
                     if (quickPanelOpen()) performGlobalAction(GLOBAL_ACTION_BACK)
-                    Toast.makeText(this, "האריח \"מצב טיסה\" לא נמצא בפאנל המהיר. פותח את ההגדרות", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, "האריח \"מצב טיסה\" לא נמצא בפאנל המהיר. פותח את ההגדרות. אפשר לשלוח לי דוח מהאפליקציה", Toast.LENGTH_LONG).show()
                     runCatching {
                         startActivity(Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     }
                 }
             }
         }
-        handler.postDelayed(tryTap, 450)
+        handler.postDelayed(tryTap, 500)
     }
 
     /**
-     * One UI may ask "Turn on Airplane mode?" after the tap. Press its confirm button when it
+     * One UI may ask "Turn on Airplane mode?" after the touch. Press its confirm button when it
      * appears; only once no dialog is up is the panel closed, so a BACK never cancels it.
      */
     private fun confirmThenClose(round: Int) {
@@ -445,39 +459,63 @@ class IslandService : AccessibilityService(), IslandDirector.System {
             val confirm = runCatching { findConfirmButton() }.getOrNull()
             when {
                 confirm != null -> {
-                    confirm.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    handler.postDelayed({ if (quickPanelOpen() && findConfirmButton() == null) performGlobalAction(GLOBAL_ACTION_BACK) }, 800)
+                    log("confirm dialog: pressing ${describe(confirm)}")
+                    touch(confirm)
+                    handler.postDelayed({
+                        if (quickPanelOpen() && findConfirmButton() == null) performGlobalAction(GLOBAL_ACTION_BACK)
+                        saveAirplaneReport()
+                    }, 900)
                 }
                 round < 3 -> confirmThenClose(round + 1)
-                quickPanelOpen() -> performGlobalAction(GLOBAL_ACTION_BACK)
+                else -> {
+                    log("no confirm dialog; panel open = ${quickPanelOpen()}")
+                    if (quickPanelOpen()) performGlobalAction(GLOBAL_ACTION_BACK)
+                    saveAirplaneReport()
+                }
             }
-        }, if (round == 0) 450L else 350L)
+        }, if (round == 0) 500L else 350L)
+    }
+
+    /** A real touch at the node's center: works whether or not the node is marked clickable. */
+    private fun touch(node: AccessibilityNodeInfo) {
+        if (node.isClickable && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+            log("  clicked via action")
+            return
+        }
+        val r = android.graphics.Rect().also(node::getBoundsInScreen)
+        val path = Path().apply { moveTo(r.exactCenterX(), r.exactCenterY()) }
+        val gesture = android.accessibilityservice.GestureDescription.Builder()
+            .addStroke(android.accessibilityservice.GestureDescription.StrokeDescription(path, 0L, 60L)).build()
+        val ok = dispatchGesture(gesture, null, null)
+        log("  touched at ${r.centerX()},${r.centerY()} dispatched=$ok")
+    }
+
+    private fun swipe(x1: Float, y1: Float, x2: Float, y2: Float) {
+        val path = Path().apply {
+            moveTo(x1, y1)
+            lineTo(x2, y2)
+        }
+        val gesture = android.accessibilityservice.GestureDescription.Builder()
+            .addStroke(android.accessibilityservice.GestureDescription.StrokeDescription(path, 0L, 260L)).build()
+        dispatchGesture(gesture, null, null)
     }
 
     /** A SystemUI window taller than the status bar strip: the quick panel or the shade. */
-    private fun quickPanelOpen(): Boolean {
-        val maxBar = realSize().y * 0.12f
-        return windows.any { w ->
-            val b = android.graphics.Rect().also { w.getBoundsInScreen(it) }
-            w.type == AccessibilityWindowInfo.TYPE_SYSTEM && b.height() > maxBar &&
-                runCatching { w.root?.packageName?.toString() }.getOrNull() == SYSTEM_UI
-        }
-    }
+    private fun quickPanelOpen(): Boolean = panelRoots().isNotEmpty()
 
     /** SystemUI roots of windows taller than the status bar: the quick panel and its dialogs. */
     private fun panelRoots(): List<AccessibilityNodeInfo> {
         val maxBar = realSize().y * 0.12f
         return windows.mapNotNull { w ->
             val b = android.graphics.Rect().also { w.getBoundsInScreen(it) }
-            if (w.type != AccessibilityWindowInfo.TYPE_SYSTEM || b.height() <= maxBar) return@mapNotNull null
+            if (b.height() <= maxBar) return@mapNotNull null
             runCatching { w.root }.getOrNull()?.takeIf { it.packageName?.toString() == SYSTEM_UI }
         }
     }
 
     /**
-     * The airplane-mode tile: a node labelled with it that is tappable itself, or whose small
-     * tappable container is. Plain text carrying the words in a wide row (a header, a settings
-     * entry) is never tapped, so a wrong hit opens nothing.
+     * The airplane-mode tile: a node labelled with it (its own label, or its small container's).
+     * Wide rows carrying the words (a header, a settings entry) are never touched.
      */
     private fun findAirplaneTile(): AccessibilityNodeInfo? {
         val size = realSize()
@@ -485,17 +523,21 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         for (root in panelRoots()) {
             collectNodes(root, 0, labelled) { node ->
                 val label = (node.contentDescription ?: node.text)?.toString()?.trim()?.lowercase().orEmpty()
-                AIRPLANE_LABELS.any { label.startsWith(it) || label == it } && WRONG_LABELS.none { it in label }
+                AIRPLANE_LABELS.any { it in label } && WRONG_LABELS.none { it in label }
             }
         }
-        val tappable = labelled.mapNotNull { node ->
-            generateSequence(node) { it.parent }.take(4).firstOrNull { n ->
+        val fitting = labelled.mapNotNull { node ->
+            // The tile itself, or the nearest small tappable container around its label.
+            val chain = generateSequence(node) { it.parent }.take(4).toList()
+            chain.firstOrNull { n ->
                 val r = android.graphics.Rect().also(n::getBoundsInScreen)
-                (n.isCheckable || n.isClickable) && r.width() <= size.x * 0.45f && r.height() <= size.y * 0.2f
+                (n.isCheckable || n.isClickable) && r.width() <= size.x * 0.5f && r.height() <= size.y * 0.2f
+            } ?: node.takeIf { n ->
+                val r = android.graphics.Rect().also(n::getBoundsInScreen)
+                r.width() <= size.x * 0.5f && r.height() <= size.y * 0.2f && !r.isEmpty
             }
         }
-        // The tile is the innermost match: prefer checkable, then the smallest bounds.
-        return tappable.minWithOrNull(compareBy({ !it.isCheckable }, { android.graphics.Rect().also(it::getBoundsInScreen).let { r -> r.width() * r.height() } }))
+        return fitting.minWithOrNull(compareBy({ !it.isCheckable }, { !it.isClickable }, { android.graphics.Rect().also(it::getBoundsInScreen).let { r -> r.width() * r.height() } }))
     }
 
     /** The "Turn on" / "OK" button of a confirmation dialog, if one is showing. */
@@ -503,9 +545,9 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         val found = ArrayList<AccessibilityNodeInfo>()
         for (root in panelRoots()) {
             collectNodes(root, 0, found) { node ->
-                if (!node.isClickable) return@collectNodes false
                 val label = (node.text ?: node.contentDescription)?.toString()?.trim()?.lowercase().orEmpty()
-                label.length <= 16 && CONFIRM_WORDS.any { label == it || label.startsWith(it) }
+                label.length in 1..16 && CONFIRM_WORDS.any { label == it || label.startsWith(it) } &&
+                    (node.isClickable || node.className?.toString()?.contains("Button") == true)
             }
         }
         return found.firstOrNull()
@@ -515,6 +557,39 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         val scrollables = ArrayList<AccessibilityNodeInfo>()
         for (root in panelRoots()) collectNodes(root, 0, scrollables) { it.isScrollable }
         scrollables.firstOrNull()?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+    }
+
+    // --- airplane report ----------------------------------------------------------------------
+
+    private val airplaneLog = StringBuilder()
+
+    private fun log(line: String) {
+        if (airplaneLog.length < 60_000) airplaneLog.append(line).append('\n')
+    }
+
+    private fun describe(n: AccessibilityNodeInfo): String {
+        val r = android.graphics.Rect().also(n::getBoundsInScreen)
+        return "[${n.className?.toString()?.substringAfterLast('.')} text=\"${n.text}\" desc=\"${n.contentDescription}\" click=${n.isClickable} check=${n.isCheckable} $r]"
+    }
+
+    private fun panelSummary(): String {
+        val ws = windows.joinToString(" | ") { w ->
+            val b = android.graphics.Rect().also { w.getBoundsInScreen(it) }
+            "type=${w.type} pkg=${runCatching { w.root?.packageName }.getOrNull()} $b"
+        }
+        return "windows: $ws"
+    }
+
+    /** Every labelled node in the panel, so the tile can be recognized from the report. */
+    private fun dumpPanel() {
+        val nodes = ArrayList<AccessibilityNodeInfo>()
+        for (root in panelRoots()) collectNodes(root, 0, nodes) { n -> !n.text.isNullOrBlank() || !n.contentDescription.isNullOrBlank() }
+        log("labelled nodes (${nodes.size}):")
+        nodes.take(150).forEach { log("  " + describe(it)) }
+    }
+
+    private fun saveAirplaneReport() {
+        runCatching { java.io.File(filesDir, AIRPLANE_REPORT).writeText(airplaneLog.toString()) }
     }
 
     private fun collectNodes(node: AccessibilityNodeInfo, depth: Int, out: MutableList<AccessibilityNodeInfo>, match: (AccessibilityNodeInfo) -> Boolean) {
@@ -784,9 +859,13 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         private val LOW_THRESHOLDS = listOf(20, 10)
         private const val SYSTEM_UI = "com.android.systemui"
         private const val CHIP_SCAN_INTERVAL_MS = 400L
-        private val AIRPLANE_LABELS = listOf("מצב טיסה", "airplane mode", "aeroplane mode", "flight mode")
+        private val AIRPLANE_LABELS = listOf("מצב טיסה", "airplane", "aeroplane", "flight mode")
         private val WRONG_LABELS = listOf("wi-fi", "wifi", "הגדרות", "settings", "שיחות", "calling")
         private val CONFIRM_WORDS = listOf("הפעל", "הפעלה", "אישור", "turn on", "ok", "אשר", "כן", "yes")
+        private const val AIRPLANE_REPORT = "airplane-report.txt"
+
+        fun lastAirplaneReport(context: Context): String =
+            runCatching { java.io.File(context.filesDir, AIRPLANE_REPORT).readText() }.getOrDefault("")
         private val HEADPHONE_TYPES = setOf(
             AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
             AudioDeviceInfo.TYPE_WIRED_HEADPHONES,

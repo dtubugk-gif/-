@@ -46,6 +46,7 @@ class IslandSnapshotTest {
         override fun openAppInfo() = Unit
         override fun openSettings() = Unit
         override fun demo(command: IslandCommand) = Unit
+        override fun shareDiagnostics() = Unit
     }
 
     private val noSystem = object : IslandDirector.System {

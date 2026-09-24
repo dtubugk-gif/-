@@ -180,7 +180,8 @@ class IslandView(
                 pullDown()
                 return true
             }
-            if (velocityY < -600f * dp && abs(velocityY) > abs(velocityX)) {
+            // Hiding takes a real flick, so a hurried tap never makes the island vanish.
+            if (velocityY < -1400f * dp && abs(velocityY) > abs(velocityX) * 2f) {
                 swipeUp()
                 return true
             }
@@ -200,7 +201,7 @@ class IslandView(
             val threshold = 36f * dp
             when {
                 abs(dy) >= abs(dx) && dy > threshold -> pullDown()
-                abs(dy) >= abs(dx) && dy < -threshold -> swipeUp()
+                abs(dy) >= abs(dx) * 2f && dy < -64f * dp -> swipeUp()
                 abs(dx) > abs(dy) && abs(dx) > threshold -> swipeSideways(if (dx < 0f) -1 else 1)
                 else -> return false
             }

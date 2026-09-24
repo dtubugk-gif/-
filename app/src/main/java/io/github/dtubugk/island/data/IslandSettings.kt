@@ -82,7 +82,7 @@ object IslandColors {
 }
 
 /** One-shot requests from the app screen: show a sample of each island feature. */
-enum class IslandCommand { EXPANDED, MUSIC, CALL, NAVIGATION, TIMER, PROGRESS, ALARM, MESSAGE, SILENT, CHARGING }
+enum class IslandCommand { EXPANDED, MUSIC, CALL, NAVIGATION, TIMER, PROGRESS, ALARM, MESSAGE, SILENT, CHARGING, WAKE }
 
 /**
  * Process-wide settings store. The app screen and the accessibility service live in the same

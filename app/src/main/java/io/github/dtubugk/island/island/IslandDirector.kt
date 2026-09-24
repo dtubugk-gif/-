@@ -345,6 +345,8 @@ class IslandDirector(
     /** Sample content so each feature can be seen before it happens for real. */
     fun demo(command: IslandCommand) {
         when (command) {
+            // Opening the app always brings a hidden island back.
+            IslandCommand.WAKE -> return setSnoozed(false)
             IslandCommand.EXPANDED -> expand()
             IslandCommand.MUSIC -> {
                 demoMedia = sampleMedia(playing = true)
@@ -507,6 +509,7 @@ class IslandDirector(
             return
         }
         setSnoozed(true)
+        android.widget.Toast.makeText(view.context, "האי מוסתר לדקה. פתיחת האפליקציה מחזירה אותו מיד", android.widget.Toast.LENGTH_LONG).show()
     }
 
     override fun onPullDown() {
@@ -749,7 +752,7 @@ class IslandDirector(
         const val NOTICE_MS = 2600L
         const val UNLOCK_MS = 1300L
         const val MAX_CUSTOM_MS = 120_000L
-        const val SNOOZE_MS = 120_000L
+        const val SNOOZE_MS = 60_000L
         private val STOPPABLE = setOf(LiveKind.TIMER, LiveKind.RECORDING, LiveKind.PROGRESS)
         private val STOP_WORDS = listOf("עצור", "עצירה", "השהה", "השהיה", "סיים", "סיום", "בטל", "ביטול", "stop", "pause", "cancel", "end")
         const val PAUSED_LINGER_MS = 30_000L
