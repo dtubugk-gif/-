@@ -400,6 +400,12 @@ class IslandService : AccessibilityService(), IslandDirector.System {
      * the quick panel, taps the airplane tile, and closes it. If the tile isn't on the first page
      * it opens the airplane-mode settings instead.
      */
+    /**
+     * Apps cannot switch airplane mode themselves, so the island does what a finger would: open
+     * the quick panel, tap the airplane tile, confirm One UI's "Turn on?" dialog if it shows one,
+     * and close the panel. If the tile is on another page it scrolls; if it can't be found at all
+     * it opens the airplane-mode settings and says so.
+     */
     private fun toggleAirplaneMode() {
         performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
         var attempts = 0
@@ -410,12 +416,17 @@ class IslandService : AccessibilityService(), IslandDirector.System {
             when {
                 tile != null -> {
                     tile.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    // One UI sometimes folds the panel away by itself; only close it if it is still up.
-                    handler.postDelayed({ if (quickPanelOpen()) performGlobalAction(GLOBAL_ACTION_BACK) }, 700)
+                    confirmThenClose(0)
                 }
-                attempts < 5 -> handler.postDelayed(tryTap, 300)
+                attempts in setOf(3, 5) -> {
+                    // Maybe on the next page of tiles.
+                    runCatching { scrollPanel() }
+                    handler.postDelayed(tryTap, 450)
+                }
+                attempts < 7 -> handler.postDelayed(tryTap, 300)
                 else -> {
                     if (quickPanelOpen()) performGlobalAction(GLOBAL_ACTION_BACK)
+                    Toast.makeText(this, "האריח \"מצב טיסה\" לא נמצא בפאנל המהיר. פותח את ההגדרות", Toast.LENGTH_LONG).show()
                     runCatching {
                         startActivity(Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     }
@@ -423,6 +434,24 @@ class IslandService : AccessibilityService(), IslandDirector.System {
             }
         }
         handler.postDelayed(tryTap, 450)
+    }
+
+    /**
+     * One UI may ask "Turn on Airplane mode?" after the tap. Press its confirm button when it
+     * appears; only once no dialog is up is the panel closed, so a BACK never cancels it.
+     */
+    private fun confirmThenClose(round: Int) {
+        handler.postDelayed({
+            val confirm = runCatching { findConfirmButton() }.getOrNull()
+            when {
+                confirm != null -> {
+                    confirm.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    handler.postDelayed({ if (quickPanelOpen() && findConfirmButton() == null) performGlobalAction(GLOBAL_ACTION_BACK) }, 800)
+                }
+                round < 3 -> confirmThenClose(round + 1)
+                quickPanelOpen() -> performGlobalAction(GLOBAL_ACTION_BACK)
+            }
+        }, if (round == 0) 450L else 350L)
     }
 
     /** A SystemUI window taller than the status bar strip: the quick panel or the shade. */
@@ -435,26 +464,57 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         }
     }
 
+    /** SystemUI roots of windows taller than the status bar: the quick panel and its dialogs. */
+    private fun panelRoots(): List<AccessibilityNodeInfo> {
+        val maxBar = realSize().y * 0.12f
+        return windows.mapNotNull { w ->
+            val b = android.graphics.Rect().also { w.getBoundsInScreen(it) }
+            if (w.type != AccessibilityWindowInfo.TYPE_SYSTEM || b.height() <= maxBar) return@mapNotNull null
+            runCatching { w.root }.getOrNull()?.takeIf { it.packageName?.toString() == SYSTEM_UI }
+        }
+    }
+
     /**
-     * The airplane-mode tile itself: a checkable or clickable node labelled with it. Plain text
-     * carrying the words (a header, a settings row) is never tapped, so a wrong hit opens nothing.
+     * The airplane-mode tile: a node labelled with it that is tappable itself, or whose small
+     * tappable container is. Plain text carrying the words in a wide row (a header, a settings
+     * entry) is never tapped, so a wrong hit opens nothing.
      */
     private fun findAirplaneTile(): AccessibilityNodeInfo? {
-        val maxBar = realSize().y * 0.12f
-        val candidates = ArrayList<AccessibilityNodeInfo>()
-        for (w in windows) {
-            val b = android.graphics.Rect().also { w.getBoundsInScreen(it) }
-            if (w.type != AccessibilityWindowInfo.TYPE_SYSTEM || b.height() <= maxBar) continue
-            val root = runCatching { w.root }.getOrNull() ?: continue
-            if (root.packageName?.toString() != SYSTEM_UI) continue
-            collectNodes(root, 0, candidates) { node ->
-                if (!node.isCheckable && !node.isClickable) return@collectNodes false
+        val size = realSize()
+        val labelled = ArrayList<AccessibilityNodeInfo>()
+        for (root in panelRoots()) {
+            collectNodes(root, 0, labelled) { node ->
                 val label = (node.contentDescription ?: node.text)?.toString()?.trim()?.lowercase().orEmpty()
                 AIRPLANE_LABELS.any { label.startsWith(it) || label == it } && WRONG_LABELS.none { it in label }
             }
         }
+        val tappable = labelled.mapNotNull { node ->
+            generateSequence(node) { it.parent }.take(4).firstOrNull { n ->
+                val r = android.graphics.Rect().also(n::getBoundsInScreen)
+                (n.isCheckable || n.isClickable) && r.width() <= size.x * 0.45f && r.height() <= size.y * 0.2f
+            }
+        }
         // The tile is the innermost match: prefer checkable, then the smallest bounds.
-        return candidates.minWithOrNull(compareBy({ !it.isCheckable }, { android.graphics.Rect().also(it::getBoundsInScreen).let { r -> r.width() * r.height() } }))
+        return tappable.minWithOrNull(compareBy({ !it.isCheckable }, { android.graphics.Rect().also(it::getBoundsInScreen).let { r -> r.width() * r.height() } }))
+    }
+
+    /** The "Turn on" / "OK" button of a confirmation dialog, if one is showing. */
+    private fun findConfirmButton(): AccessibilityNodeInfo? {
+        val found = ArrayList<AccessibilityNodeInfo>()
+        for (root in panelRoots()) {
+            collectNodes(root, 0, found) { node ->
+                if (!node.isClickable) return@collectNodes false
+                val label = (node.text ?: node.contentDescription)?.toString()?.trim()?.lowercase().orEmpty()
+                label.length <= 16 && CONFIRM_WORDS.any { label == it || label.startsWith(it) }
+            }
+        }
+        return found.firstOrNull()
+    }
+
+    private fun scrollPanel() {
+        val scrollables = ArrayList<AccessibilityNodeInfo>()
+        for (root in panelRoots()) collectNodes(root, 0, scrollables) { it.isScrollable }
+        scrollables.firstOrNull()?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
     }
 
     private fun collectNodes(node: AccessibilityNodeInfo, depth: Int, out: MutableList<AccessibilityNodeInfo>, match: (AccessibilityNodeInfo) -> Boolean) {
@@ -726,6 +786,7 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         private const val CHIP_SCAN_INTERVAL_MS = 400L
         private val AIRPLANE_LABELS = listOf("מצב טיסה", "airplane mode", "aeroplane mode", "flight mode")
         private val WRONG_LABELS = listOf("wi-fi", "wifi", "הגדרות", "settings", "שיחות", "calling")
+        private val CONFIRM_WORDS = listOf("הפעל", "הפעלה", "אישור", "turn on", "ok", "אשר", "כן", "yes")
         private val HEADPHONE_TYPES = setOf(
             AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
             AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
