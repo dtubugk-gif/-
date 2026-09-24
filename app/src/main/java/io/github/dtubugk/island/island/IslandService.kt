@@ -62,6 +62,10 @@ class IslandService : AccessibilityService(), IslandDirector.System {
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            runCatching { handle(context, intent) }
+        }
+
+        private fun handle(context: Context, intent: Intent) {
             val d = director ?: return
             when (intent.action) {
                 Intent.ACTION_SCREEN_OFF -> updateVisibility(animate = false)
@@ -98,6 +102,10 @@ class IslandService : AccessibilityService(), IslandDirector.System {
     /** Headphones: needs no Bluetooth permission, since audio routing already knows the device. */
     private val audioCallback = object : AudioDeviceCallback() {
         override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>) {
+            runCatching { onAdded(added) }
+        }
+
+        private fun onAdded(added: Array<out AudioDeviceInfo>) {
             val fresh = added.filter { it.isSink && it.type in HEADPHONE_TYPES && knownAudioDevices.add(it.id) }
             // The first callback lists what was already connected; only later ones are news.
             if (!audioCallbackPrimed) {
@@ -233,6 +241,7 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         val visible = !isLandscape() && isInteractive()
         director?.active = visible
         island?.setShown(visible, animate)
+        if (visible) scheduleChipScan()
     }
 
     private fun checkLowBattery(b: BatteryState) {
@@ -310,7 +319,7 @@ class IslandService : AccessibilityService(), IslandDirector.System {
     private val chipScan = Runnable {
         chipScanPending = false
         lastChipScan = SystemClock.uptimeMillis()
-        director?.setChip(findChip())
+        director?.setChip(runCatching { findChip() }.getOrNull())
     }
 
     /** At most a few scans a second, however chatty the status bar is. */
@@ -332,7 +341,8 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         if (needles.isEmpty()) return null
         val size = realSize()
         val cameraX = screen?.hole?.centerX ?: (size.x / 2f)
-        val maxBarHeight = size.y * 0.08f
+        // Room for a heads-up notification sharing the status bar window on some One UI builds.
+        val maxBarHeight = size.y * 0.12f
         val windows = runCatching { windows }.getOrNull().orEmpty()
         for (w in windows) {
             if (w.type != android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM) continue

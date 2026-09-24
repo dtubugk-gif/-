@@ -31,15 +31,21 @@ class IslandNotificationListener : NotificationListenerService() {
     /** Per notification key: its last `when` and a hash of its title and text. */
     private val seen = HashMap<String, Pair<Long, Int>>()
     private val labels = HashMap<String, String>()
+    /** Keys currently shown as calls/timers, so an update that stops being one still refreshes them. */
+    private var liveKeys: Set<String> = emptySet()
     private var artCache: Triple<Long, Bitmap, Int>? = null
 
-    private val sessionsListener = MediaSessionManager.OnActiveSessionsChangedListener { watch(it.orEmpty()) }
+    private val sessionsListener = MediaSessionManager.OnActiveSessionsChangedListener { runCatching { watch(it.orEmpty()) } }
 
     private val controllerCallback = object : MediaController.Callback() {
-        override fun onPlaybackStateChanged(state: PlaybackState?) = pickController()
-        override fun onMetadataChanged(metadata: MediaMetadata?) = pickController()
+        override fun onPlaybackStateChanged(state: PlaybackState?) {
+            runCatching { pickController() }
+        }
+        override fun onMetadataChanged(metadata: MediaMetadata?) {
+            runCatching { pickController() }
+        }
         override fun onSessionDestroyed() {
-            refreshSessions()
+            runCatching { refreshSessions() }
         }
     }
 
@@ -52,9 +58,9 @@ class IslandNotificationListener : NotificationListenerService() {
         runCatching {
             msm?.addOnActiveSessionsChangedListener(sessionsListener, ComponentName(this, javaClass), handler)
         }
-        refreshSessions()
+        runCatching { refreshSessions() }
         runCatching { activeNotifications }.getOrNull()?.forEach { seen[it.key] = it.notification.`when` to contentHash(it.notification) }
-        publishActivities()
+        runCatching { publishActivities() }
     }
 
     override fun onListenerDisconnected() {
@@ -67,9 +73,16 @@ class IslandNotificationListener : NotificationListenerService() {
         super.onListenerDisconnected()
     }
 
+    // Every system callback is guarded: one odd notification must never take the island down,
+    // since this listener shares its process with the island itself.
     override fun onNotificationPosted(sbn: StatusBarNotification) {
+        runCatching { handlePosted(sbn) }
+    }
+
+    private fun handlePosted(sbn: StatusBarNotification) {
         val n = sbn.notification
-        if (isLiveCandidate(sbn)) publishActivities()
+        // A ringing call can turn into a missed-call notice under the same key: refresh then too.
+        if (isLiveCandidate(sbn) || sbn.key in liveKeys) publishActivities()
         val previous = seen.put(sbn.key, n.`when` to contentHash(n))
         if (!shouldPeek(sbn, previous)) return
         val extras = n.extras
@@ -93,10 +106,12 @@ class IslandNotificationListener : NotificationListenerService() {
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
-        seen.remove(sbn.key)
-        // Read or dismissed elsewhere: the island must not show it later from its queue.
-        LiveBus.notificationRemoved(sbn.key)
-        if (isLiveCandidate(sbn)) publishActivities()
+        runCatching {
+            seen.remove(sbn.key)
+            // Read or dismissed elsewhere: the island must not show it later from its queue.
+            LiveBus.notificationRemoved(sbn.key)
+            if (isLiveCandidate(sbn) || sbn.key in liveKeys) publishActivities()
+        }
     }
 
     // --- messages -----------------------------------------------------------------------------
@@ -162,6 +177,7 @@ class IslandNotificationListener : NotificationListenerService() {
             }
             // Ringing or ongoing calls first, then the most recent timer.
             .sortedWith(compareBy<LiveActivity> { it.kind != LiveKind.CALL })
+        liveKeys = list.mapTo(HashSet()) { it.key }
         LiveBus.setActivities(list)
     }
 
@@ -235,11 +251,16 @@ class IslandNotificationListener : NotificationListenerService() {
     }
 
     /** Artwork scaled for the island, with a bright accent taken from it for the waveform. */
-    private fun artwork(meta: MediaMetadata): Pair<Bitmap, Int>? {
-        val source = meta.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
+    private fun artwork(meta: MediaMetadata): Pair<Bitmap, Int>? = runCatching { artworkOrThrow(meta) }.getOrNull()
+
+    private fun artworkOrThrow(meta: MediaMetadata): Pair<Bitmap, Int>? {
+        val original = meta.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART)
             ?: meta.getBitmap(MediaMetadata.METADATA_KEY_ART)
             ?: meta.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
             ?: return null
+        if (original.isRecycled || original.width <= 0 || original.height <= 0) return null
+        // Some players hand over GPU-only (HARDWARE) bitmaps: their pixels can't be read directly.
+        val source = if (original.config == Bitmap.Config.HARDWARE) original.copy(Bitmap.Config.ARGB_8888, false) ?: return null else original
         // Play/pause re-sends the same artwork; only a new cover is worth scaling and analyzing.
         val signature = signature(source)
         artCache?.let { (sig, cached, accent) -> if (sig == signature) return cached to accent }

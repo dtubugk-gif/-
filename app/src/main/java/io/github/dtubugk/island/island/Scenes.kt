@@ -132,6 +132,7 @@ class InfoScene(
     private val date: String,
 ) : Scene("info") {
     override val isCard = true
+    private var tileGradient: LinearGradient? = null
     override fun shape(l: IslandLayout) = l.expanded
 
     override fun draw(c: Canvas, f: Frame, alpha: Float) {
@@ -157,7 +158,9 @@ class InfoScene(
         val tile = 50f * dp
         val tileRight = right - 16f * dp
         val tileLeft = tileRight - tile
-        p.fill.shader = LinearGradient(tileLeft, row - tile / 2f, tileRight, row + tile / 2f, IslandColors.GRADIENT_START, IslandColors.GRADIENT_END, Shader.TileMode.CLAMP)
+        // Built once per card, not per frame while the card animates.
+        val gradient = tileGradient ?: LinearGradient(tileLeft, row - tile / 2f, tileRight, row + tile / 2f, IslandColors.GRADIENT_START, IslandColors.GRADIENT_END, Shader.TileMode.CLAMP).also { tileGradient = it }
+        p.fill.shader = gradient
         p.fill.alpha = (alpha * 255).roundToInt()
         c.drawRoundRect(tileLeft, row - tile / 2f, tileRight, row + tile / 2f, 16f * dp, 16f * dp, p.fill)
         p.fill.shader = null

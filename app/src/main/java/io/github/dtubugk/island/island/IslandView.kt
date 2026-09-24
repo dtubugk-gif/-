@@ -227,6 +227,11 @@ class IslandView(
     private fun updateShown(animate: Boolean) {
         val target = if (isShownTarget) 1f else 0f
         if (target != shown.target) host?.onShownChanged(target > 0f)
+        if (target == 0f) {
+            // The window turns untouchable now and may never see this finger lift.
+            press.snapTo(0f)
+            host?.onTouching(false)
+        }
         if (!animate || !animationsEnabled()) {
             shown.snapTo(target)
             invalidate()

@@ -60,6 +60,10 @@ class IslandDirector(
                 expanded = false
                 peek = null
                 queue.clear()
+                // The chip's position belongs to the orientation it was found in; rescan later.
+                chip = null
+                // A hidden window may never get the finger's UP; don't let that freeze the timers.
+                touching = false
                 resolve(animate = false)
             }
         }
