@@ -130,7 +130,7 @@ object IslandGeometry {
             idle = IslandShape(width, height, height / 2f),
             compact = IslandShape(compactWidth, height, height / 2f),
             charging = IslandShape(chargingWidth, height, height / 2f),
-            expanded = IslandShape(cardWidth, cardHeight, min(CARD_RADIUS_DP * dp, cardHeight / 2f)),
+            expanded = IslandShape(cardWidth, cardHeight, min(config.cornerDp.coerceIn(IslandConfig.MIN_CORNER_DP, IslandConfig.MAX_CORNER_DP) * dp, cardHeight / 2f)),
             bandHeight = bandHeight,
             holeOffsetX = cameraX - centerX,
             holeCenterY = cameraY - top,

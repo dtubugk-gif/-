@@ -15,6 +15,7 @@ import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.palette.graphics.Palette
+import io.github.dtubugk.island.data.IslandSettings
 import kotlin.math.max
 
 /**
@@ -131,6 +132,24 @@ class IslandNotificationListener : NotificationListenerService() {
         val text = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
             ?: extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
         if (title.isBlank() && text.isBlank()) return
+        // A screenshot saved: a short notice with a camera glyph rather than a message.
+        if (sbn.packageName in SCREENSHOT_PACKAGES && SCREENSHOT_WORDS.any { it in (title + " " + text).lowercase() }) {
+            LiveBus.peek(Peek.Screenshot(n.contentIntent))
+            return
+        }
+        // The notification's buttons: the reply one (with a text input) is kept apart.
+        val buttons = ArrayList<LiveAction>()
+        var reply: ReplyAction? = null
+        n.actions.orEmpty().forEach { a ->
+            val intent = a.actionIntent ?: return@forEach
+            val label = a.title?.toString()?.takeIf { it.isNotBlank() } ?: return@forEach
+            val input = a.remoteInputs?.firstOrNull { it.allowFreeFormInput }
+            if (input != null) {
+                if (reply == null) reply = ReplyAction(label, intent, input)
+            } else {
+                buttons += LiveAction(label, intent)
+            }
+        }
         LiveBus.peek(
             Peek.Message(
                 key = sbn.key,
@@ -142,6 +161,9 @@ class IslandNotificationListener : NotificationListenerService() {
                 // Clearing from here counts as a swipe-away; if the app listens for that (deleteIntent),
                 // leave it to the app, which clears its own notification when the chat opens.
                 autoCancel = n.flags and Notification.FLAG_AUTO_CANCEL != 0 && n.deleteIntent == null,
+                actions = buttons.take(3),
+                reply = reply,
+                packageName = sbn.packageName,
             ),
         )
     }
@@ -164,6 +186,8 @@ class IslandNotificationListener : NotificationListenerService() {
     private fun shouldPeek(sbn: StatusBarNotification, previous: Pair<Long, Int>?): Boolean {
         val n = sbn.notification
         if (sbn.packageName == packageName) return false
+        // The user's per-app filter.
+        if (sbn.packageName in IslandSettings.config.value.blockedApps) return false
         if (sbn.isOngoing || n.flags and Notification.FLAG_GROUP_SUMMARY != 0) return false
         if (n.extras.containsKey(Notification.EXTRA_MEDIA_SESSION)) return false
         if (n.category in QUIET_CATEGORIES) return false
@@ -403,6 +427,8 @@ class IslandNotificationListener : NotificationListenerService() {
         val NAV_PACKAGES = setOf("com.google.android.apps.maps", "com.waze", "com.here.app.maps", "com.sygic.aura")
         val SYSTEM_PACKAGES = setOf("android", "com.android.systemui", "com.android.settings", "com.android.networkstack.tethering", "com.google.android.networkstack.tethering", "com.samsung.android.net.wifi.wifiguider", "com.sec.android.app.wlantest", "com.samsung.android.app.telephonyui")
         val HOTSPOT_WORDS = listOf("hotspot", "נקודה חמה", "tethering", "שיתוף אינטרנט")
+        val SCREENSHOT_PACKAGES = setOf("com.samsung.android.app.smartcapture", "com.android.systemui")
+        val SCREENSHOT_WORDS = listOf("screenshot", "צילום מסך", "screen capture")
         const val STATUS_HOTSPOT = 1
         // Android 16 keys, spelled out so the app builds against older SDKs too.
         const val EXTRA_REQUEST_PROMOTED_ONGOING = "android.requestPromotedOngoing"

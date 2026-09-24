@@ -80,6 +80,10 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.asImageBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import kotlin.math.roundToInt
 
@@ -139,6 +143,10 @@ fun IslandScreen(
             Spacer(Modifier.height(16.dp))
             FeaturesCard(config, notificationAccess, actions)
             Spacer(Modifier.height(16.dp))
+            if (notificationAccess) {
+                BlockedAppsCard(config, actions)
+                Spacer(Modifier.height(16.dp))
+            }
             TextCard(config, actions)
             Spacer(Modifier.height(16.dp))
             SizeCard(config, actions)
@@ -593,6 +601,24 @@ private fun SizeCard(config: IslandConfig, actions: IslandActions) {
         LabeledSlider("אטימות", config.opacity * 100f, IslandConfig.MIN_OPACITY * 100f..100f, suffix = "%") { v ->
             actions.update { it.copy(opacity = v / 100f) }
         }
+        LabeledSlider("עיגול פינות הכרטיס", config.cornerDp, IslandConfig.MIN_CORNER_DP..IslandConfig.MAX_CORNER_DP, suffix = "dp") { v ->
+            actions.update { it.copy(cornerDp = v) }
+        }
+        LabeledSlider("מסגרת צבעונית", config.borderWidthDp, 0f..IslandConfig.MAX_BORDER_DP, suffix = "dp") { v ->
+            actions.update { it.copy(borderWidthDp = v) }
+        }
+        if (config.borderWidthDp > 0f) {
+            FieldLabel("צבע המסגרת")
+            val accent = IslandColors.systemAccent(LocalContext.current)
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.fillMaxWidth()) {
+                IslandColors.swatches.forEachIndexed { index, color ->
+                    if (color == IslandColors.SYSTEM && accent == null) return@forEachIndexed
+                    Swatch(color, selected = index == config.borderColorIndex, index = index, accent = accent) {
+                        actions.update { it.copy(borderColorIndex = index) }
+                    }
+                }
+            }
+        }
         Text(
             "האי תמיד נשאר גדול מספיק כדי להסתיר את המצלמה ואת הטקסט.",
             style = MaterialTheme.typography.bodyMedium,
@@ -645,6 +671,21 @@ private fun BehaviorCard(config: IslandConfig, actions: IslandActions) {
         }
         ToggleRow("רטט", "רטט עדין כשנוגעים באי", config.haptics) { v ->
             actions.update { it.copy(haptics = v) }
+        }
+        ToggleRow("הסתרה באפליקציות במסך מלא", "האי נעלם כשסרטון או משחק מסתירים את שורת הסטטוס, וחוזר אחר כך", config.hideInFullscreen) { v ->
+            actions.update { it.copy(hideInFullscreen = v) }
+        }
+        ToggleRow("הצגה במסך הנעילה", "בלי זה האי מופיע רק אחרי הפתיחה. תוכן ההודעות לעולם לא מוצג במסך נעילה", config.showOnLockScreen) { v ->
+            actions.update { it.copy(showOnLockScreen = v) }
+        }
+        ToggleRow("הצגה במצב רוחבי", "כבוי כברירת מחדל: במצב רוחבי המצלמה נמצאת במקום אחר", config.showInLandscape) { v ->
+            actions.update { it.copy(showInLandscape = v) }
+        }
+        LabeledSlider("משך הצגת הודעה", config.messageSeconds.toFloat(), IslandConfig.MIN_MESSAGE_SECONDS.toFloat()..IslandConfig.MAX_MESSAGE_SECONDS.toFloat(), suffix = " שנ׳") { v ->
+            actions.update { it.copy(messageSeconds = v.roundToInt()) }
+        }
+        LabeledSlider("מהירות האנימציה", config.animationSpeed * 100f, 50f..200f, suffix = "%") { v ->
+            actions.update { it.copy(animationSpeed = v / 100f) }
         }
         ToggleRow("איים מאפליקציות אחרות", "Tasker, MacroDroid וכל אפליקציה יכולים להציג אי משלהם (למשל מהירות נסיעה ברכב). כבוי עד שמדליקים", config.api) { v ->
             actions.update { it.copy(api = v) }
@@ -705,6 +746,92 @@ private fun QuickActionChips(config: IslandConfig, actions: IslandActions) {
             )
         }
     }
+}
+
+/** An installed app's name, icon and package, for the per-app filter. */
+private data class AppEntry(val packageName: String, val label: String, val icon: androidx.compose.ui.graphics.ImageBitmap?)
+
+@Composable
+private fun BlockedAppsCard(config: IslandConfig, actions: IslandActions) {
+    val context = LocalContext.current
+    var open by remember { mutableStateOf(false) }
+    var apps by remember { mutableStateOf<List<AppEntry>>(emptyList()) }
+    LaunchedEffect(open) {
+        if (open && apps.isEmpty()) {
+            apps = withContext(Dispatchers.IO) { installedApps(context) }
+        }
+    }
+    SectionCard {
+        SectionTitle("אילו אפליקציות מופיעות באי")
+        Text(
+            if (config.blockedApps.isEmpty()) "כל האפליקציות. אפשר לחסום אפליקציות שלא רוצים לראות באי."
+            else "${config.blockedApps.size} אפליקציות חסומות. ההתראות שלהן נשארות בלוח ההתראות בלבד.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(12.dp))
+        FilledTonalButton(
+            onClick = { open = !open },
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp),
+            shape = RoundedCornerShape(14.dp),
+        ) { Text(if (open) "סגירת הרשימה" else "בחירת אפליקציות") }
+        if (open) {
+            Spacer(Modifier.height(8.dp))
+            if (apps.isEmpty()) {
+                Text("טוען את רשימת האפליקציות…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            apps.forEach { app ->
+                val blocked = app.packageName in config.blockedApps
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 56.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .toggleable(value = !blocked, role = Role.Switch) { on ->
+                            actions.update { c -> c.copy(blockedApps = if (on) c.blockedApps - app.packageName else c.blockedApps + app.packageName) }
+                        }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (app.icon != null) {
+                        androidx.compose.foundation.Image(bitmap = app.icon, contentDescription = null, modifier = Modifier.size(36.dp))
+                    } else {
+                        Box(Modifier.size(36.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text(app.label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    Switch(checked = !blocked, onCheckedChange = null)
+                }
+            }
+        }
+    }
+}
+
+/** Launchable apps, by name; icons rasterized small so a long list stays light. */
+private fun installedApps(context: android.content.Context): List<AppEntry> {
+    val pm = context.packageManager
+    val intent = android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER)
+    @Suppress("DEPRECATION")
+    val infos = runCatching { pm.queryIntentActivities(intent, 0) }.getOrDefault(emptyList())
+    val size = (36 * context.resources.displayMetrics.density).toInt().coerceAtLeast(24)
+    return infos
+        .filter { it.activityInfo.packageName != context.packageName }
+        .distinctBy { it.activityInfo.packageName }
+        .map { ri ->
+            val label = runCatching { ri.loadLabel(pm).toString() }.getOrDefault(ri.activityInfo.packageName)
+            val icon = runCatching {
+                val d = ri.loadIcon(pm)
+                val b = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+                val canvas = android.graphics.Canvas(b)
+                d.setBounds(0, 0, size, size)
+                d.draw(canvas)
+                b.asImageBitmap()
+            }.getOrNull()
+            AppEntry(ri.activityInfo.packageName, label, icon)
+        }
+        .sortedBy { it.label.lowercase() }
 }
 
 @Composable

@@ -38,6 +38,10 @@ class IslandDirector(
         fun isLocked(): Boolean
         /** Runs a quick action on the phone; the director redraws from [SystemState] afterwards. */
         fun act(action: IslandAction) {}
+        /** Opens an inline reply box for a message that offers one. */
+        fun reply(message: Peek.Message) {}
+        /** The status bar came or went (a fullscreen video or game hides it). */
+        fun onStatusBarVisible(visible: Boolean) {}
         fun onWindowSizeNeeded(width: Int, height: Int) {}
         fun onShownChanged(shown: Boolean) {}
     }
@@ -419,7 +423,8 @@ class IslandDirector(
             }
             // Notices asked for by a tap show at once, over whatever is up, and don't touch the
             // timer of a sample that may be running underneath.
-            IslandCommand.MESSAGE -> return showSample(Peek.Message("demo", "הודעות", null, "דני", "נפגשים ב-8? 🙂", null))
+            IslandCommand.MESSAGE -> return showSample(Peek.Message("demo", "הודעות", null, "דני", "נפגשים ב-8? 🙂", null,
+                actions = listOf(LiveAction("סמן כנקרא", null), LiveAction("לייק", null))))
             IslandCommand.SILENT -> return showSample(Peek.Ringer(Peek.RingerMode.SILENT))
             IslandCommand.CHARGING -> return showSample(Peek.Charging(battery.level, minutesLeft = 42))
         }
@@ -469,6 +474,14 @@ class IslandDirector(
                 selectedKey = tap.key
                 rearm()
                 resolve()
+            }
+            is Tap.Reply -> {
+                val current = peek
+                if (current is Peek.Message && current.reply != null && !sys.isLocked()) {
+                    sys.reply(current)
+                    // The island steps aside while the reply box is up; the message stays available.
+                    nextPeek()
+                }
             }
             is Tap.Act -> {
                 if (tap.action == IslandAction.SETTINGS) {
@@ -582,6 +595,8 @@ class IslandDirector(
 
     override fun onWindowSizeNeeded(width: Int, height: Int) = sys.onWindowSizeNeeded(width, height)
 
+    override fun onStatusBarVisible(visible: Boolean) = sys.onStatusBarVisible(visible)
+
     override fun onShownChanged(shown: Boolean) = sys.onShownChanged(shown)
 
     // --- resolution ---------------------------------------------------------------------------
@@ -641,7 +656,7 @@ class IslandDirector(
                 call()?.let(::isRinging) == true -> RINGING_MS
                 else -> CARD_MS
             }
-            peek is Peek.Message -> MESSAGE_MS
+            peek is Peek.Message -> config.messageSeconds.coerceIn(IslandConfig.MIN_MESSAGE_SECONDS, IslandConfig.MAX_MESSAGE_SECONDS) * 1000L
             peek is Peek.Charging || peek is Peek.BatteryFull -> CHARGING_MS
             peek is Peek.Unlocked -> UNLOCK_MS
             peek is Peek.Custom -> (peek as Peek.Custom).durationMs.coerceIn(800L, MAX_CUSTOM_MS)
@@ -718,8 +733,13 @@ class IslandDirector(
                 text = if (private || !config.notificationText) "הודעה חדשה" else p.text,
                 open = p.open,
                 key = p.key + p.text.hashCode(),
+                actions = if (private) emptyList() else p.actions,
+                canReply = !private && p.reply != null,
+                // How many more are waiting behind this one.
+                more = queue.count { it is Peek.Message },
             )
         }
+        is Peek.Screenshot -> NoticeScene("shot", "צילום מסך נשמר", NoticeScene.Glyph.Icon(R.drawable.ic_screenshot, 0xFF3A3A44.toInt()), open = p.open)
         is Peek.Charging -> NoticeScene(
             "charging",
             // The green bolt already says "charging"; the words go to what the user can't see.
@@ -758,7 +778,7 @@ class IslandDirector(
     private fun allowed(p: Peek) = when (p) {
         is Peek.Message -> config.notifications
         is Peek.Charging, is Peek.BatteryFull -> config.chargingAnimation
-        is Peek.LowBattery, is Peek.Ringer, is Peek.DoNotDisturb, is Peek.Headphones, is Peek.PowerSave, is Peek.Hotspot, is Peek.Vpn, is Peek.Unlocked -> config.systemAlerts
+        is Peek.LowBattery, is Peek.Ringer, is Peek.DoNotDisturb, is Peek.Headphones, is Peek.PowerSave, is Peek.Hotspot, is Peek.Vpn, is Peek.Unlocked, is Peek.Screenshot -> config.systemAlerts
         is Peek.Custom -> config.api
     }
 
@@ -803,7 +823,7 @@ class IslandDirector(
         const val DEMO_MS = 12_000L
 
         fun formatMinutes(m: Int): String = if (m < 60) "$m דק׳" else "${m / 60} שע׳ ${m % 60} דק׳".replace(" 0 דק׳", "")
-        private const val MAX_QUEUE = 3
+        private const val MAX_QUEUE = 5
         private val HEBREW: Locale = Locale.forLanguageTag("he-IL")
 
         /** A gradient "album cover" for demos and previews. */

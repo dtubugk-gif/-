@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.res.Configuration
+import android.graphics.Color
 import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.Point
@@ -288,7 +289,12 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         }
         publishSystemState()
 
-        scope.launch { IslandSettings.config.collect { d.config = it } }
+        scope.launch {
+            IslandSettings.config.collect {
+                d.config = it
+                updateVisibility(animate = true)
+            }
+        }
         scope.launch { IslandSettings.commands.collect { d.demo(it) } }
         scope.launch {
             LiveBus.media.collect {
@@ -323,8 +329,21 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         updateVisibility(animate = true)
     }
 
+    /** False while a fullscreen app hides the status bar (told by the overlay's insets). */
+    private var statusBarVisible = true
+
+    override fun onStatusBarVisible(visible: Boolean) {
+        if (statusBarVisible == visible) return
+        statusBarVisible = visible
+        updateVisibility(animate = true)
+    }
+
     private fun updateVisibility(animate: Boolean) {
-        val visible = !isLandscape() && isInteractive()
+        val cfg = IslandSettings.config.value
+        val visible = isInteractive() &&
+            (cfg.showInLandscape || !isLandscape()) &&
+            (!cfg.hideInFullscreen || statusBarVisible) &&
+            (cfg.showOnLockScreen || !isLocked())
         director?.active = visible
         island?.setShown(visible, animate)
         if (visible) scheduleChipScan()
@@ -696,6 +715,102 @@ class IslandService : AccessibilityService(), IslandDirector.System {
 
     override fun isLocked(): Boolean = getSystemService(KeyguardManager::class.java)?.isKeyguardLocked ?: false
 
+    // --- inline reply -------------------------------------------------------------------------
+
+    private var replyBox: android.view.View? = null
+
+    /**
+     * A small focusable window under the island with a text field: the reply goes into the
+     * notification's own RemoteInput, exactly as from the shade.
+     */
+    override fun reply(message: Peek.Message) {
+        val action = message.reply ?: return
+        val wm = windowManager ?: return
+        closeReply()
+        val dp = resources.displayMetrics.density
+        val ctx = android.view.ContextThemeWrapper(this, android.R.style.Theme_DeviceDefault_Dialog)
+        val box = android.widget.LinearLayout(ctx).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            layoutDirection = android.view.View.LAYOUT_DIRECTION_RTL
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(0xFF111116.toInt())
+                cornerRadius = 24f * dp
+                setStroke((1f * dp).roundToInt(), 0x33FFFFFF)
+            }
+            setPadding((16f * dp).roundToInt(), (12f * dp).roundToInt(), (16f * dp).roundToInt(), (12f * dp).roundToInt())
+        }
+        val title = android.widget.TextView(ctx).apply {
+            text = "תשובה ל${message.title}"
+            setTextColor(0x99FFFFFF.toInt())
+            textSize = 13f
+        }
+        val input = android.widget.EditText(ctx).apply {
+            hint = action.label
+            setTextColor(Color.WHITE)
+            setHintTextColor(0x66FFFFFF)
+            textSize = 16f
+            maxLines = 3
+            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEND
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            background = null
+        }
+        val row = android.widget.LinearLayout(ctx).apply { orientation = android.widget.LinearLayout.HORIZONTAL }
+        fun button(label: String, primary: Boolean, onClick: () -> Unit) = android.widget.Button(ctx).apply {
+            text = label
+            isAllCaps = false
+            setTextColor(if (primary) Color.BLACK else Color.WHITE)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(if (primary) IslandPainter.BLUE else 0x33FFFFFF)
+                cornerRadius = 22f * dp
+            }
+            minHeight = (44f * dp).roundToInt()
+            setOnClickListener { onClick() }
+        }
+        val send = {
+            val text = input.text?.toString()?.trim().orEmpty()
+            if (text.isNotEmpty()) {
+                runCatching {
+                    val fill = Intent()
+                    android.app.RemoteInput.addResultsToIntent(arrayOf(action.remoteInput), fill, android.os.Bundle().apply { putCharSequence(action.remoteInput.resultKey, text) })
+                    action.intent.send(this, 0, fill)
+                }
+                Toast.makeText(this, "נשלח", Toast.LENGTH_SHORT).show()
+            }
+            closeReply()
+        }
+        input.setOnEditorActionListener { _, id, _ -> if (id == android.view.inputmethod.EditorInfo.IME_ACTION_SEND) { send(); true } else false }
+        row.addView(button("שליחה", primary = true, onClick = send), android.widget.LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        row.addView(android.view.View(ctx), android.widget.LinearLayout.LayoutParams((8f * dp).roundToInt(), 1))
+        row.addView(button("ביטול", primary = false, onClick = ::closeReply), android.widget.LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        box.addView(title)
+        box.addView(input)
+        box.addView(row)
+        val lp = WindowManager.LayoutParams(
+            (realSize().x - (24f * dp).roundToInt()).coerceAtMost((420f * dp).roundToInt()),
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            y = (readScreen().statusBarHeight + 52f * dp).roundToInt()
+            softInputMode = WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN
+        }
+        runCatching {
+            wm.addView(box, lp)
+            replyBox = box
+            input.requestFocus()
+            // Anywhere else closes it, like a dialog.
+            handler.postDelayed({ box.rootView.setOnTouchListener { _, e -> if (e.actionMasked == android.view.MotionEvent.ACTION_OUTSIDE) closeReply(); false } }, 100)
+        }
+    }
+
+    private fun closeReply() {
+        val box = replyBox ?: return
+        replyBox = null
+        runCatching { windowManager?.removeViewImmediate(box) }
+    }
+
     // --- lifecycle ----------------------------------------------------------------------------
 
     // --- Samsung's chip -----------------------------------------------------------------------
@@ -826,6 +941,7 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         vpnCallback = null
         vpnUp = null
         runCatching { windowManager?.removeViewImmediate(view) }
+        closeReply()
     }
 
     // --- screen facts -------------------------------------------------------------------------

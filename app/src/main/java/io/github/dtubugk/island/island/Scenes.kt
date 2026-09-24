@@ -34,6 +34,8 @@ sealed class Tap {
     data class Act(val action: IslandAction) : Tap()
     /** Switch to another concurrent activity (a tab in the card). */
     data class Select(val key: String) : Tap()
+    /** Open the inline reply box for the message shown. */
+    object Reply : Tap()
 }
 
 /**
@@ -312,7 +314,10 @@ class NoticeScene(
     private val glyph: Glyph,
     private val value: String = "",
     private val valueColor: Int = Color.WHITE,
+    /** Tapping opens this instead of just dismissing (a saved screenshot). */
+    private val open: PendingIntent? = null,
 ) : Scene(key) {
+    override val app get() = open
     sealed class Glyph {
         data class Icon(val res: Int, val background: Int) : Glyph()
         data class Battery(val level: Int, val color: Int, val bolt: Boolean) : Glyph()
@@ -349,7 +354,7 @@ class NoticeScene(
         }
     }
 
-    override fun tap(x: Float, y: Float, f: Frame) = Tap.Dismiss
+    override fun tap(x: Float, y: Float, f: Frame): Tap = if (open != null) Tap.Launch(open) else Tap.Dismiss
 }
 
 // --- music -------------------------------------------------------------------------------------
@@ -716,10 +721,17 @@ class MessageScene(
     private val text: String,
     private val open: PendingIntent?,
     key: String,
+    private val actions: List<LiveAction> = emptyList(),
+    private val canReply: Boolean = false,
+    /** How many more messages wait behind this one. */
+    private val more: Int = 0,
 ) : Scene("msg:$key") {
     override val isCard = true
     override val app get() = open
-    override fun shape(l: IslandLayout) = l.card(76f * l.density)
+    /** The notification's buttons, and "reply" first when the app offers one. */
+    private val pills: List<Pair<String, Tap>> =
+        (if (canReply) listOf("השב" to Tap.Reply) else emptyList()) + actions.take(3).map { it.title to Tap.Launch(it.intent) }
+    override fun shape(l: IslandLayout) = l.card((76f + if (pills.isEmpty()) 0f else 52f) * l.density)
 
     override fun draw(c: Canvas, f: Frame, alpha: Float) {
         val s = shape(f.layout)
@@ -730,7 +742,8 @@ class MessageScene(
         val band = f.bandY()
         val inset = 24f * dp
         p.label(c, appLabel, right - inset, band, 13f * dp, SECONDARY, alpha, Paint.Align.RIGHT, p.medium, f.sideRoom(s, inset))
-        p.label(c, "עכשיו", left + inset, band, 13f * dp, SECONDARY, alpha, Paint.Align.LEFT, p.medium)
+        // "+2": more messages waiting; a sideways swipe moves on to them.
+        p.label(c, if (more > 0) "עכשיו · +$more" else "עכשיו", left + inset, band, 13f * dp, SECONDARY, alpha, Paint.Align.LEFT, p.medium)
 
         val row = f.top + f.layout.bandHeight + 32f * dp
         val size = 48f * dp
@@ -746,7 +759,35 @@ class MessageScene(
         val room = textRight - (left + inset)
         p.label(c, title, textRight, row - 11f * dp, 17f * dp, Color.WHITE, alpha, Paint.Align.RIGHT, p.semibold, room)
         p.label(c, text, textRight, row + 12f * dp, 14f * dp, SECONDARY, alpha, Paint.Align.RIGHT, p.regular, room)
+
+        pillRects(f).forEachIndexed { i, (l, r) ->
+            val (label, tap) = pills[i]
+            val y = pillsY(f)
+            val bg = if (tap is Tap.Reply) IslandPainter.BLUE else 0x33FFFFFF
+            p.pill(c, l, y - 21f * dp, r, y + 21f * dp, bg, label, Color.WHITE, 15f * dp, alpha)
+        }
     }
 
-    override fun tap(x: Float, y: Float, f: Frame) = Tap.Launch(open)
+    override fun tap(x: Float, y: Float, f: Frame): Tap {
+        if (pills.isNotEmpty() && abs(y - pillsY(f)) <= 26f * f.dp) {
+            pillRects(f).forEachIndexed { i, (l, r) -> if (x in l..r) return pills[i].second }
+        }
+        return Tap.Launch(open)
+    }
+
+    private fun pillsY(f: Frame) = f.top + f.layout.bandHeight + 100f * f.dp
+
+    /** Buttons share the row equally; the first one sits on the right. */
+    private fun pillRects(f: Frame): List<Pair<Float, Float>> {
+        if (pills.isEmpty()) return emptyList()
+        val s = shape(f.layout)
+        val gap = 10f * f.dp
+        val start = f.left(s) + 18f * f.dp
+        val end = f.right(s) - 18f * f.dp
+        val w = (end - start - gap * (pills.size - 1)) / pills.size
+        return pills.indices.map { i ->
+            val r = end - i * (w + gap)
+            (r - w) to r
+        }
+    }
 }

@@ -60,6 +60,9 @@ data class SystemState(
 /** A button from the call's or timer's own notification. Null intent: a sample with nothing to do. */
 data class LiveAction(val title: String, val intent: PendingIntent?)
 
+/** A notification's inline reply: the text goes into [remoteInput] and [intent] is sent. */
+data class ReplyAction(val label: String, val intent: PendingIntent, val remoteInput: android.app.RemoteInput)
+
 /** Tells call buttons apart by their label, in Hebrew or English, to color and auto-open. */
 object CallActions {
     private val DECLINE = listOf("נתק", "דחה", "דחיי", "סיים", "סיום", "בטל", "decline", "end", "hang", "reject", "cancel", "stop")
@@ -103,7 +106,15 @@ sealed class Peek {
         val open: PendingIntent?,
         /** Opening it clears it from the notification shade, as tapping it there would. */
         val autoCancel: Boolean = false,
+        /** The notification's own buttons (mark as read, archive, like...). */
+        val actions: List<LiveAction> = emptyList(),
+        /** Its reply action, when the app offers one (WhatsApp, Telegram, SMS...). */
+        val reply: ReplyAction? = null,
+        /** The app's package, for the per-app filter and for opening the app. */
+        val packageName: String = "",
     ) : Peek()
+    /** A screenshot was just saved; [open] shows it. */
+    data class Screenshot(val open: PendingIntent?) : Peek()
     /** [minutesLeft] until full, when the phone can tell; else -1. */
     data class Charging(val level: Int, val minutesLeft: Int = -1) : Peek()
     data class BatteryFull(val unit: Unit = Unit) : Peek()

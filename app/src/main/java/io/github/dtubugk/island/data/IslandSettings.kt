@@ -43,6 +43,23 @@ data class IslandConfig(
     val quickActions: List<IslandAction> = QUICK_ACTION_ORDER,
     /** Let other apps (Tasker, MacroDroid) show their own islands through the broadcast API. Opt-in. */
     val api: Boolean = false,
+    /** Apps whose notifications never pop up in the island. */
+    val blockedApps: Set<String> = emptySet(),
+    /** Show the island on the lock screen at all (content is always hidden there). */
+    val showOnLockScreen: Boolean = true,
+    /** Hide the island while a fullscreen app (video, game) hides the status bar. */
+    val hideInFullscreen: Boolean = true,
+    /** Keep the island in landscape (off by default: the camera sits elsewhere then). */
+    val showInLandscape: Boolean = false,
+    /** How long a message pop-up stays, in seconds. */
+    val messageSeconds: Int = DEFAULT_MESSAGE_SECONDS,
+    /** Corner radius of the cards in dp; pills are always fully round. */
+    val cornerDp: Float = DEFAULT_CORNER_DP,
+    /** A colored outline around the island; 0 = none. */
+    val borderWidthDp: Float = 0f,
+    val borderColorIndex: Int = 0,
+    /** Motion speed multiplier: 0.5 = slow, 1 = normal, 2 = fast. */
+    val animationSpeed: Float = 1f,
 ) {
     companion object {
         const val DEFAULT_TEXT = "א"
@@ -56,6 +73,13 @@ data class IslandConfig(
         const val MAX_OFFSET_X_DP = 60f
         const val MAX_OFFSET_Y_DP = 16f
         const val MIN_OPACITY = 0.5f
+        const val DEFAULT_MESSAGE_SECONDS = 5
+        const val MIN_MESSAGE_SECONDS = 2
+        const val MAX_MESSAGE_SECONDS = 20
+        const val DEFAULT_CORNER_DP = 36f
+        const val MIN_CORNER_DP = 12f
+        const val MAX_CORNER_DP = 40f
+        const val MAX_BORDER_DP = 3f
         /** The info card's tools in their fixed display order (index 0 is drawn rightmost). */
         val QUICK_ACTION_ORDER: List<IslandAction> = listOf(
             IslandAction.FLASHLIGHT, IslandAction.DND, IslandAction.AIRPLANE,
@@ -145,6 +169,15 @@ object IslandSettings {
             .putFloat("opacity", next.opacity)
             .putString("quickActions", next.quickActions.joinToString(",") { it.name })
             .putBoolean("api", next.api)
+            .putStringSet("blockedApps", next.blockedApps)
+            .putBoolean("showOnLockScreen", next.showOnLockScreen)
+            .putBoolean("hideInFullscreen", next.hideInFullscreen)
+            .putBoolean("showInLandscape", next.showInLandscape)
+            .putInt("messageSeconds", next.messageSeconds)
+            .putFloat("cornerDp", next.cornerDp)
+            .putFloat("borderWidthDp", next.borderWidthDp)
+            .putInt("borderColorIndex", next.borderColorIndex)
+            .putFloat("animationSpeed", next.animationSpeed)
             .apply()
     }
 
@@ -176,6 +209,15 @@ object IslandSettings {
             quickActions = p.getString("quickActions", null)?.split(',')
                 ?.mapNotNull { n -> IslandAction.entries.firstOrNull { it.name == n } } ?: d.quickActions,
             api = p.getBoolean("api", d.api),
+            blockedApps = p.getStringSet("blockedApps", null)?.toSet() ?: d.blockedApps,
+            showOnLockScreen = p.getBoolean("showOnLockScreen", d.showOnLockScreen),
+            hideInFullscreen = p.getBoolean("hideInFullscreen", d.hideInFullscreen),
+            showInLandscape = p.getBoolean("showInLandscape", d.showInLandscape),
+            messageSeconds = p.getInt("messageSeconds", d.messageSeconds).coerceIn(IslandConfig.MIN_MESSAGE_SECONDS, IslandConfig.MAX_MESSAGE_SECONDS),
+            cornerDp = p.getFloat("cornerDp", d.cornerDp).coerceIn(IslandConfig.MIN_CORNER_DP, IslandConfig.MAX_CORNER_DP),
+            borderWidthDp = p.getFloat("borderWidthDp", d.borderWidthDp).coerceIn(0f, IslandConfig.MAX_BORDER_DP),
+            borderColorIndex = p.getInt("borderColorIndex", d.borderColorIndex),
+            animationSpeed = p.getFloat("animationSpeed", d.animationSpeed).coerceIn(0.5f, 2f),
         )
     }
 }

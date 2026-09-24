@@ -15,6 +15,7 @@ import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import io.github.dtubugk.island.R
+import io.github.dtubugk.island.data.IslandColors
 import io.github.dtubugk.island.data.IslandConfig
 import kotlin.math.abs
 import kotlin.math.max
@@ -51,6 +52,8 @@ class IslandView(
         fun onOutsideTouch() {}
         /** Auto-close timers pause while a finger is on the island. */
         fun onTouching(active: Boolean) {}
+        /** The status bar came or went (a fullscreen video or game hides it). */
+        fun onStatusBarVisible(visible: Boolean) {}
     }
 
     var host: Host? = null
@@ -120,6 +123,7 @@ class IslandView(
     private val rect = RectF()
     private val clipPath = Path()
     private val islandPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK }
+    private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val lensPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     private var pulledDown = false
@@ -313,8 +317,10 @@ class IslandView(
             snapShape()
             return
         }
-        // Opening is soft and bouncy; closing is quicker and settles without wobble.
-        val stiffness = if (growing) 260f else 420f
+        // Opening is soft and bouncy; closing is quicker and settles without wobble. The user's
+        // speed setting scales the stiffness (squared: a spring's pace goes with its square root).
+        val speed = config.animationSpeed.coerceIn(0.5f, 2f)
+        val stiffness = (if (growing) 260f else 420f) * speed * speed
         val damping = if (growing) 0.72f else 0.86f
         width.animateTo(shape.width, stiffness, damping)
         height.animateTo(shape.height, stiffness, damping)
@@ -509,6 +515,18 @@ class IslandView(
         islandPaint.alpha = (255 * opacity).roundToInt()
         canvas.drawRoundRect(rect, r, r, islandPaint)
         islandPaint.alpha = 255
+        // An optional colored outline, drawn inside the edge so the shape stays the same.
+        val border = config.borderWidthDp.coerceIn(0f, IslandConfig.MAX_BORDER_DP) * dp
+        if (border > 0.5f) {
+            val c = IslandColors.of(config.borderColorIndex)
+            borderPaint.color = when (c) {
+                IslandColors.GRADIENT -> IslandColors.GRADIENT_END
+                IslandColors.SYSTEM -> painter.systemAccent()
+                else -> c
+            }
+            borderPaint.strokeWidth = border
+            canvas.drawRoundRect(left + border / 2f, top + border / 2f, left + w - border / 2f, top + h - border / 2f, max(r - border / 2f, 0f), max(r - border / 2f, 0f), borderPaint)
+        }
         if (opacity < 1f) {
             // Transparency is for the card body only: the strip over the status bar and the
             // collar around the camera stay hardware-black, so nothing shows through them.
@@ -561,6 +579,23 @@ class IslandView(
         canvas.drawCircle(x, y, r * 0.55f, lensPaint)
         lensPaint.color = 0x2A5A6A9A
         canvas.drawCircle(x - r * 0.24f, y - r * 0.24f, r * 0.14f, lensPaint)
+    }
+
+    /**
+     * System-bar visibility is global state every window is told about: when a fullscreen app
+     * hides the status bar, this overlay hears it here.
+     */
+    override fun onApplyWindowInsets(insets: android.view.WindowInsets): android.view.WindowInsets {
+        if (isOverlay) {
+            val visible = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                insets.isVisible(android.view.WindowInsets.Type.statusBars())
+            } else {
+                @Suppress("DEPRECATION")
+                insets.systemWindowInsetTop > 0
+            }
+            host?.onStatusBarVisible(visible)
+        }
+        return super.onApplyWindowInsets(insets)
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
