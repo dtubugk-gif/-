@@ -114,6 +114,8 @@ class IslandView(
     private var pulledDown = false
     private var doubleTapped = false
     private var lastTapWasButton = false
+    /** App behind what was on screen at the first tap of a possible double tap. */
+    private var firstTapApp: android.app.PendingIntent? = null
     private val gestures = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent): Boolean = true
 
@@ -123,7 +125,10 @@ class IslandView(
         override fun onSingleTapUp(e: MotionEvent): Boolean {
             if (doubleTapped) return true
             val tap = scene.tap(e.x, e.y, frame())
-            // A tap that pressed a button (answer, play, a tool) is not the start of a double tap.
+            // The first tap may replace the scene at once (a notice dismissed, a card opened), so
+            // the app a double tap opens is the one the user actually saw. Only a plain
+            // expand/collapse starts a double tap; a button, a dismissal or a launch never does.
+            firstTapApp = if (tap is Tap.Expand || tap is Tap.Collapse) scene.app else null
             lastTapWasButton = tap !is Tap.Expand && tap !is Tap.Collapse && tap !is Tap.Dismiss
             haptic(HapticFeedbackConstants.VIRTUAL_KEY)
             host?.onTap(tap)
@@ -132,15 +137,29 @@ class IslandView(
 
         override fun onDoubleTap(e: MotionEvent): Boolean {
             doubleTapped = true
-            val app = scene.app
-            if (app != null && !lastTapWasButton) {
-                haptic(HapticFeedbackConstants.CONFIRM)
+            val app = firstTapApp
+            firstTapApp = null
+            if (app != null) {
+                haptic(HapticFeedbackConstants.VIRTUAL_KEY)
                 host?.onTap(Tap.Launch(app))
             }
             return true
         }
 
+        // Two quick presses on a control (next, next) both count; the detector would otherwise
+        // swallow the second one as half of a double tap.
+        override fun onDoubleTapEvent(e: MotionEvent): Boolean {
+            if (e.actionMasked != MotionEvent.ACTION_UP || !lastTapWasButton) return false
+            val tap = scene.tap(e.x, e.y, frame())
+            if (tap is Tap.Expand || tap is Tap.Collapse || tap is Tap.Dismiss) return false
+            haptic(HapticFeedbackConstants.VIRTUAL_KEY)
+            host?.onTap(tap)
+            return true
+        }
+
         override fun onLongPress(e: MotionEvent) {
+            // A held second tap of a double tap is not a long press: the app just opened.
+            if (doubleTapped) return
             haptic(HapticFeedbackConstants.LONG_PRESS)
             host?.onLongPress()
         }
@@ -254,6 +273,8 @@ class IslandView(
                 gestures.onTouchEvent(it)
                 it.recycle()
             }
+            doubleTapped = false
+            firstTapApp = null
             host?.onTouching(false)
         }
         if (!animate || !animationsEnabled()) {
@@ -374,6 +395,7 @@ class IslandView(
                 if (!hitIsland(event.x, event.y, slop = 8f * dp)) {
                     doubleTapped = false
                     lastTapWasButton = false
+                    firstTapApp = null
                     host?.onOutsideTouch()
                     return false
                 }

@@ -109,6 +109,11 @@ class IslandDirector(
     private val linger = Runnable { resolve() }
     /** What the pending auto-close was armed for; the same state never restarts the clock. */
     private var armedFor: String? = null
+
+    /** A deliberate change (a tap, a new notice) gets a fresh clock even in an equal-looking state. */
+    private fun rearm() {
+        armedFor = null
+    }
     private val endDemo = Runnable {
         // A sample that opened the island (the incoming call) closes it when it ends, unless a
         // real ringing call has meanwhile opened it for its own reasons.
@@ -154,6 +159,7 @@ class IslandDirector(
             expanded = true
             peek = null
             autoExpandedCall = incoming.key
+            rearm()
         }
         // The call it opened for is gone (answered elsewhere, declined, missed): close with it.
         val opened = autoExpandedCall
@@ -206,6 +212,7 @@ class IslandDirector(
         if (p is Peek.Message) queue.removeAll { it is Peek.Message && it.key == p.key }
         if (peek == null && !expanded) {
             peek = p
+            rearm()
             resolve()
         } else {
             if (queue.size >= MAX_QUEUE) queue.removeFirst()
@@ -223,6 +230,7 @@ class IslandDirector(
     fun expand() {
         expanded = true
         peek = null
+        rearm()
         resolve()
     }
 
@@ -296,6 +304,7 @@ class IslandDirector(
         queue.clear()
         expanded = false
         peek = p
+        rearm()
         resolve()
     }
 
@@ -332,6 +341,7 @@ class IslandDirector(
                 } else {
                     sys.act(tap.action)
                     // Keep the card up so the lit button confirms what happened.
+                    rearm()
                     schedule()
                 }
             }
@@ -358,6 +368,7 @@ class IslandDirector(
         expanded = false
         peek = null
         queue.clear()
+        rearm()
         resolve()
     }
 
@@ -379,11 +390,13 @@ class IslandDirector(
     private fun collapse() {
         expanded = false
         autoExpandedCall = null
+        rearm()
         resolve()
     }
 
     private fun nextPeek() {
         peek = queue.removeFirstOrNull()
+        rearm()
         resolve()
     }
 
