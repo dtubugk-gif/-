@@ -85,7 +85,12 @@ data class LiveActivity(
     val icon: Drawable? = null,
     /** 0..1 for [LiveKind.PROGRESS], else -1. */
     val progress: Float = -1f,
+    /** Navigation: ETA and remaining time from the app; live updates: their short status. */
+    val subText: String = "",
 )
+
+/** One of several concurrent activities, shown as a tab in the card. */
+data class IslandTab(val key: String, val icon: Int, val accent: Int, val selected: Boolean)
 
 /** Short-lived events that pop the island open for a moment, like on the iPhone. */
 sealed class Peek {
@@ -103,6 +108,22 @@ sealed class Peek {
     data class Charging(val level: Int, val minutesLeft: Int = -1) : Peek()
     data class BatteryFull(val unit: Unit = Unit) : Peek()
     data class PowerSave(val on: Boolean, val level: Int) : Peek()
+    data class Hotspot(val on: Boolean) : Peek()
+    data class Vpn(val on: Boolean) : Peek()
+    /** The phone was just unlocked: the island's Face ID moment. */
+    data class Unlocked(val unit: Unit = Unit) : Peek()
+    /**
+     * An island asked for by another app through the broadcast API (Tasker, MacroDroid, any app).
+     * [durationMs] 0 keeps it until the same [id] is hidden or the user dismisses it.
+     */
+    data class Custom(
+        val id: String,
+        val title: String,
+        val text: String,
+        val color: Int,
+        val durationMs: Long,
+        val card: Boolean,
+    ) : Peek()
     data class LowBattery(val level: Int) : Peek()
     enum class RingerMode { SILENT, VIBRATE, SOUND }
     data class Ringer(val mode: RingerMode) : Peek()
@@ -149,6 +170,14 @@ object LiveBus {
 
     fun peek(p: Peek) {
         _peeks.tryEmit(p)
+    }
+
+    private val _hideCustom = MutableSharedFlow<String>(extraBufferCapacity = 8)
+    /** Ids of API islands their app asked to hide. */
+    val hideCustom: SharedFlow<String> = _hideCustom.asSharedFlow()
+
+    fun hideCustom(id: String) {
+        _hideCustom.tryEmit(id)
     }
 
     fun notificationRemoved(key: String) {

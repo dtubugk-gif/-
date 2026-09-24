@@ -2,6 +2,7 @@ package io.github.dtubugk.island.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import io.github.dtubugk.island.island.IslandAction
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -36,6 +37,12 @@ data class IslandConfig(
     val systemAlerts: Boolean = true,
     /** Stretch the island over Samsung's own status-bar chip for the same song or call. */
     val absorbChip: Boolean = true,
+    /** Island background opacity, 0.5..1. Pure black at 1. */
+    val opacity: Float = 1f,
+    /** Which tools the info card offers, in order. */
+    val quickActions: List<IslandAction> = IslandAction.entries.filter { it != IslandAction.SPEAKER && it != IslandAction.MUTE },
+    /** Let other apps (Tasker, MacroDroid) show their own islands through the broadcast API. */
+    val api: Boolean = true,
 ) {
     companion object {
         const val DEFAULT_TEXT = "א"
@@ -48,13 +55,16 @@ data class IslandConfig(
         const val MAX_HEIGHT_DP = 44f
         const val MAX_OFFSET_X_DP = 60f
         const val MAX_OFFSET_Y_DP = 16f
+        const val MIN_OPACITY = 0.5f
     }
 }
 
-/** Glyph colors offered in the app. [GRADIENT] paints the text blue-to-pink. */
+/** Glyph colors offered in the app. [GRADIENT] paints the text blue-to-pink; [SYSTEM] follows Material You. */
 object IslandColors {
     // Fully transparent black: never a real swatch (opaque white is -1 as an Int, so -1 won't do).
     const val GRADIENT = 0
+    // Nearly transparent black: also never a real swatch. The phone's own accent color (Android 12+).
+    const val SYSTEM = 1
     val swatches: List<Int> = listOf(
         0xFFFFFFFF.toInt(), // white
         0xFFFF6FA3.toInt(), // pink
@@ -63,6 +73,7 @@ object IslandColors {
         0xFF5CE1A6.toInt(), // mint
         0xFFB69CFF.toInt(), // lavender
         GRADIENT,
+        SYSTEM,
     )
     const val GRADIENT_START = 0xFF6E8BFF.toInt()
     const val GRADIENT_END = 0xFFFF6FA3.toInt()
@@ -118,6 +129,9 @@ object IslandSettings {
             .putBoolean("liveActivities", next.liveActivities)
             .putBoolean("systemAlerts", next.systemAlerts)
             .putBoolean("absorbChip", next.absorbChip)
+            .putFloat("opacity", next.opacity)
+            .putString("quickActions", next.quickActions.joinToString(",") { it.name })
+            .putBoolean("api", next.api)
             .apply()
     }
 
@@ -145,6 +159,10 @@ object IslandSettings {
             liveActivities = p.getBoolean("liveActivities", d.liveActivities),
             systemAlerts = p.getBoolean("systemAlerts", d.systemAlerts),
             absorbChip = p.getBoolean("absorbChip", d.absorbChip),
+            opacity = p.getFloat("opacity", d.opacity).coerceIn(IslandConfig.MIN_OPACITY, 1f),
+            quickActions = p.getString("quickActions", null)?.split(',')
+                ?.mapNotNull { n -> IslandAction.entries.firstOrNull { it.name == n } } ?: d.quickActions,
+            api = p.getBoolean("api", d.api),
         )
     }
 }

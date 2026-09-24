@@ -44,6 +44,16 @@
                 android:resource="@xml/island_accessibility_service" />
         </service>
 
+        <!-- Open API: other apps and automations show their own islands with a broadcast. -->
+        <receiver
+            android:name=".island.IslandApiReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="io.github.dtubugk.island.SHOW" />
+                <action android:name="io.github.dtubugk.island.HIDE" />
+            </intent-filter>
+        </receiver>
+
         <!-- Now playing, calls, timers and messages. Enabled by the user under Notification access. -->
         <service
             android:name=".island.IslandNotificationListener"

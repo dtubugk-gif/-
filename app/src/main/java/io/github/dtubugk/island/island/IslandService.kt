@@ -91,7 +91,12 @@ class IslandService : AccessibilityService(), IslandDirector.System {
             val d = director ?: return
             when (intent.action) {
                 Intent.ACTION_SCREEN_OFF -> updateVisibility(animate = false)
-                Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> updateVisibility(animate = true)
+                Intent.ACTION_SCREEN_ON -> updateVisibility(animate = true)
+                Intent.ACTION_USER_PRESENT -> {
+                    // The island's Face ID moment: a short open-lock flash.
+                    updateVisibility(animate = true)
+                    d.post(Peek.Unlocked())
+                }
                 Intent.ACTION_BATTERY_CHANGED -> {
                     val b = readBattery(intent)
                     d.battery = b
@@ -265,6 +270,7 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         }
         scope.launch { LiveBus.peeks.collect { d.post(it) } }
         scope.launch { LiveBus.removed.collect { d.onNotificationRemoved(it) } }
+        scope.launch { LiveBus.hideCustom.collect { d.hideCustom(it) } }
         _running.value = true
     }
 

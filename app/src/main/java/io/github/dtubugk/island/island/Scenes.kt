@@ -32,6 +32,8 @@ sealed class Tap {
     object Previous : Tap()
     data class Launch(val intent: PendingIntent?) : Tap()
     data class Act(val action: IslandAction) : Tap()
+    /** Switch to another concurrent activity (a tab in the card). */
+    data class Select(val key: String) : Tap()
 }
 
 /**
@@ -131,15 +133,45 @@ private class ActionRow(private val actions: List<QuickAction>) {
     }
 }
 
-/** The island's own tools, shown on the info card. */
-fun quickActions(state: SystemState): List<QuickAction> = listOf(
-    QuickAction(IslandAction.FLASHLIGHT, R.drawable.ic_flashlight, "פנס", state.flashlight, 0xFFFFD60A.toInt()),
-    QuickAction(IslandAction.DND, R.drawable.ic_dnd, "לא להפריע", state.doNotDisturb, IslandPainter.PURPLE),
-    QuickAction(IslandAction.AIRPLANE, R.drawable.ic_airplane, "מצב טיסה", false),
-    QuickAction(IslandAction.SCREENSHOT, R.drawable.ic_screenshot, "צילום מסך", false),
-    QuickAction(IslandAction.LOCK, R.drawable.ic_lock, "נעילה", false),
-    QuickAction(IslandAction.SETTINGS, R.drawable.ic_island_settings, "הגדרות", false),
-)
+/** The island's own tools, shown on the info card, in the user's chosen order. */
+fun quickActions(state: SystemState, chosen: List<IslandAction>): List<QuickAction> = chosen.mapNotNull { a ->
+    when (a) {
+        IslandAction.FLASHLIGHT -> QuickAction(a, R.drawable.ic_flashlight, "פנס", state.flashlight, 0xFFFFD60A.toInt())
+        IslandAction.DND -> QuickAction(a, R.drawable.ic_dnd, "לא להפריע", state.doNotDisturb, IslandPainter.PURPLE)
+        IslandAction.AIRPLANE -> QuickAction(a, R.drawable.ic_airplane, "מצב טיסה", false)
+        IslandAction.SCREENSHOT -> QuickAction(a, R.drawable.ic_screenshot, "צילום מסך", false)
+        IslandAction.LOCK -> QuickAction(a, R.drawable.ic_lock, "נעילה", false)
+        IslandAction.SETTINGS -> QuickAction(a, R.drawable.ic_island_settings, "הגדרות", false)
+        IslandAction.SPEAKER, IslandAction.MUTE -> null
+    }
+}
+
+/**
+ * Tabs for concurrent activities, on the band's left side of a card: small discs, the current one
+ * filled with its color. Tapping one switches the island to it.
+ */
+private object Tabs {
+    fun centers(f: Frame, shape: IslandShape, count: Int): List<Float> {
+        val step = 26f * f.dp
+        val start = f.left(shape) + 22f * f.dp + 10f * f.dp
+        return List(count) { i -> start + i * step }
+    }
+
+    fun draw(c: Canvas, f: Frame, shape: IslandShape, tabs: List<IslandTab>, alpha: Float) {
+        val cy = f.bandY()
+        centers(f, shape, tabs.size).forEachIndexed { i, cx ->
+            val t = tabs[i]
+            f.p.circle(c, cx, cy, 10f * f.dp, if (t.selected) t.accent else 0x33FFFFFF, alpha)
+            f.p.icon(c, t.icon, cx, cy, 12f * f.dp, if (t.selected) Color.BLACK else Color.WHITE, alpha * 0.95f)
+        }
+    }
+
+    fun hit(x: Float, y: Float, f: Frame, shape: IslandShape, tabs: List<IslandTab>): IslandTab? {
+        if (tabs.isEmpty() || abs(y - f.bandY()) > 18f * f.dp) return null
+        centers(f, shape, tabs.size).forEachIndexed { i, cx -> if (abs(x - cx) <= 14f * f.dp) return tabs[i] }
+        return null
+    }
+}
 
 /** What a call needs at hand: speaker, mute, and airplane mode to drop everything at once. */
 fun callActions(state: SystemState): List<QuickAction> = listOf(
@@ -171,7 +203,7 @@ class IdleScene(private val config: IslandConfig) : Scene("idle") {
         val x = f.cx + side * (f.width / 2f - fromEdge)
         p.text.getTextBounds(text, 0, text.length, bounds)
         val y = f.top + f.height / 2f - (bounds.top + bounds.bottom) / 2f
-        val color = IslandColors.of(config.colorIndex)
+        val color = IslandColors.of(config.colorIndex).let { if (it == IslandColors.SYSTEM) p.systemAccent() else it }
         if (color == IslandColors.GRADIENT) {
             p.text.color = Color.WHITE
             val half = max(p.text.measureText(text) / 2f, 4f * f.dp)
@@ -196,10 +228,11 @@ class InfoScene(
     private val greeting: String,
     private val date: String,
     private val system: SystemState = SystemState(),
+    actions: List<IslandAction> = IslandConfig().quickActions,
 ) : Scene("info") {
     override val isCard = true
     private var tileGradient: LinearGradient? = null
-    private val row = ActionRow(quickActions(system))
+    private val row = ActionRow(quickActions(system, actions))
     override fun shape(l: IslandLayout) = l.card((76f + ActionRow.HEIGHT_DP) * l.density)
 
     override fun draw(c: Canvas, f: Frame, alpha: Float) {
@@ -349,7 +382,7 @@ class MediaCompactScene(
 }
 
 /** Artwork, title, progress and controls, the island's big music card. */
-class MediaCardScene(private val media: MediaState) : Scene("media-card:${media.packageName}") {
+class MediaCardScene(private val media: MediaState, private val tabs: List<IslandTab> = emptyList()) : Scene("media-card:${media.packageName}") {
     override val isCard = true
     override val app get() = media.openApp
     override val refreshMs get() = if (media.playing) MediaCompactScene.FRAME_MS else 0L
@@ -365,7 +398,8 @@ class MediaCardScene(private val media: MediaState) : Scene("media-card:${media.
         val inset = 24f * dp
 
         p.label(c, media.appLabel, right - inset, band, 13f * dp, SECONDARY, alpha, Paint.Align.RIGHT, p.medium, f.sideRoom(s, inset))
-        p.waveform(c, left + inset + 11f * dp, band, 22f * dp, 14f * dp, media.accent, media.playing, f.animMs, alpha)
+        if (tabs.isEmpty()) p.waveform(c, left + inset + 11f * dp, band, 22f * dp, 14f * dp, media.accent, media.playing, f.animMs, alpha)
+        else Tabs.draw(c, f, s, tabs, alpha)
 
         val row = artCenterY(f)
         val art = ART_DP * dp
@@ -397,6 +431,7 @@ class MediaCardScene(private val media: MediaState) : Scene("media-card:${media.
 
     override fun tap(x: Float, y: Float, f: Frame): Tap {
         val dp = f.dp
+        Tabs.hit(x, y, f, shape(f.layout), tabs)?.let { return Tap.Select(it.key) }
         val cy = controlsY(f)
         val r = 30f * dp
         return when {
@@ -455,7 +490,7 @@ private fun drawBadge(c: Canvas, f: Frame, a: LiveActivity, cx: Float, cy: Float
 /** The short value shown opposite the badge: running time, distance, or percent. */
 private fun LiveActivity.compactValue(nowMs: Long): String? = when (kind) {
     LiveKind.NAVIGATION -> title.takeIf { it.isNotBlank() }
-    LiveKind.PROGRESS -> if (progress >= 0f) "${(progress * 100).roundToInt()}%" else null
+    LiveKind.PROGRESS -> if (progress >= 0f) "${(progress * 100).roundToInt()}%" else subText.ifBlank { title }.takeIf { it.isNotBlank() }
     else -> clock(nowMs)
 }
 /** Time until the shown seconds change, on the chronometer's own phase (up or down alike). */
@@ -515,6 +550,7 @@ class LiveCompactScene(
 class LiveCardScene(
     private val activity: LiveActivity,
     private val system: SystemState = SystemState(),
+    private val tabs: List<IslandTab> = emptyList(),
 ) : Scene("live-card:${activity.key}") {
     override val isCard = true
     override val app get() = activity.openApp
@@ -538,8 +574,14 @@ class LiveCardScene(
         val band = f.bandY()
         val inset = 24f * dp
         p.label(c, activity.appLabel, right - inset, band, 13f * dp, SECONDARY, alpha, Paint.Align.RIGHT, p.medium, f.sideRoom(s, inset))
-        activity.clock(f.nowMs)?.let {
-            p.label(c, it, left + inset, band, 15f * dp, activity.accent(), alpha, Paint.Align.LEFT, p.semibold)
+        when {
+            tabs.isNotEmpty() -> Tabs.draw(c, f, s, tabs, alpha)
+            activity.kind == LiveKind.NAVIGATION && activity.subText.isNotBlank() ->
+                // ETA and remaining time, as the app reports them.
+                p.label(c, activity.subText, left + inset, band, 13f * dp, SECONDARY, alpha, Paint.Align.LEFT, p.medium, f.sideRoom(s, inset))
+            else -> activity.clock(f.nowMs)?.let {
+                p.label(c, it, left + inset, band, 15f * dp, activity.accent(), alpha, Paint.Align.LEFT, p.semibold)
+            }
         }
 
         val row = f.top + f.layout.bandHeight + 32f * dp
@@ -579,6 +621,7 @@ class LiveCardScene(
     }
 
     override fun tap(x: Float, y: Float, f: Frame): Tap {
+        Tabs.hit(x, y, f, shape(f.layout), tabs)?.let { return Tap.Select(it.key) }
         if (actions.isNotEmpty() && abs(y - actionsY(f)) <= 26f * f.dp) {
             actionRects(f).forEachIndexed { i, (l, r) -> if (x in l..r) return Tap.Launch(actions[i].intent) }
         }
@@ -608,6 +651,32 @@ class LiveCardScene(
         CallActions.isAccept(title) -> GREEN to Color.WHITE
         else -> 0x33FFFFFF to Color.WHITE
     }
+}
+
+// --- islands from other apps (broadcast API) --------------------------------------------------------
+
+class CustomCardScene(private val p: Peek.Custom) : Scene("custom-card:${p.id}") {
+    override val isCard = true
+    override fun shape(l: IslandLayout) = l.card(76f * l.density)
+
+    override fun draw(c: Canvas, f: Frame, alpha: Float) {
+        val s = shape(f.layout)
+        val painter = f.p
+        val dp = f.dp
+        val left = f.left(s)
+        val right = f.right(s)
+        val row = f.top + f.layout.bandHeight + 32f * dp
+        val size = 48f * dp
+        val ix = right - 18f * dp - size / 2f
+        painter.circle(c, ix, row, size / 2f, p.color, alpha)
+        painter.icon(c, R.drawable.ic_bolt, ix, row, size * 0.5f, Color.WHITE, alpha)
+        val textRight = ix - size / 2f - 14f * dp
+        val room = textRight - (left + 24f * dp)
+        painter.label(c, p.title, textRight, row - 11f * dp, 17f * dp, Color.WHITE, alpha, Paint.Align.RIGHT, painter.semibold, room)
+        painter.label(c, p.text, textRight, row + 12f * dp, 14f * dp, SECONDARY, alpha, Paint.Align.RIGHT, painter.regular, room)
+    }
+
+    override fun tap(x: Float, y: Float, f: Frame) = Tap.Dismiss
 }
 
 // --- messages ------------------------------------------------------------------------------------

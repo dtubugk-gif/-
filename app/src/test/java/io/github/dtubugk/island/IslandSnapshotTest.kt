@@ -31,7 +31,7 @@ import java.time.LocalDateTime
 class IslandSnapshotTest {
     @get:Rule
     val paparazzi = Paparazzi(
-        deviceConfig = DeviceConfig.PIXEL_5.copy(screenHeight = 7000, softButtons = false),
+        deviceConfig = DeviceConfig.PIXEL_5.copy(screenHeight = 9000, softButtons = false),
         maxPercentDifference = 0.1,
         useDeviceResolution = true,
     )
@@ -79,7 +79,7 @@ class IslandSnapshotTest {
 
     @Test
     fun screenActiveDark() {
-        paparazzi.unsafeUpdateConfig(DeviceConfig.PIXEL_5.copy(screenHeight = 7000, softButtons = false, nightMode = NightMode.NIGHT))
+        paparazzi.unsafeUpdateConfig(DeviceConfig.PIXEL_5.copy(screenHeight = 9000, softButtons = false, nightMode = NightMode.NIGHT))
         paparazzi.snapshot { Screen(dark = true, on = true) }
     }
 
@@ -134,6 +134,35 @@ class IslandSnapshotTest {
         val progress = island(IslandConfig(), IslandCommand.PROGRESS)
         column.addView(progress, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, short))
         (progress.host as IslandDirector).expand()
+        // Several activities at once: music, guidance and a timer, with tabs to switch between them.
+        val multi = island(IslandConfig(), null)
+        (multi.host as IslandDirector).apply {
+            setMedia(IslandDirector.sampleMedia(playing = true))
+            setActivities(listOf(
+                io.github.dtubugk.island.island.LiveActivity("nav", io.github.dtubugk.island.island.LiveKind.NAVIGATION, "מפות", "300 מ׳", "פנייה ימינה לרחוב הרצל",
+                    0L, false, null, emptyList(), subText = "הגעה 14:32 · 12 דק׳"),
+                io.github.dtubugk.island.island.LiveActivity("timer", io.github.dtubugk.island.island.LiveKind.TIMER, "שעון", "טיימר", "פסטה",
+                    clock().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() + 299_000L, true, null, emptyList()),
+            ))
+            expand()
+        }
+        column.addView(multi, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, tall))
+        // The same, switched to the guidance tab.
+        val multiNav = island(IslandConfig(), null)
+        (multiNav.host as IslandDirector).apply {
+            setMedia(IslandDirector.sampleMedia(playing = true))
+            setActivities(listOf(
+                io.github.dtubugk.island.island.LiveActivity("nav", io.github.dtubugk.island.island.LiveKind.NAVIGATION, "מפות", "300 מ׳", "פנייה ימינה לרחוב הרצל",
+                    0L, false, null, emptyList(), subText = "הגעה 14:32 · 12 דק׳"),
+            ))
+            onTap(io.github.dtubugk.island.island.Tap.Select("nav"))
+            expand()
+        }
+        column.addView(multiNav, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, short))
+        // An island another app asked for through the API.
+        val custom = island(IslandConfig(), null)
+        (custom.host as IslandDirector).post(io.github.dtubugk.island.island.Peek.Custom("speed", "87 קמ״ש", "כביש 6 · מגבלה 110", 0xFF34C759.toInt(), 0L, card = true))
+        column.addView(custom, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, short))
         paparazzi.snapshot(column)
     }
 

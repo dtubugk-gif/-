@@ -97,6 +97,11 @@ class IslandDirector(
     private var expanded = false
     /** The ringing call that opened the island by itself, if any. */
     private var autoExpandedCall: String? = null
+    /** The activity the user picked (tab or swipe) among concurrent ones; null = by priority. */
+    private var selectedKey: String? = null
+    /** Swiped up: hidden for a while, or until something urgent (a call, an alarm) arrives. */
+    private var snoozed = false
+    private val unsnooze = Runnable { setSnoozed(false) }
     private var peek: Peek? = null
     private val queue = ArrayDeque<Peek>()
     private var touching = false
@@ -156,11 +161,14 @@ class IslandDirector(
         // A ringing call opens the island by itself, answer and decline buttons ready, like the iPhone.
         val incoming = list.firstOrNull { it.key !in known && isRinging(it) }
         if (incoming != null && active && config.liveActivities) {
+            if (snoozed) setSnoozed(false)
             expanded = true
             peek = null
             autoExpandedCall = incoming.key
+            selectedKey = null
             rearm()
         }
+        if (selectedKey != null && candidates().none { it.key == selectedKey }) selectedKey = null
         // The call it opened for is gone (answered elsewhere, declined, missed): close with it.
         val opened = autoExpandedCall
         if (opened != null && list.none { it.key == opened }) {
@@ -210,6 +218,17 @@ class IslandDirector(
         if (p is Peek.Charging && expanded) return
         // A newer message from the same chat replaces the waiting one instead of queueing twice.
         if (p is Peek.Message) queue.removeAll { it is Peek.Message && it.key == p.key }
+        // An API island updated by its app replaces its previous version, shown or waiting.
+        if (p is Peek.Custom) {
+            queue.removeAll { it is Peek.Custom && it.id == p.id }
+            val current = peek
+            if (current is Peek.Custom && current.id == p.id) {
+                peek = p
+                rearm()
+                resolve()
+                return
+            }
+        }
         if (peek == null && !expanded) {
             peek = p
             rearm()
@@ -230,6 +249,79 @@ class IslandDirector(
     fun expand() {
         expanded = true
         peek = null
+        rearm()
+        resolve()
+    }
+
+    /** An app took back its island. */
+    fun hideCustom(id: String) {
+        queue.removeAll { it is Peek.Custom && it.id == id }
+        val current = peek
+        if (current is Peek.Custom && current.id == id) nextPeek()
+    }
+
+    private fun setSnoozed(on: Boolean) {
+        snoozed = on
+        handler.removeCallbacks(unsnooze)
+        if (on) {
+            expanded = false
+            handler.postDelayed(unsnooze, SNOOZE_MS)
+        }
+        view.setSnoozed(on)
+    }
+
+    // --- concurrent activities ----------------------------------------------------------------
+
+    /** Everything live right now, in priority order: call/alarm, music, guidance, recording, timer, progress. */
+    private fun candidates(): List<Candidate> {
+        val out = ArrayList<Candidate>()
+        val live = listOfNotNull(demoActivity) + activities
+        fun add(kind: LiveKind) {
+            if (!config.liveActivities) return
+            live.firstOrNull { it.kind == kind }?.let { out += Candidate.Live(it) }
+        }
+        add(LiveKind.CALL)
+        add(LiveKind.ALARM)
+        if (config.music) {
+            currentMedia()?.let { m ->
+                val recent = SystemClock.elapsedRealtime() - mediaPausedAt < PAUSED_LINGER_MS
+                if (m.playing || recent || m === demoMedia || chip != null) out += Candidate.Music(m)
+            }
+        }
+        add(LiveKind.NAVIGATION)
+        add(LiveKind.RECORDING)
+        add(LiveKind.TIMER)
+        add(LiveKind.PROGRESS)
+        return out
+    }
+
+    private sealed class Candidate(val key: String) {
+        class Live(val activity: LiveActivity) : Candidate(activity.key)
+        class Music(val media: MediaState) : Candidate("music:" + media.packageName)
+    }
+
+    /** The one the island shows: the user's pick if still live, else the most important. */
+    private fun current(list: List<Candidate> = candidates()): Candidate? =
+        list.firstOrNull { it.key == selectedKey } ?: list.firstOrNull()
+
+    private fun tabsFor(list: List<Candidate>, current: Candidate?): List<IslandTab> {
+        if (list.size < 2) return emptyList()
+        return list.map { c ->
+            val (icon, accent) = when (c) {
+                is Candidate.Music -> R.drawable.ic_music to c.media.accent
+                is Candidate.Live -> c.activity.tabIcon() to c.activity.tabAccent()
+            }
+            IslandTab(c.key, icon, accent, c === current)
+        }
+    }
+
+    /** Sideways swipe: next song on music, else the next concurrent activity, else dismiss a notice. */
+    private fun cycle(step: Int) {
+        val list = candidates()
+        val cur = current(list) ?: return
+        if (list.size < 2) return
+        val i = list.indexOf(cur)
+        selectedKey = list[Math.floorMod(i + step, list.size)].key
         rearm()
         resolve()
     }
@@ -334,6 +426,11 @@ class IslandDirector(
                 currentMedia()?.controls?.previous()
                 schedule()
             }
+            is Tap.Select -> {
+                selectedKey = tap.key
+                rearm()
+                resolve()
+            }
             is Tap.Act -> {
                 if (tap.action == IslandAction.SETTINGS) {
                     sys.openSettings()
@@ -359,11 +456,49 @@ class IslandDirector(
     }
 
     override fun onLongPress() {
+        // On a timer, stopwatch or recording: its own stop/pause button, if it has one.
+        val cur = current()
+        if (cur is Candidate.Live && cur.activity.kind in STOPPABLE) {
+            val stop = cur.activity.actions.firstOrNull { a -> STOP_WORDS.any { it in a.title.lowercase() } }
+            if (stop?.intent != null) {
+                sys.launch(stop.intent)
+                collapse()
+                return
+            }
+            if (!expanded) {
+                expand()
+                return
+            }
+        }
         sys.openSettings()
         collapse()
     }
 
+    override fun onSwipe(direction: Int) {
+        val cur = current()
+        when {
+            peek != null -> nextPeek()
+            cur is Candidate.Music && (view.scene is MediaCompactScene || view.scene is MediaCardScene) && candidates().size < 2 ->
+                onTap(if (direction < 0) Tap.Next else Tap.Previous)
+            candidates().size >= 2 -> cycle(if (direction < 0) 1 else -1)
+            cur is Candidate.Music -> onTap(if (direction < 0) Tap.Next else Tap.Previous)
+        }
+    }
+
+    override fun onSwipeUp() {
+        if (peek != null) {
+            nextPeek()
+            return
+        }
+        setSnoozed(true)
+    }
+
     override fun onPullDown() {
+        // First pull opens the island's own pop-up; a pull on an open card reaches the shade.
+        if (!expanded && peek == null) {
+            expand()
+            return
+        }
         sys.openNotifications()
         expanded = false
         peek = null
@@ -378,7 +513,13 @@ class IslandDirector(
 
     override fun onTouching(active: Boolean) {
         touching = active
-        if (active) handler.removeCallbacks(timeout) else schedule()
+        if (active) {
+            // The clock stops under the finger and starts afresh when it lifts, whatever it did.
+            handler.removeCallbacks(timeout)
+            armedFor = null
+        } else {
+            schedule()
+        }
     }
 
     override fun onWindowSizeNeeded(width: Int, height: Int) = sys.onWindowSizeNeeded(width, height)
@@ -444,6 +585,8 @@ class IslandDirector(
             }
             peek is Peek.Message -> MESSAGE_MS
             peek is Peek.Charging || peek is Peek.BatteryFull -> CHARGING_MS
+            peek is Peek.Unlocked -> UNLOCK_MS
+            peek is Peek.Custom -> (peek as Peek.Custom).durationMs.let { if (it <= 0L) return else it.coerceIn(800L, MAX_CUSTOM_MS) }
             peek != null -> NOTICE_MS
             else -> {
                 // Paused music leaves the island after a while; re-check when that time comes.
@@ -463,33 +606,30 @@ class IslandDirector(
 
     private fun live(kind: LiveKind) = (listOfNotNull(demoActivity) + activities).firstOrNull { it.kind == kind }
     private fun call() = live(LiveKind.CALL) ?: live(LiveKind.ALARM)
-    /** Below music: guidance, then a running timer, then a download or delivery in progress. */
     private fun timer() = live(LiveKind.NAVIGATION) ?: live(LiveKind.RECORDING) ?: live(LiveKind.TIMER) ?: live(LiveKind.PROGRESS)
 
     private fun compactScene(): Scene? {
         val cover = chip.takeIf { config.absorbChip }
-        if (config.liveActivities) call()?.let { return LiveCompactScene(it, cover) }
-        if (config.music) {
-            currentMedia()?.let { m ->
-                val recent = SystemClock.elapsedRealtime() - mediaPausedAt < PAUSED_LINGER_MS
-                // While Samsung still shows its chip, keep swallowing it, paused or not.
-                if (m.playing || recent || m === demoMedia || cover != null) return MediaCompactScene(m, cover)
-            }
+        return when (val c = current()) {
+            is Candidate.Live -> LiveCompactScene(c.activity, cover)
+            is Candidate.Music -> MediaCompactScene(c.media, cover)
+            null -> null
         }
-        if (config.liveActivities) timer()?.let { return LiveCompactScene(it, cover) }
-        return null
     }
 
     private fun expandedScene(): Scene {
-        if (config.liveActivities) call()?.let { return LiveCardScene(it, system) }
-        if (config.music) {
-            currentMedia()?.let { m ->
+        val list = candidates()
+        val cur = current(list)
+        val tabs = tabsFor(list, cur)
+        when (cur) {
+            is Candidate.Live -> return LiveCardScene(cur.activity, system, tabs)
+            is Candidate.Music -> {
                 // Paused long ago means it is not what the user wants; show the info card.
-                val fresh = m.playing || SystemClock.elapsedRealtime() - mediaPausedAt < RESUMABLE_MS
-                if (fresh) return MediaCardScene(m)
+                val fresh = cur.media.playing || SystemClock.elapsedRealtime() - mediaPausedAt < RESUMABLE_MS || cur.media === demoMedia
+                if (fresh) return MediaCardScene(cur.media, tabs)
             }
+            null -> Unit
         }
-        if (config.liveActivities) timer()?.let { return LiveCardScene(it, system) }
         val now = clock()
         return InfoScene(
             config = config,
@@ -503,6 +643,7 @@ class IslandDirector(
             },
             date = now.format(DateTimeFormatter.ofPattern("EEEE, d 'ב'MMMM", HEBREW)),
             system = system,
+            actions = config.quickActions,
         )
     }
 
@@ -544,16 +685,43 @@ class IslandDirector(
             NoticeScene.Glyph.Icon(R.drawable.ic_dnd, if (p.on) IslandPainter.PURPLE else 0xFF3A3A44.toInt()),
         )
         is Peek.Headphones -> NoticeScene("phones", p.name, NoticeScene.Glyph.Icon(R.drawable.ic_headphones, IslandPainter.BLUE), "מחוברות", IslandPainter.BLUE)
+        is Peek.Hotspot -> NoticeScene("hotspot", if (p.on) "נקודה חמה פעילה" else "נקודה חמה כבויה", NoticeScene.Glyph.Icon(R.drawable.ic_hotspot, if (p.on) IslandPainter.BLUE else 0xFF3A3A44.toInt()))
+        is Peek.Vpn -> NoticeScene("vpn", if (p.on) "VPN מחובר" else "VPN מנותק", NoticeScene.Glyph.Icon(R.drawable.ic_vpn, if (p.on) IslandPainter.GREEN else 0xFF3A3A44.toInt()))
+        is Peek.Unlocked -> NoticeScene("unlock", "נפתח", NoticeScene.Glyph.Icon(R.drawable.ic_lock_open, IslandPainter.GREEN))
+        is Peek.Custom -> if (p.card) {
+            CustomCardScene(p)
+        } else {
+            NoticeScene("custom:" + p.id, p.title, NoticeScene.Glyph.Icon(R.drawable.ic_bolt, p.color), p.text, Color.WHITE)
+        }
     }
 
     private fun allowed(p: Peek) = when (p) {
         is Peek.Message -> config.notifications
         is Peek.Charging, is Peek.BatteryFull -> config.chargingAnimation
-        is Peek.LowBattery, is Peek.Ringer, is Peek.DoNotDisturb, is Peek.Headphones, is Peek.PowerSave -> config.systemAlerts
+        is Peek.LowBattery, is Peek.Ringer, is Peek.DoNotDisturb, is Peek.Headphones, is Peek.PowerSave, is Peek.Hotspot, is Peek.Vpn, is Peek.Unlocked -> config.systemAlerts
+        is Peek.Custom -> config.api
     }
 
     fun release() {
         handler.removeCallbacksAndMessages(null)
+    }
+
+    private fun LiveActivity.tabIcon() = when (kind) {
+        LiveKind.CALL -> R.drawable.ic_call
+        LiveKind.ALARM -> R.drawable.ic_alarm
+        LiveKind.NAVIGATION -> R.drawable.ic_navigation
+        LiveKind.RECORDING -> R.drawable.ic_timer
+        LiveKind.TIMER -> R.drawable.ic_timer
+        LiveKind.PROGRESS -> R.drawable.ic_download
+    }
+
+    private fun LiveActivity.tabAccent() = when (kind) {
+        LiveKind.CALL -> IslandPainter.GREEN
+        LiveKind.ALARM -> IslandPainter.RED
+        LiveKind.NAVIGATION -> IslandPainter.BLUE
+        LiveKind.RECORDING -> IslandPainter.RED
+        LiveKind.TIMER -> IslandPainter.ORANGE
+        LiveKind.PROGRESS -> IslandPainter.BLUE
     }
 
     companion object {
@@ -563,6 +731,11 @@ class IslandDirector(
         const val MESSAGE_MS = 4500L
         const val CHARGING_MS = 3200L
         const val NOTICE_MS = 2600L
+        const val UNLOCK_MS = 1300L
+        const val MAX_CUSTOM_MS = 120_000L
+        const val SNOOZE_MS = 120_000L
+        private val STOPPABLE = setOf(LiveKind.TIMER, LiveKind.RECORDING, LiveKind.PROGRESS)
+        private val STOP_WORDS = listOf("עצור", "עצירה", "השהה", "השהיה", "סיים", "סיום", "בטל", "ביטול", "stop", "pause", "cancel", "end")
         const val PAUSED_LINGER_MS = 30_000L
         const val RESUMABLE_MS = 30 * 60_000L
         const val DEMO_MS = 12_000L

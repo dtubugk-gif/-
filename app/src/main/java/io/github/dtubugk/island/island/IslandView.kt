@@ -45,6 +45,9 @@ class IslandView(
         fun onTap(tap: Tap) {}
         fun onLongPress() {}
         fun onPullDown() {}
+        /** Sideways swipe: -1 = towards the left, +1 = towards the right. */
+        fun onSwipe(direction: Int) {}
+        fun onSwipeUp() {}
         fun onOutsideTouch() {}
         /** Auto-close timers pause while a finger is on the island. */
         fun onTouching(active: Boolean) {}
@@ -83,6 +86,14 @@ class IslandView(
 
     /** Host-driven visibility (screen off, landscape); combined with the user's own switch. */
     private var hostVisible = true
+    /** Swiped up by the user: hidden for a while. */
+    private var snoozed = false
+
+    fun setSnoozed(on: Boolean) {
+        if (snoozed == on) return
+        snoozed = on
+        updateShown(animate = true)
+    }
 
     private var frameLoopRunning = false
     private var lastFrameNanos = 0L
@@ -169,12 +180,13 @@ class IslandView(
                 pullDown()
                 return true
             }
-            // Music: a sideways swipe skips, like flicking to the next card.
-            if (abs(velocityX) > 500f * dp && abs(velocityX) > abs(velocityY) * 1.5f &&
-                (scene is MediaCompactScene || scene is MediaCardScene)
-            ) {
-                haptic(HapticFeedbackConstants.VIRTUAL_KEY)
-                host?.onTap(if (velocityX < 0f) Tap.Next else Tap.Previous)
+            if (velocityY < -600f * dp && abs(velocityY) > abs(velocityX)) {
+                swipeUp()
+                return true
+            }
+            // Sideways: next song, the next concurrent activity, or a notice dismissed.
+            if (abs(velocityX) > 500f * dp && abs(velocityX) > abs(velocityY) * 1.5f) {
+                swipeSideways(if (velocityX < 0f) -1 else 1)
                 return true
             }
             return false
@@ -182,11 +194,15 @@ class IslandView(
 
         override fun onScroll(e1: MotionEvent?, e2: MotionEvent, distanceX: Float, distanceY: Float): Boolean {
             val start = e1 ?: return false
-            if (e2.y - start.y > 36f * dp) {
-                pullDown()
-                return true
+            val dx = e2.x - start.x
+            val dy = e2.y - start.y
+            when {
+                dy > 36f * dp && abs(dy) > abs(dx) -> pullDown()
+                dy < -36f * dp && abs(dy) > abs(dx) -> swipeUp()
+                abs(dx) > 48f * dp && abs(dx) > abs(dy) * 1.5f -> swipeSideways(if (dx < 0f) -1 else 1)
+                else -> return false
             }
-            return false
+            return true
         }
     })
 
@@ -254,7 +270,7 @@ class IslandView(
     }
 
     /** Whether the island is (or is becoming) visible. */
-    val isShownTarget: Boolean get() = hostVisible && config.visible
+    val isShownTarget: Boolean get() = hostVisible && config.visible && !snoozed
 
     /** Current resting window size for the overlay host. */
     fun restingWindowSize(): Pair<Int, Int> = windowSizeFor(animating = false)
@@ -424,6 +440,20 @@ class IslandView(
         host?.onPullDown()
     }
 
+    private fun swipeUp() {
+        if (pulledDown) return
+        pulledDown = true
+        haptic(HapticFeedbackConstants.VIRTUAL_KEY)
+        host?.onSwipeUp()
+    }
+
+    private fun swipeSideways(direction: Int) {
+        if (pulledDown) return
+        pulledDown = true
+        haptic(HapticFeedbackConstants.VIRTUAL_KEY)
+        host?.onSwipe(direction)
+    }
+
     private fun hitIsland(x: Float, y: Float, slop: Float): Boolean =
         abs(x - centerX() - offset.value) <= width.value / 2f + slop && y >= layout.top - slop && y <= layout.top + height.value + slop
 
@@ -469,7 +499,9 @@ class IslandView(
             islandPaint.clearShadowLayer()
         }
         rect.set(left, top, left + w, top + h)
+        islandPaint.alpha = (255 * config.opacity.coerceIn(IslandConfig.MIN_OPACITY, 1f)).roundToInt()
         canvas.drawRoundRect(rect, r, r, islandPaint)
+        islandPaint.alpha = 255
         if (drawLens) drawLens(canvas, centerX() + layout.holeOffsetX, top + layout.holeCenterY)
 
         clipPath.rewind()

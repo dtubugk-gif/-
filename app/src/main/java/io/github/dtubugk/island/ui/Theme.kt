@@ -8,7 +8,11 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import android.os.Build
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -95,8 +99,15 @@ private val AppTypography = Typography(
 )
 
 @Composable
-fun IslandTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = if (dark) Dark else Light, typography = AppTypography) {
+fun IslandTheme(dark: Boolean = isSystemInDarkTheme(), dynamic: Boolean = true, content: @Composable () -> Unit) {
+    // Material You: the app takes the wallpaper's colors on Android 12+, with the static scheme as a fallback.
+    val context = LocalContext.current
+    val scheme = when {
+        dynamic && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        dark -> Dark
+        else -> Light
+    }
+    MaterialTheme(colorScheme = scheme, typography = AppTypography) {
         // The whole app is Hebrew, so it is right-to-left even on a phone set to English.
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl, content = content)
     }

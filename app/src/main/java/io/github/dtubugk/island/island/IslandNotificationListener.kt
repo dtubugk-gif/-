@@ -35,6 +35,22 @@ class IslandNotificationListener : NotificationListenerService() {
     private val controls = HashMap<android.media.session.MediaSession.Token, MediaControls>()
     /** App icons by package, so a re-posted activity compares equal and doesn't churn the island. */
     private val appIcons = HashMap<String, Drawable?>()
+    /** System status notifications (hotspot, VPN) currently up, by key. */
+    private val statusKeys = HashMap<String, Int>()
+
+    /** Hotspot or VPN, told by the system's own ongoing notification. */
+    private fun statusKind(sbn: StatusBarNotification): Int? {
+        if (!sbn.isOngoing || sbn.packageName !in SYSTEM_PACKAGES) return null
+        val e = sbn.notification.extras
+        val text = (e.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty() + " " +
+            e.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()).lowercase()
+        return when {
+            HOTSPOT_WORDS.any { it in text } -> STATUS_HOTSPOT
+            VPN_WORDS.any { it in text } -> STATUS_VPN
+            else -> null
+        }
+    }
+
     /** Keys currently shown as calls/timers, so an update that stops being one still refreshes them. */
     private var liveKeys: Set<String> = emptySet()
     private var artCache: Triple<Long, Bitmap, Int>? = null
@@ -92,6 +108,13 @@ class IslandNotificationListener : NotificationListenerService() {
 
     private fun handlePosted(sbn: StatusBarNotification) {
         val n = sbn.notification
+        statusKind(sbn)?.let { kind ->
+            if (sbn.key !in statusKeys) {
+                statusKeys[sbn.key] = kind
+                LiveBus.peek(if (kind == STATUS_HOTSPOT) Peek.Hotspot(true) else Peek.Vpn(true))
+            }
+            return
+        }
         // A ringing call can turn into a missed-call notice under the same key: refresh then too.
         if (isLiveCandidate(sbn) || sbn.key in liveKeys) publishActivities()
         val previous = seen.put(sbn.key, n.`when` to contentHash(n))
@@ -120,6 +143,9 @@ class IslandNotificationListener : NotificationListenerService() {
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         runCatching {
+            statusKeys.remove(sbn.key)?.let { kind ->
+                LiveBus.peek(if (kind == STATUS_HOTSPOT) Peek.Hotspot(false) else Peek.Vpn(false))
+            }
             seen.remove(sbn.key)
             // Read or dismissed elsewhere: the island must not show it later from its queue.
             LiveBus.notificationRemoved(sbn.key)
@@ -180,6 +206,8 @@ class IslandNotificationListener : NotificationListenerService() {
             sbn.isOngoing && e.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER) -> LiveKind.TIMER
             // A determinate progress bar: download, upload, delivery or ride on its way.
             sbn.isOngoing && e.getInt(Notification.EXTRA_PROGRESS_MAX) > 0 && !e.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE) -> LiveKind.PROGRESS
+            // Android 16 Live Updates (rides, deliveries, scores): apps ask for promotion with this extra.
+            sbn.isOngoing && e.getBoolean(EXTRA_REQUEST_PROMOTED_ONGOING) -> LiveKind.PROGRESS
             else -> null
         }
     }
@@ -202,6 +230,7 @@ class IslandNotificationListener : NotificationListenerService() {
                         else -> null
                     },
                     progress = if (kind == LiveKind.PROGRESS && max > 0) (extras.getInt(Notification.EXTRA_PROGRESS).toFloat() / max).coerceIn(0f, 1f) else -1f,
+                    subText = (extras.getCharSequence(EXTRA_SHORT_CRITICAL_TEXT) ?: extras.getCharSequence(Notification.EXTRA_SUB_TEXT))?.toString().orEmpty(),
                     appLabel = appLabel(sbn.packageName),
                     title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty(),
                     text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty(),
@@ -367,6 +396,14 @@ class IslandNotificationListener : NotificationListenerService() {
         const val ART_PX = 160
         val DEFAULT_ACCENT = 0xFFFF7EB0.toInt()
         val NAV_PACKAGES = setOf("com.google.android.apps.maps", "com.waze", "com.here.app.maps", "com.sygic.aura")
+        val SYSTEM_PACKAGES = setOf("android", "com.android.systemui", "com.android.settings", "com.android.networkstack.tethering", "com.google.android.networkstack.tethering", "com.samsung.android.net.wifi.wifiguider")
+        val HOTSPOT_WORDS = listOf("hotspot", "נקודה חמה", "tethering", "שיתוף אינטרנט")
+        val VPN_WORDS = listOf("vpn")
+        const val STATUS_HOTSPOT = 1
+        const val STATUS_VPN = 2
+        // Android 16 keys, spelled out so the app builds against older SDKs too.
+        const val EXTRA_REQUEST_PROMOTED_ONGOING = "android.requestPromotedOngoing"
+        const val EXTRA_SHORT_CRITICAL_TEXT = "android.shortCriticalText"
         val RECORDER_PACKAGES = setOf("com.samsung.android.app.smartcapture", "com.sec.android.app.voicenote", "com.google.android.apps.recorder")
         val QUIET_CATEGORIES = setOf(
             Notification.CATEGORY_CALL,
