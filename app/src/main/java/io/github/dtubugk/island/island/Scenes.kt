@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.drawable.Drawable
 import io.github.dtubugk.island.R
@@ -48,6 +49,8 @@ class Frame(
     val nowMs: Long,
     /** Monotonic time, for animation. */
     val animMs: Long,
+    /** The camera's x in view pixels; content keeps clear of it. */
+    val holeX: Float = cx,
 ) {
     val dp get() = layout.density
 }
@@ -230,23 +233,40 @@ class NoticeScene(
 // --- music -------------------------------------------------------------------------------------
 
 /** Artwork by the camera on the right, live waveform on the left: the classic island. */
-class MediaCompactScene(private val media: MediaState) : Scene("media-c:${media.packageName}") {
+class MediaCompactScene(
+    private val media: MediaState,
+    /** Samsung's own chip for this song, in screen pixels: the island stretches over it. */
+    private val cover: RectF? = null,
+) : Scene("media-c:${media.packageName}") {
     override val refreshMs get() = if (media.playing) FRAME_MS else 0L
-    override fun shape(l: IslandLayout) = l.compact
+    override fun shape(l: IslandLayout) = l.compact.covering(cover, l)
 
     override fun draw(c: Canvas, f: Frame, alpha: Float) {
         val s = shape(f.layout)
         val h = s.height
         val mid = f.top + h / 2f
         val art = h * 0.66f
-        f.p.artwork(c, media.art, f.right(s) - h / 2f, mid, art, art * 0.26f, media.accent, alpha)
-        f.p.waveform(c, f.left(s) + h / 2f + h * 0.05f, mid, h * 0.62f, h * 0.46f, media.accent, media.playing, f.animMs, alpha)
+        val artX = f.right(s) - h / 2f
+        val waveX = f.left(s) + h / 2f + h * 0.05f
+        f.p.artwork(c, media.art, artX, mid, art, art * 0.26f, media.accent, alpha)
+        f.p.waveform(c, waveX, mid, h * 0.62f, h * 0.46f, media.accent, media.playing, f.animMs, alpha)
+
+        // Stretched over Samsung's chip, the island takes over what the chip said: the title.
+        val gap = 10f * f.dp
+        val clear = f.layout.holeRadius + gap
+        val rightRoom = (f.holeX + clear) to (artX - art / 2f - gap)
+        val leftRoom = (waveX + h * 0.31f + gap) to (f.holeX - clear)
+        val room = listOf(rightRoom, leftRoom).maxByOrNull { it.second - it.first } ?: return
+        if (room.second - room.first >= MIN_TITLE_ROOM_DP * f.dp) {
+            f.p.marquee(c, media.title, room.first, room.second, mid, h * 0.4f, 0xE6FFFFFF.toInt(), alpha, if (media.playing) f.animMs else 0L)
+        }
     }
 
     override fun tap(x: Float, y: Float, f: Frame) = Tap.Expand
 
     companion object {
         const val FRAME_MS = 33L
+        private const val MIN_TITLE_ROOM_DP = 56f
     }
 }
 
@@ -329,9 +349,12 @@ private fun LiveActivity.clock(nowMs: Long): String? {
 }
 
 /** Green phone and running call time, or orange timer and countdown, around the camera. */
-class LiveCompactScene(private val activity: LiveActivity) : Scene("live-c:${activity.key}") {
+class LiveCompactScene(
+    private val activity: LiveActivity,
+    private val cover: RectF? = null,
+) : Scene("live-c:${activity.key}") {
     override val refreshMs get() = if (activity.chronometerBase > 0L) 1000L else 0L
-    override fun shape(l: IslandLayout) = l.compact
+    override fun shape(l: IslandLayout) = l.compact.covering(cover, l)
 
     override fun draw(c: Canvas, f: Frame, alpha: Float) {
         val s = shape(f.layout)
@@ -411,18 +434,10 @@ class LiveCardScene(private val activity: LiveActivity) : Scene("live-card:${act
         }
     }
 
-    private fun actionColors(title: String): Pair<Int, Int> {
-        val t = title.lowercase()
-        return when {
-            DECLINE.any { it in t } -> RED to Color.WHITE
-            ACCEPT.any { it in t } -> GREEN to Color.WHITE
-            else -> 0x33FFFFFF to Color.WHITE
-        }
-    }
-
-    private companion object {
-        val DECLINE = listOf("נתק", "דחה", "דחיי", "סיים", "סיום", "בטל", "decline", "end", "hang", "reject", "cancel", "stop")
-        val ACCEPT = listOf("ענה", "מענה", "answer", "accept")
+    private fun actionColors(title: String): Pair<Int, Int> = when {
+        CallActions.isDecline(title) -> RED to Color.WHITE
+        CallActions.isAccept(title) -> GREEN to Color.WHITE
+        else -> 0x33FFFFFF to Color.WHITE
     }
 }
 

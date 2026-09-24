@@ -1,5 +1,6 @@
 package io.github.dtubugk.island.island
 
+import android.graphics.RectF
 import io.github.dtubugk.island.data.IslandConfig
 import io.github.dtubugk.island.data.TextSide
 import kotlin.math.max
@@ -16,7 +17,22 @@ data class ScreenSpec(
     val hole: Hole?,
 )
 
-data class IslandShape(val width: Float, val height: Float, val radius: Float)
+/**
+ * A resting island shape. [offsetX] moves its center away from the camera, used when the island
+ * stretches sideways to swallow Samsung's status-bar chip.
+ */
+data class IslandShape(val width: Float, val height: Float, val radius: Float, val offsetX: Float = 0f) {
+    /** This shape grown to also cover [cover] (screen pixels), keeping the top edge. */
+    fun covering(cover: RectF?, layout: IslandLayout): IslandShape {
+        if (cover == null || cover.isEmpty) return this
+        val pad = 4f * layout.density
+        val c = layout.centerX + offsetX
+        val left = minOf(c - width / 2f, cover.left - pad).coerceAtLeast(0f)
+        val right = maxOf(c + width / 2f, cover.right + pad).coerceAtMost(layout.screenWidth)
+        val h = maxOf(height, cover.bottom + pad - layout.top)
+        return IslandShape(right - left, h, h / 2f, (left + right) / 2f - layout.centerX)
+    }
+}
 
 /**
  * Resolved island geometry in screen pixels. Every shape is horizontally centered on [centerX]
@@ -41,6 +57,8 @@ data class IslandLayout(
     /** Where the idle text sits: its center, relative to [centerX]. */
     val textCenterX: Float,
     val density: Float,
+    /** Screen width in pixels, to keep stretched shapes on screen. */
+    val screenWidth: Float = 0f,
 ) {
     /** A card as wide as [expanded], with [contentHeight] below the camera band. */
     fun card(contentHeight: Float): IslandShape {
@@ -119,6 +137,7 @@ object IslandGeometry {
             holeRadius = holeD / 2f,
             textCenterX = if (config.textSide == TextSide.RIGHT) textCenter else -textCenter,
             density = dp,
+            screenWidth = screen.width,
         )
     }
 }

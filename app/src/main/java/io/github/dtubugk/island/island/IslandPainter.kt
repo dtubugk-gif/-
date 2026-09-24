@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapShader
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
@@ -156,6 +157,43 @@ class IslandPainter(private val context: Context) {
             rect.set(x, cy - h / 2f, x + barW, cy + h / 2f)
             canvas.drawRoundRect(rect, barW / 2f, barW / 2f, fill)
         }
+    }
+
+    private val fade = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_OUT)
+    }
+
+    /**
+     * One line of text between [left] and [right]. If it fits it sits against the right edge
+     * (Hebrew reads from there); otherwise it scrolls in its reading direction with soft edges.
+     */
+    fun marquee(canvas: Canvas, value: String, left: Float, right: Float, centerY: Float, size: Float, color: Int, alpha: Float, timeMs: Long) {
+        if (value.isBlank() || right <= left) return
+        val width = measure(value, size, medium)
+        val room = right - left
+        if (width <= room) {
+            label(canvas, value, right, centerY, size, color, alpha, Paint.Align.RIGHT, medium)
+            return
+        }
+        val edge = size * 0.9f
+        val layer = canvas.saveLayer(left, centerY - size, right, centerY + size, null)
+        val cycle = width + size * 2.5f
+        val phase = (timeMs * size * 1.6f / 1000f) % cycle
+        val rtl = value.firstOrNull { Character.isLetter(it) }?.let {
+            Character.getDirectionality(it) == Character.DIRECTIONALITY_RIGHT_TO_LEFT
+        } ?: false
+        if (rtl) {
+            label(canvas, value, right + phase, centerY, size, color, alpha, Paint.Align.RIGHT, medium)
+            label(canvas, value, right + phase - cycle, centerY, size, color, alpha, Paint.Align.RIGHT, medium)
+        } else {
+            label(canvas, value, left - phase, centerY, size, color, alpha, Paint.Align.LEFT, medium)
+            label(canvas, value, left - phase + cycle, centerY, size, color, alpha, Paint.Align.LEFT, medium)
+        }
+        fade.shader = LinearGradient(left, 0f, left + edge, 0f, Color.BLACK, Color.TRANSPARENT, Shader.TileMode.CLAMP)
+        canvas.drawRect(left, centerY - size, left + edge, centerY + size, fade)
+        fade.shader = LinearGradient(right - edge, 0f, right, 0f, Color.TRANSPARENT, Color.BLACK, Shader.TileMode.CLAMP)
+        canvas.drawRect(right - edge, centerY - size, right, centerY + size, fade)
+        canvas.restoreToCount(layer)
     }
 
     fun progress(canvas: Canvas, left: Float, right: Float, cy: Float, height: Float, fraction: Float, alpha: Float) {

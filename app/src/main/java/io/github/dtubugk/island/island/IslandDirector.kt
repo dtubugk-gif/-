@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.Shader
 import android.os.Handler
 import android.os.Looper
@@ -69,6 +70,9 @@ class IslandDirector(
     private var demoMedia: MediaState? = null
     private var demoActivity: LiveActivity? = null
 
+    /** Where Samsung's status-bar chip for the current live activity is, if it is on screen. */
+    private var chip: RectF? = null
+
     private var expanded = false
     private var peek: Peek? = null
     private val queue = ArrayDeque<Peek>()
@@ -99,7 +103,37 @@ class IslandDirector(
     }
 
     fun setActivities(list: List<LiveActivity>) {
+        val known = activities.mapTo(HashSet()) { it.key }
         activities = list
+        // A ringing call opens the island by itself, answer and decline buttons ready, like the iPhone.
+        val incoming = list.firstOrNull { it.kind == LiveKind.CALL && it.key !in known && isRinging(it) }
+        if (incoming != null && active && config.liveActivities) {
+            expanded = true
+            peek = null
+        }
+        resolve()
+    }
+
+    private fun isRinging(a: LiveActivity) = a.kind == LiveKind.CALL && a.actions.any { CallActions.isAccept(it.title) }
+
+    /**
+     * Text that identifies Samsung's chip for what the island is showing: the song or the
+     * caller. The service looks for it in the status bar and reports back with [setChip].
+     */
+    fun chipNeedles(): List<String> {
+        if (!config.absorbChip) return emptyList()
+        val needles = ArrayList<String>()
+        if (config.liveActivities) call()?.let { needles += it.title }
+        if (config.music) currentMedia()?.let { needles += it.title }
+        if (config.liveActivities) timer()?.let { needles += it.title }
+        return needles.filter { it.trim().length >= 2 }
+    }
+
+    fun setChip(rect: RectF?) {
+        val same = rect == chip || (rect != null && chip != null &&
+            kotlin.math.abs(rect.left - chip!!.left) < 2f && kotlin.math.abs(rect.right - chip!!.right) < 2f)
+        if (same) return
+        chip = rect
         resolve()
     }
 
@@ -136,9 +170,12 @@ class IslandDirector(
                 if (autoDismiss) handler.postDelayed(endDemo, DEMO_MS)
             }
             IslandCommand.CALL -> {
-                demoActivity = LiveActivity("demo-call", LiveKind.CALL, "טלפון", "דני", "שיחה פעילה",
-                    java.lang.System.currentTimeMillis() - 83_000L, countDown = false, openApp = null, actions = emptyList())
-                expanded = false
+                // An incoming call: the island opens by itself with the call's own buttons.
+                demoActivity = LiveActivity("demo-call", LiveKind.CALL, "טלפון", "דני", "שיחה נכנסת",
+                    0L, countDown = false, openApp = null,
+                    actions = listOf(LiveAction("דחייה", null), LiveAction("מענה", null)))
+                expanded = true
+                peek = null
                 resolve()
                 if (autoDismiss) handler.postDelayed(endDemo, DEMO_MS)
             }
@@ -251,7 +288,11 @@ class IslandDirector(
         handler.removeCallbacks(timeout)
         if (touching || !autoDismiss) return
         val ms = when {
-            expanded -> if (view.scene is MediaCardScene) MEDIA_CARD_MS else CARD_MS
+            expanded -> when {
+                view.scene is MediaCardScene -> MEDIA_CARD_MS
+                call()?.let(::isRinging) == true -> RINGING_MS
+                else -> CARD_MS
+            }
             peek is Peek.Message -> MESSAGE_MS
             peek is Peek.Charging -> CHARGING_MS
             peek != null -> NOTICE_MS
@@ -274,14 +315,16 @@ class IslandDirector(
     private fun timer() = (listOfNotNull(demoActivity) + activities).firstOrNull { it.kind == LiveKind.TIMER }
 
     private fun compactScene(): Scene? {
-        if (config.liveActivities) call()?.let { return LiveCompactScene(it) }
+        val cover = chip.takeIf { config.absorbChip }
+        if (config.liveActivities) call()?.let { return LiveCompactScene(it, cover) }
         if (config.music) {
             currentMedia()?.let { m ->
                 val recent = SystemClock.elapsedRealtime() - mediaPausedAt < PAUSED_LINGER_MS
-                if (m.playing || recent || m === demoMedia) return MediaCompactScene(m)
+                // While Samsung still shows its chip, keep swallowing it, paused or not.
+                if (m.playing || recent || m === demoMedia || cover != null) return MediaCompactScene(m, cover)
             }
         }
-        if (config.liveActivities) timer()?.let { return LiveCompactScene(it) }
+        if (config.liveActivities) timer()?.let { return LiveCompactScene(it, cover) }
         return null
     }
 
@@ -351,6 +394,7 @@ class IslandDirector(
     companion object {
         const val CARD_MS = 6000L
         const val MEDIA_CARD_MS = 8000L
+        const val RINGING_MS = 30_000L
         const val MESSAGE_MS = 4500L
         const val CHARGING_MS = 3200L
         const val NOTICE_MS = 2600L

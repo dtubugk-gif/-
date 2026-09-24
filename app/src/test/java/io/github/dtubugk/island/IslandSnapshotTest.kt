@@ -119,9 +119,7 @@ class IslandSnapshotTest {
         val music = island(IslandConfig(), IslandCommand.MUSIC)
         column.addView(music, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, tall))
         (music.host as IslandDirector).expand()
-        val call = island(IslandConfig(), IslandCommand.CALL)
-        column.addView(call, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, short))
-        (call.host as IslandDirector).expand()
+        column.addView(island(IslandConfig(), IslandCommand.CALL), ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, tall))
         paparazzi.snapshot(column)
     }
 
@@ -151,6 +149,8 @@ class IslandSnapshotTest {
                 battery = this@IslandSnapshotTest.battery
                 config = IslandConfig()
                 command?.let(::demo)
+                // Where Samsung's music chip sits on the reference screenshot (1080 px wide).
+                if (command == IslandCommand.MUSIC) setChip(android.graphics.RectF(665f * scale, 26f * scale, 911f * scale, 77f * scale))
             }
             frame.addView(island, FrameLayout.LayoutParams(bitmap.width, bitmap.height))
             column.addView(frame, ViewGroup.LayoutParams(bitmap.width, bitmap.height))

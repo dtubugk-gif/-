@@ -34,6 +34,8 @@ data class IslandConfig(
     val liveActivities: Boolean = true,
     /** Silent mode, Do Not Disturb, headphones, low battery. */
     val systemAlerts: Boolean = true,
+    /** Stretch the island over Samsung's own status-bar chip for the same song or call. */
+    val absorbChip: Boolean = true,
 ) {
     companion object {
         const val DEFAULT_TEXT = "א"
@@ -115,6 +117,7 @@ object IslandSettings {
             .putBoolean("notificationText", next.notificationText)
             .putBoolean("liveActivities", next.liveActivities)
             .putBoolean("systemAlerts", next.systemAlerts)
+            .putBoolean("absorbChip", next.absorbChip)
             .apply()
     }
 
@@ -141,6 +144,7 @@ object IslandSettings {
             notificationText = p.getBoolean("notificationText", d.notificationText),
             liveActivities = p.getBoolean("liveActivities", d.liveActivities),
             systemAlerts = p.getBoolean("systemAlerts", d.systemAlerts),
+            absorbChip = p.getBoolean("absorbChip", d.absorbChip),
         )
     }
 }

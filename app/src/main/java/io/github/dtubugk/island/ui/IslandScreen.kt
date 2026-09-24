@@ -430,14 +430,18 @@ private fun AccessGrantedToggles(config: IslandConfig, actions: IslandActions) {
         ToggleRow("מצבי מערכת", "מצב שקט, נא לא להפריע, אוזניות וסוללה חלשה", config.systemAlerts) { v ->
             actions.update { it.copy(systemAlerts = v) }
         }
+        ToggleRow(
+            "בליעת הצ'יפ של סמסונג",
+            "כשסמסונג מציגה ליד השעון צ'יפ לשיר או לשיחה, האי מתרחב מעליו והצ'יפ עובר לתוך האי",
+            config.absorbChip,
+        ) { v -> actions.update { it.copy(absorbChip = v) } }
         Spacer(Modifier.height(12.dp))
         Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(16.dp)) {
             Column(Modifier.padding(16.dp)) {
-                Text("להעלים את הצ'יפ של סמסונג ליד השעון", style = MaterialTheme.typography.titleMedium)
+                Text("רוצים שהצ'יפ ייעלם גם ממסך הנעילה?", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "סמסונג מציגה בעצמה את השיר בשורת הסטטוס, ואף אפליקציה לא יכולה להסתיר אותו. " +
-                        "מכבים אותו פעם אחת, והשיר ימשיך להופיע באי ובלוח ההתראות:",
+                    "באי הוא כבר נבלע לבד. כדי לכבות אותו לגמרי אצל סמסונג, פעם אחת:",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

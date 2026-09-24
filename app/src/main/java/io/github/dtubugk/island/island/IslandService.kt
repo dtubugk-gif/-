@@ -41,8 +41,9 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * Keeps the island on screen. It is an accessibility service only because that is the one way
- * for an app to draw above the status bar; it reads no screen content and handles no events.
+ * Keeps the island on screen. It is an accessibility service because that is the one way for an
+ * app to draw above the status bar. It reads only the status bar, to find Samsung's own chip for
+ * the song or call the island shows and swallow it.
  */
 class IslandService : AccessibilityService(), IslandDirector.System {
 
@@ -196,8 +197,18 @@ class IslandService : AccessibilityService(), IslandDirector.System {
 
         scope.launch { IslandSettings.config.collect { d.config = it } }
         scope.launch { IslandSettings.commands.collect { d.demo(it) } }
-        scope.launch { LiveBus.media.collect { d.setMedia(it) } }
-        scope.launch { LiveBus.activities.collect { d.setActivities(it) } }
+        scope.launch {
+            LiveBus.media.collect {
+                d.setMedia(it)
+                scheduleChipScan()
+            }
+        }
+        scope.launch {
+            LiveBus.activities.collect {
+                d.setActivities(it)
+                scheduleChipScan()
+            }
+        }
         scope.launch { LiveBus.peeks.collect { d.post(it) } }
         _running.value = true
     }
@@ -286,7 +297,100 @@ class IslandService : AccessibilityService(), IslandDirector.System {
 
     // --- lifecycle ----------------------------------------------------------------------------
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
+    // --- Samsung's chip -----------------------------------------------------------------------
+
+    /** Only status-bar events arrive here (the service config filters to SystemUI). */
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        scheduleChipScan()
+    }
+
+    private var chipScanPending = false
+    private var lastChipScan = 0L
+    private val chipScan = Runnable {
+        chipScanPending = false
+        lastChipScan = SystemClock.uptimeMillis()
+        director?.setChip(findChip())
+    }
+
+    /** At most a few scans a second, however chatty the status bar is. */
+    private fun scheduleChipScan() {
+        if (chipScanPending || director == null) return
+        chipScanPending = true
+        val wait = (CHIP_SCAN_INTERVAL_MS - (SystemClock.uptimeMillis() - lastChipScan)).coerceAtLeast(0L)
+        handler.postDelayed(chipScan, wait)
+    }
+
+    /**
+     * Finds Samsung's chip by what it says: the status bar node showing the song title (or the
+     * caller) that the island is already showing, grown to its whole capsule. Reading the text
+     * instead of Samsung's view ids keeps this working across One UI versions.
+     */
+    private fun findChip(): RectF? {
+        val d = director ?: return null
+        val needles = d.chipNeedles()
+        if (needles.isEmpty()) return null
+        val size = realSize()
+        val cameraX = screen?.hole?.centerX ?: (size.x / 2f)
+        val maxBarHeight = size.y * 0.08f
+        val windows = runCatching { windows }.getOrNull().orEmpty()
+        for (w in windows) {
+            if (w.type != android.view.accessibility.AccessibilityWindowInfo.TYPE_SYSTEM) continue
+            val bounds = android.graphics.Rect().also { w.getBoundsInScreen(it) }
+            // The status bar strip itself, not the pulled-down shade or the lock screen.
+            if (bounds.top > 0 || bounds.height() > maxBarHeight) continue
+            val root = runCatching { w.root }.getOrNull() ?: continue
+            if (root.packageName?.toString() != SYSTEM_UI) continue
+            val hit = findText(root, needles, depth = 0) ?: continue
+            return capsule(hit, bounds, cameraX, size.x)
+        }
+        return null
+    }
+
+    private fun findText(node: android.view.accessibility.AccessibilityNodeInfo, needles: List<String>, depth: Int): android.view.accessibility.AccessibilityNodeInfo? {
+        if (depth > 24) return null
+        val label = (node.text ?: node.contentDescription)?.toString()?.trim().orEmpty()
+        if (label.isNotEmpty() && node.isVisibleToUser && needles.any { matches(label, it) }) return node
+        for (i in 0 until node.childCount) {
+            val child = runCatching { node.getChild(i) }.getOrNull() ?: continue
+            findText(child, needles, depth + 1)?.let { return it }
+        }
+        return null
+    }
+
+    private fun matches(label: String, needle: String): Boolean {
+        val n = needle.trim()
+        return label.contains(n, ignoreCase = true) || (label.length >= 4 && n.contains(label, ignoreCase = true))
+    }
+
+    /**
+     * The chip is the first tappable capsule around the song title. Stopping there, rather than at
+     * the widest parent, keeps the clock and icons next to it untouched.
+     */
+    private fun capsule(node: android.view.accessibility.AccessibilityNodeInfo, bar: android.graphics.Rect, cameraX: Float, screenWidth: Int): RectF? {
+        val r = android.graphics.Rect()
+        node.getBoundsInScreen(r)
+        if (r.isEmpty) return null
+        val text = RectF(r)
+        var parent = node.parent
+        var steps = 0
+        while (parent != null && steps < 5) {
+            parent.getBoundsInScreen(r)
+            val fits = r.width() <= screenWidth * 0.45f && !(r.left < cameraX && r.right > cameraX) &&
+                r.top >= bar.top && r.bottom <= bar.bottom
+            if (!fits) break
+            if (parent.isClickable) return RectF(r)
+            parent = parent.parent
+            steps++
+        }
+        // No tappable capsule found: cover the text with room for the app icon beside it.
+        val pad = 24f * resources.displayMetrics.density
+        return RectF(
+            if (text.left - pad < cameraX && text.left > cameraX) cameraX else text.left - pad,
+            text.top,
+            if (text.right + pad > cameraX && text.right < cameraX) cameraX else text.right + pad,
+            text.bottom,
+        )
+    }
 
     override fun onInterrupt() = Unit
 
@@ -302,6 +406,8 @@ class IslandService : AccessibilityService(), IslandDirector.System {
 
     private fun tearDown() {
         _running.value = false
+        handler.removeCallbacks(chipScan)
+        chipScanPending = false
         scope.cancel()
         val view = island ?: return
         island = null
@@ -379,6 +485,8 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         val running: StateFlow<Boolean> = _running.asStateFlow()
 
         private val LOW_THRESHOLDS = listOf(20, 10)
+        private const val SYSTEM_UI = "com.android.systemui"
+        private const val CHIP_SCAN_INTERVAL_MS = 400L
         private val HEADPHONE_TYPES = setOf(
             AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
             AudioDeviceInfo.TYPE_WIRED_HEADPHONES,

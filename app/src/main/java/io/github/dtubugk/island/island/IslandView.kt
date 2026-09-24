@@ -74,10 +74,12 @@ class IslandView(
     private val width = Spring(0f, 0.5f)
     private val height = Spring(0f, 0.5f)
     private val radius = Spring(0f, 0.5f)
+    /** Horizontal shift of the island's center, for shapes that stretch over Samsung's chip. */
+    private val offset = Spring(0f, 0.5f)
     private val shadow = Spring(0f, 0.002f)
     private val press = Spring(0f, 0.002f)
     private val shown = Spring(1f, 0.002f)
-    private val shapeSprings = listOf(width, height, radius, shadow, press, shown)
+    private val shapeSprings = listOf(width, height, radius, offset, shadow, press, shown)
 
     /** Host-driven visibility (screen off, landscape); combined with the user's own switch. */
     private var hostVisible = true
@@ -103,6 +105,7 @@ class IslandView(
         }
     }
 
+    private val tick = Runnable { invalidate() }
     private val rect = RectF()
     private val clipPath = Path()
     private val islandPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK }
@@ -127,6 +130,14 @@ class IslandView(
         override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
             if (velocityY > 600f * dp && abs(velocityY) > abs(velocityX)) {
                 pullDown()
+                return true
+            }
+            // Music: a sideways swipe skips, like flicking to the next card.
+            if (abs(velocityX) > 500f * dp && abs(velocityX) > abs(velocityY) * 1.5f &&
+                (scene is MediaCompactScene || scene is MediaCardScene)
+            ) {
+                haptic(HapticFeedbackConstants.VIRTUAL_KEY)
+                host?.onTap(if (velocityX < 0f) Tap.Next else Tap.Previous)
                 return true
             }
             return false
@@ -226,6 +237,7 @@ class IslandView(
         width.animateTo(shape.width, stiffness, damping)
         height.animateTo(shape.height, stiffness, damping)
         radius.animateTo(shape.radius, stiffness, 1f)
+        offset.animateTo(shape.offsetX, stiffness, damping)
         shadow.animateTo(if (scene.isCard) 1f else 0f, 300f, 1f)
         requestWindowSize(settled = false)
         startFrameLoop()
@@ -236,6 +248,7 @@ class IslandView(
         width.snapTo(shape.width)
         height.snapTo(shape.height)
         radius.snapTo(shape.radius)
+        offset.snapTo(shape.offsetX)
         shadow.snapTo(if (scene.isCard) 1f else 0f)
         press.snapTo(0f)
         for (l in layers) l.alpha.snapTo(if (l.scene === scene) 1f else 0f)
@@ -252,6 +265,7 @@ class IslandView(
             width.animateTo(shape.width, 520f, 0.8f)
             height.animateTo(shape.height, 520f, 0.8f)
             radius.animateTo(shape.radius, 520f, 1f)
+            offset.animateTo(shape.offsetX, 520f, 0.8f)
             requestWindowSize(settled = false)
             startFrameLoop()
         } else {
@@ -285,13 +299,15 @@ class IslandView(
         val margin = SHADOW_MARGIN_DP * dp
         val w: Float
         val h: Float
+        // The window is centered on the camera, so an off-center shape needs room on both sides.
         if (animating) {
             // Room for the current shape, the target, the spring overshoot and the press squish.
-            w = max(width.value, target.width) * 1.1f + 2f * margin
+            val shift = max(abs(offset.value), abs(target.offsetX))
+            w = (max(width.value, target.width) * 1.1f + 2f * shift) + 2f * margin
             h = layout.top + max(height.value, target.height) * 1.1f + margin
         } else {
             val m = if (scene.isCard) margin else 1f * dp
-            w = target.width + 2f * m
+            w = target.width + 2f * abs(target.offsetX) + 2f * m
             h = layout.top + target.height + m
         }
         return min(w, screen.width * 1.2f).roundToInt() to h.roundToInt()
@@ -341,7 +357,7 @@ class IslandView(
     }
 
     private fun hitIsland(x: Float, y: Float, slop: Float): Boolean =
-        abs(x - centerX()) <= width.value / 2f + slop && y >= layout.top - slop && y <= layout.top + height.value + slop
+        abs(x - centerX() - offset.value) <= width.value / 2f + slop && y >= layout.top - slop && y <= layout.top + height.value + slop
 
     private fun haptic(type: Int) {
         if (config.haptics) performHapticFeedback(type)
@@ -352,7 +368,8 @@ class IslandView(
     private fun centerX(): Float = if (isOverlay) getWidth() / 2f else layout.centerX
 
     private fun frame(): Frame = Frame(
-        cx = centerX(),
+        holeX = centerX() + layout.holeOffsetX,
+        cx = centerX() + offset.value,
         top = layout.top,
         width = width.value,
         height = height.value,
@@ -365,7 +382,7 @@ class IslandView(
     override fun onDraw(canvas: Canvas) {
         val visibility = shown.value.coerceIn(0f, 1f)
         if (visibility <= 0.001f) return
-        val cx = centerX()
+        val cx = centerX() + offset.value
         val top = layout.top
         val appear = 0.55f + 0.45f * visibility
         val w = max(width.value * (1f + 0.05f * press.value) * appear, 1f)
@@ -385,13 +402,13 @@ class IslandView(
         }
         rect.set(left, top, left + w, top + h)
         canvas.drawRoundRect(rect, r, r, islandPaint)
-        if (drawLens) drawLens(canvas, cx + layout.holeOffsetX, top + layout.holeCenterY)
+        if (drawLens) drawLens(canvas, centerX() + layout.holeOffsetX, top + layout.holeCenterY)
 
         clipPath.rewind()
         clipPath.addRoundRect(rect, r, r, Path.Direction.CW)
         canvas.clipPath(clipPath)
 
-        val f = Frame(cx, top, w, h, layout, painter, System.currentTimeMillis(), SystemClock.uptimeMillis())
+        val f = Frame(cx, top, w, h, layout, painter, System.currentTimeMillis(), SystemClock.uptimeMillis(), holeX = centerX() + layout.holeOffsetX)
         var refresh = Long.MAX_VALUE
         for (l in layers) {
             val a = l.alpha.value.coerceIn(0f, 1f)
@@ -411,7 +428,9 @@ class IslandView(
         canvas.restore()
 
         // Waveforms and running clocks redraw on their own cadence while nothing else animates.
-        if (!frameLoopRunning && refresh != Long.MAX_VALUE) postInvalidateDelayed(refresh)
+        // One pending tick at most, so extra invalidations never stack into parallel loops.
+        removeCallbacks(tick)
+        if (!frameLoopRunning && refresh != Long.MAX_VALUE) postDelayed(tick, refresh)
     }
 
     /** A camera lens as it really looks inside a black island: barely there. */
@@ -435,6 +454,7 @@ class IslandView(
 
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
+        removeCallbacks(tick)
         Choreographer.getInstance().removeFrameCallback(frameCallback)
         frameLoopRunning = false
         lastFrameNanos = 0L

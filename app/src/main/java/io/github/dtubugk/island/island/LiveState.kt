@@ -45,7 +45,17 @@ data class MediaState(
 
 enum class LiveKind { CALL, TIMER }
 
-data class LiveAction(val title: String, val intent: PendingIntent)
+/** A button from the call's or timer's own notification. Null intent: a sample with nothing to do. */
+data class LiveAction(val title: String, val intent: PendingIntent?)
+
+/** Tells call buttons apart by their label, in Hebrew or English, to color and auto-open. */
+object CallActions {
+    private val DECLINE = listOf("נתק", "דחה", "דחיי", "סיים", "סיום", "בטל", "decline", "end", "hang", "reject", "cancel", "stop")
+    private val ACCEPT = listOf("ענה", "מענה", "answer", "accept")
+
+    fun isDecline(title: String) = title.lowercase().let { t -> DECLINE.any { it in t } }
+    fun isAccept(title: String) = title.lowercase().let { t -> ACCEPT.any { it in t } }
+}
 
 /** An ongoing call or timer, mirrored from its notification. */
 data class LiveActivity(

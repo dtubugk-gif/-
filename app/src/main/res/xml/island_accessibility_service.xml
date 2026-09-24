@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The service only draws the island. It asks for no screen content and listens to a single
-     rare event type, so it costs nothing while idle. -->
+<!-- The service draws the island, and reads only the system status bar (com.android.systemui) to
+     find Samsung's own chip for the song or call the island shows, so it can swallow it. Events
+     from every other app are filtered out by the system before they reach the service. -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeAnnouncement"
+    android:accessibilityEventTypes="typeWindowContentChanged|typeWindowsChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagDefault"
-    android:canRetrieveWindowContent="false"
+    android:accessibilityFlags="flagRetrieveInteractiveWindows"
+    android:canRetrieveWindowContent="true"
     android:description="@string/a11y_description"
     android:isAccessibilityTool="false"
-    android:notificationTimeout="0"
+    android:notificationTimeout="250"
+    android:packageNames="com.android.systemui"
     android:settingsActivity="io.github.dtubugk.island.MainActivity" />
