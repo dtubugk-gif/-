@@ -196,7 +196,17 @@ class IslandView(
         }
         val growing = area(newShape) >= area(oldShape)
         for (l in layers) l.alpha.animateTo(0f, 900f, 1f)
-        layers.add(Layer(next, Spring(0f, 0.002f).also { it.animateTo(1f, 320f, 1f, delaySeconds = if (growing) 0.07f else 0.05f) }))
+        // Going back to something still fading out (A -> B -> A): revive that layer instead of
+        // stacking a second copy of it, which would ghost old content for a moment.
+        val revived = layers.firstOrNull { it.scene.key == next.key }
+        if (revived != null) {
+            layers.remove(revived)
+            revived.scene = next
+            revived.alpha.animateTo(1f, 320f, 1f)
+            layers.add(revived)
+        } else {
+            layers.add(Layer(next, Spring(0f, 0.002f).also { it.animateTo(1f, 320f, 1f, delaySeconds = if (growing) 0.07f else 0.05f) }))
+        }
         morphTo(newShape, growing, animate = true)
     }
 
@@ -430,7 +440,11 @@ class IslandView(
         // Waveforms and running clocks redraw on their own cadence while nothing else animates.
         // One pending tick at most, so extra invalidations never stack into parallel loops.
         removeCallbacks(tick)
-        if (!frameLoopRunning && refresh != Long.MAX_VALUE) postDelayed(tick, refresh)
+        if (!frameLoopRunning && refresh != Long.MAX_VALUE) {
+            // Running clocks tick right after each wall-clock second, so no second is ever skipped.
+            val delay = if (refresh >= 1000L) 1000L - System.currentTimeMillis() % 1000L + 15L else refresh
+            postDelayed(tick, delay)
+        }
     }
 
     /** A camera lens as it really looks inside a black island: barely there. */

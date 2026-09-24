@@ -192,6 +192,8 @@ private fun HeroPreview(
                 director?.battery = battery
                 director?.config = config.copy(visible = true)
             },
+            // Drop the preview's pending timers when the screen goes away.
+            onRelease = { director?.release() },
             modifier = Modifier.fillMaxSize(),
         )
         Text(

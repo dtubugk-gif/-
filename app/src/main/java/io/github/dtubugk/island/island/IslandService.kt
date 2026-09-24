@@ -409,6 +409,9 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         _running.value = false
         handler.removeCallbacks(chipScan)
         chipScanPending = false
+        // A later reconnect must learn the already-connected headphones again, not announce them.
+        audioCallbackPrimed = false
+        knownAudioDevices.clear()
         scope.cancel()
         val view = island ?: return
         island = null

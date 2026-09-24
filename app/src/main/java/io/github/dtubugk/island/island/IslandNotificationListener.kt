@@ -25,15 +25,19 @@ class IslandNotificationListener : NotificationListenerService() {
 
     private val handler = Handler(Looper.getMainLooper())
     private var sessions: MediaSessionManager? = null
+    /** Every active session is watched, so whichever app starts playing takes the island. */
+    private var controllers: List<MediaController> = emptyList()
     private var controller: MediaController? = null
-    private val seenKeys = HashMap<String, Long>()
+    /** Per notification key: its last `when` and a hash of its title and text. */
+    private val seen = HashMap<String, Pair<Long, Int>>()
+    private val labels = HashMap<String, String>()
     private var artCache: Triple<Long, Bitmap, Int>? = null
 
-    private val sessionsListener = MediaSessionManager.OnActiveSessionsChangedListener { pickController(it.orEmpty()) }
+    private val sessionsListener = MediaSessionManager.OnActiveSessionsChangedListener { watch(it.orEmpty()) }
 
     private val controllerCallback = object : MediaController.Callback() {
-        override fun onPlaybackStateChanged(state: PlaybackState?) = publishMedia()
-        override fun onMetadataChanged(metadata: MediaMetadata?) = publishMedia()
+        override fun onPlaybackStateChanged(state: PlaybackState?) = pickController()
+        override fun onMetadataChanged(metadata: MediaMetadata?) = pickController()
         override fun onSessionDestroyed() {
             refreshSessions()
         }
@@ -49,13 +53,14 @@ class IslandNotificationListener : NotificationListenerService() {
             msm?.addOnActiveSessionsChangedListener(sessionsListener, ComponentName(this, javaClass), handler)
         }
         refreshSessions()
-        runCatching { activeNotifications }.getOrNull()?.forEach { seenKeys[it.key] = it.notification.`when` }
+        runCatching { activeNotifications }.getOrNull()?.forEach { seen[it.key] = it.notification.`when` to contentHash(it.notification) }
         publishActivities()
     }
 
     override fun onListenerDisconnected() {
         runCatching { sessions?.removeOnActiveSessionsChangedListener(sessionsListener) }
-        controller?.unregisterCallback(controllerCallback)
+        controllers.forEach { runCatching { it.unregisterCallback(controllerCallback) } }
+        controllers = emptyList()
         controller = null
         LiveBus.canceller = null
         LiveBus.setListenerConnected(false)
@@ -65,7 +70,7 @@ class IslandNotificationListener : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         val n = sbn.notification
         if (isLiveCandidate(sbn)) publishActivities()
-        val previous = seenKeys.put(sbn.key, n.`when`)
+        val previous = seen.put(sbn.key, n.`when` to contentHash(n))
         if (!shouldPeek(sbn, previous)) return
         val extras = n.extras
         // EXTRA_TITLE keeps the sender in group chats ("Family: Dana"); the bare group name does not.
@@ -88,7 +93,7 @@ class IslandNotificationListener : NotificationListenerService() {
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
-        seenKeys.remove(sbn.key)
+        seen.remove(sbn.key)
         // Read or dismissed elsewhere: the island must not show it later from its queue.
         LiveBus.notificationRemoved(sbn.key)
         if (isLiveCandidate(sbn)) publishActivities()
@@ -97,20 +102,31 @@ class IslandNotificationListener : NotificationListenerService() {
     // --- messages -----------------------------------------------------------------------------
 
     /** Only real, alerting, new messages: no ongoing, silent, summary, media or repeat updates. */
-    private fun shouldPeek(sbn: StatusBarNotification, previousWhen: Long?): Boolean {
+    private fun shouldPeek(sbn: StatusBarNotification, previous: Pair<Long, Int>?): Boolean {
         val n = sbn.notification
         if (sbn.packageName == packageName) return false
         if (sbn.isOngoing || n.flags and Notification.FLAG_GROUP_SUMMARY != 0) return false
         if (n.extras.containsKey(Notification.EXTRA_MEDIA_SESSION)) return false
         if (n.category in QUIET_CATEGORIES) return false
-        // An update that the app itself marks "don't alert again", or with an unchanged timestamp.
-        if (previousWhen != null && (n.flags and Notification.FLAG_ONLY_ALERT_ONCE != 0 || previousWhen == n.`when`)) return false
+        // Same timestamp: a quiet refresh (read state, typing). "Alert once" with unchanged text: the
+        // same message re-posted. New text with a new timestamp is a new message in the same chat.
+        if (previous != null) {
+            val (previousWhen, previousContent) = previous
+            if (previousWhen == n.`when`) return false
+            if (n.flags and Notification.FLAG_ONLY_ALERT_ONCE != 0 && previousContent == contentHash(n)) return false
+        }
         val ranking = Ranking()
         if (currentRanking?.getRanking(sbn.key, ranking) == true) {
             if (ranking.importance < NotificationManager.IMPORTANCE_DEFAULT) return false
             if (!ranking.matchesInterruptionFilter()) return false
         }
         return true
+    }
+
+    private fun contentHash(n: Notification): Int {
+        val e = n.extras
+        return (e.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty() + '\u0000' +
+            e.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()).hashCode()
     }
 
     // --- calls and timers ---------------------------------------------------------------------
@@ -153,18 +169,24 @@ class IslandNotificationListener : NotificationListenerService() {
 
     private fun refreshSessions() {
         val list = runCatching { sessions?.getActiveSessions(ComponentName(this, javaClass)) }.getOrNull().orEmpty()
-        pickController(list)
+        watch(list)
+    }
+
+    /** Listens to every active session: the list itself doesn't change when another app starts playing. */
+    private fun watch(list: List<MediaController>) {
+        val keep = list.map { it.sessionToken }.toSet()
+        controllers.filter { it.sessionToken !in keep }.forEach { runCatching { it.unregisterCallback(controllerCallback) } }
+        val known = controllers.map { it.sessionToken }.toSet()
+        list.filter { it.sessionToken !in known }.forEach { runCatching { it.registerCallback(controllerCallback, handler) } }
+        controllers = list
+        pickController()
     }
 
     /** Prefer whatever is playing; otherwise the most recent session with a track loaded. */
-    private fun pickController(list: List<MediaController>) {
-        val best = list.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
-            ?: list.firstOrNull { it.metadata != null }
-        if (best?.sessionToken != controller?.sessionToken) {
-            controller?.unregisterCallback(controllerCallback)
-            controller = best
-            best?.registerCallback(controllerCallback, handler)
-        }
+    private fun pickController() {
+        controller = controllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
+            ?: controllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_BUFFERING }
+            ?: controllers.firstOrNull { it.metadata != null }
         publishMedia()
     }
 
@@ -196,7 +218,8 @@ class IslandNotificationListener : NotificationListenerService() {
                 playing = state?.state == PlaybackState.STATE_PLAYING || state?.state == PlaybackState.STATE_BUFFERING,
                 positionMs = max(state?.position ?: 0L, 0L),
                 positionSampledAt = state?.lastPositionUpdateTime?.takeIf { it > 0 } ?: android.os.SystemClock.elapsedRealtime(),
-                speed = state?.playbackSpeed?.takeIf { it > 0f } ?: 1f,
+                // Buffering still shows the waveform, but the progress bar must not run ahead.
+                speed = if (state?.state == PlaybackState.STATE_BUFFERING) 0f else state?.playbackSpeed?.takeIf { it > 0f } ?: 1f,
                 durationMs = max(meta.getLong(MediaMetadata.METADATA_KEY_DURATION), 0L),
                 controls = object : MediaControls {
                     override fun playPause() {
@@ -249,9 +272,9 @@ class IslandNotificationListener : NotificationListenerService() {
     // --- app info -----------------------------------------------------------------------------
 
     @Suppress("DEPRECATION") // The flags overload is Android 13+; this one works everywhere.
-    private fun appLabel(pkg: String): String = runCatching {
-        packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString()
-    }.getOrDefault(pkg)
+    private fun appLabel(pkg: String): String = labels.getOrPut(pkg) {
+        runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
+    }
 
     private fun appIcon(pkg: String): Drawable? = runCatching { packageManager.getApplicationIcon(pkg) }.getOrNull()
 

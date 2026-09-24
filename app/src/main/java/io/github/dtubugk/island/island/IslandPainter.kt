@@ -39,6 +39,11 @@ class IslandPainter(private val context: Context) {
     private val path = Path()
     private val matrix = Matrix()
     private val icons = HashMap<Int, Drawable?>()
+    private var artShader: BitmapShader? = null
+    private var artShaderBitmap: Bitmap? = null
+    private var fadeKey = 0L
+    private var fadeLeft: LinearGradient? = null
+    private var fadeRight: LinearGradient? = null
 
     /** Draws [value] vertically centered on [centerY]. Returns its width. */
     fun label(
@@ -121,7 +126,12 @@ class IslandPainter(private val context: Context) {
             icon(canvas, R.drawable.ic_music, cx, cy, size * 0.55f, Color.WHITE, alpha)
             return
         }
-        val shader = BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP)
+        // One shader per cover, reused every frame; only its matrix moves.
+        val shader = artShader?.takeIf { artShaderBitmap === bitmap }
+            ?: BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).also {
+                artShader = it
+                artShaderBitmap = bitmap
+            }
         val scale = size / min(bitmap.width, bitmap.height)
         matrix.setScale(scale, scale)
         matrix.postTranslate(cx - bitmap.width * scale / 2f, cy - bitmap.height * scale / 2f)
@@ -189,9 +199,16 @@ class IslandPainter(private val context: Context) {
             label(canvas, value, left - phase, centerY, size, color, alpha, Paint.Align.LEFT, medium)
             label(canvas, value, left - phase + cycle, centerY, size, color, alpha, Paint.Align.LEFT, medium)
         }
-        fade.shader = LinearGradient(left, 0f, left + edge, 0f, Color.BLACK, Color.TRANSPARENT, Shader.TileMode.CLAMP)
+        // The soft edges only change when the island does; build them once per geometry.
+        val key = (left.toLong() shl 32) or (right.toLong() and 0xffffffffL) xor edge.toLong()
+        if (key != fadeKey || fadeLeft == null) {
+            fadeKey = key
+            fadeLeft = LinearGradient(left, 0f, left + edge, 0f, Color.BLACK, Color.TRANSPARENT, Shader.TileMode.CLAMP)
+            fadeRight = LinearGradient(right - edge, 0f, right, 0f, Color.TRANSPARENT, Color.BLACK, Shader.TileMode.CLAMP)
+        }
+        fade.shader = fadeLeft
         canvas.drawRect(left, centerY - size, left + edge, centerY + size, fade)
-        fade.shader = LinearGradient(right - edge, 0f, right, 0f, Color.TRANSPARENT, Color.BLACK, Shader.TileMode.CLAMP)
+        fade.shader = fadeRight
         canvas.drawRect(right - edge, centerY - size, right, centerY + size, fade)
         canvas.restoreToCount(layer)
     }

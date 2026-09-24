@@ -254,11 +254,15 @@ class MediaCompactScene(
         // Stretched over Samsung's chip, the island takes over what the chip said: the title.
         val gap = 10f * f.dp
         val clear = f.layout.holeRadius + gap
-        val rightRoom = (f.holeX + clear) to (artX - art / 2f - gap)
-        val leftRoom = (waveX + h * 0.31f + gap) to (f.holeX - clear)
-        val room = listOf(rightRoom, leftRoom).maxByOrNull { it.second - it.first } ?: return
-        if (room.second - room.first >= MIN_TITLE_ROOM_DP * f.dp) {
-            f.p.marquee(c, media.title, room.first, room.second, mid, h * 0.4f, 0xE6FFFFFF.toInt(), alpha, if (media.playing) f.animMs else 0L)
+        val rightStart = f.holeX + clear
+        val rightEnd = artX - art / 2f - gap
+        val leftStart = waveX + h * 0.31f + gap
+        val leftEnd = f.holeX - clear
+        val useRight = rightEnd - rightStart >= leftEnd - leftStart
+        val start = if (useRight) rightStart else leftStart
+        val end = if (useRight) rightEnd else leftEnd
+        if (end - start >= MIN_TITLE_ROOM_DP * f.dp) {
+            f.p.marquee(c, media.title, start, end, mid, h * 0.4f, 0xE6FFFFFF.toInt(), alpha, if (media.playing) f.animMs else 0L)
         }
     }
 
