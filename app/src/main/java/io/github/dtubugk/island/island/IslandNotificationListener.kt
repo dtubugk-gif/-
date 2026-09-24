@@ -33,6 +33,8 @@ class IslandNotificationListener : NotificationListenerService() {
     private val labels = HashMap<String, String>()
     /** One controls object per session, so an unchanged track compares equal and doesn't redraw. */
     private val controls = HashMap<android.media.session.MediaSession.Token, MediaControls>()
+    /** App icons by package, so a re-posted activity compares equal and doesn't churn the island. */
+    private val appIcons = HashMap<String, Drawable?>()
     /** Keys currently shown as calls/timers, so an update that stops being one still refreshes them. */
     private var liveKeys: Set<String> = emptySet()
     private var artCache: Triple<Long, Bitmap, Int>? = null
@@ -170,7 +172,8 @@ class IslandNotificationListener : NotificationListenerService() {
         val e = n.extras
         return when {
             n.category == Notification.CATEGORY_CALL -> LiveKind.CALL
-            n.category == Notification.CATEGORY_ALARM -> LiveKind.ALARM
+            // A ringing alarm is ongoing or takes the screen; "alarm in 30 minutes" is neither.
+            n.category == Notification.CATEGORY_ALARM && (sbn.isOngoing || n.fullScreenIntent != null) -> LiveKind.ALARM
             n.category == Notification.CATEGORY_NAVIGATION || (sbn.isOngoing && sbn.packageName in NAV_PACKAGES) -> LiveKind.NAVIGATION
             // Screen or voice recording: a red dot and the running time, like the iPhone's.
             sbn.isOngoing && e.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER) && sbn.packageName in RECORDER_PACKAGES -> LiveKind.RECORDING
@@ -193,7 +196,11 @@ class IslandNotificationListener : NotificationListenerService() {
                 LiveActivity(
                     key = sbn.key,
                     kind = kind,
-                    icon = if (kind == LiveKind.NAVIGATION) largeIcon(n) else if (kind == LiveKind.PROGRESS) appIcon(sbn.packageName) else null,
+                    icon = when (kind) {
+                        LiveKind.NAVIGATION -> largeIcon(n)
+                        LiveKind.PROGRESS -> appIcons.getOrPut(sbn.packageName) { appIcon(sbn.packageName) }
+                        else -> null
+                    },
                     progress = if (kind == LiveKind.PROGRESS && max > 0) (extras.getInt(Notification.EXTRA_PROGRESS).toFloat() / max).coerceIn(0f, 1f) else -1f,
                     appLabel = appLabel(sbn.packageName),
                     title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty(),

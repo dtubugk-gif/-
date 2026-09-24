@@ -335,13 +335,17 @@ class IslandService : AccessibilityService(), IslandDirector.System {
                     island?.setShown(false, animate = true)
                     handler.postDelayed({
                         performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)
-                        handler.postDelayed({ updateVisibility(animate = true) }, 600)
+                        handler.postDelayed({ updateVisibility(animate = true) }, 900)
                     }, 260)
                 }
                 IslandAction.LOCK -> performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
                 IslandAction.SPEAKER -> toggleSpeaker()
                 IslandAction.MUTE -> {
                     val am = getSystemService(AudioManager::class.java) ?: return
+                    if (am.mode != AudioManager.MODE_IN_CALL && am.mode != AudioManager.MODE_IN_COMMUNICATION) {
+                        Toast.makeText(this, "ההשתקה זמינה רק בזמן שיחה", Toast.LENGTH_SHORT).show()
+                        return
+                    }
                     am.isMicrophoneMute = !am.isMicrophoneMute
                 }
                 IslandAction.AIRPLANE -> toggleAirplaneMode()
@@ -359,6 +363,11 @@ class IslandService : AccessibilityService(), IslandDirector.System {
      */
     private fun toggleSpeaker() {
         val am = getSystemService(AudioManager::class.java) ?: return
+        // Outside a call this would only set a global flag that leaks into the next call.
+        if (am.mode != AudioManager.MODE_IN_CALL && am.mode != AudioManager.MODE_IN_COMMUNICATION) {
+            Toast.makeText(this, "הרמקול זמין רק בזמן שיחה", Toast.LENGTH_SHORT).show()
+            return
+        }
         val wantSpeaker = !(director?.system?.speaker ?: false)
         var ok = false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -371,7 +380,7 @@ class IslandService : AccessibilityService(), IslandDirector.System {
             }
         }
         @Suppress("DEPRECATION")
-        am.isSpeakerphoneOn = wantSpeaker
+        if (!ok) am.isSpeakerphoneOn = wantSpeaker
         handler.postDelayed({
             publishSystemState()
             if (wantSpeaker && director?.system?.speaker != true && !ok) {
@@ -394,13 +403,13 @@ class IslandService : AccessibilityService(), IslandDirector.System {
             val tile = runCatching { findAirplaneTile() }.getOrNull()
             when {
                 tile != null -> {
-                    val clickable = generateSequence(tile) { it.parent }.take(6).firstOrNull { it.isClickable } ?: tile
-                    clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                    handler.postDelayed({ performGlobalAction(GLOBAL_ACTION_BACK) }, 700)
+                    tile.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+                    // One UI sometimes folds the panel away by itself; only close it if it is still up.
+                    handler.postDelayed({ if (quickPanelOpen()) performGlobalAction(GLOBAL_ACTION_BACK) }, 700)
                 }
                 attempts < 5 -> handler.postDelayed(tryTap, 300)
                 else -> {
-                    performGlobalAction(GLOBAL_ACTION_BACK)
+                    if (quickPanelOpen()) performGlobalAction(GLOBAL_ACTION_BACK)
                     runCatching {
                         startActivity(Intent(Settings.ACTION_AIRPLANE_MODE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     }
@@ -410,26 +419,45 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         handler.postDelayed(tryTap, 450)
     }
 
-    private fun findAirplaneTile(): AccessibilityNodeInfo? {
-        for (w in windows) {
-            val root = runCatching { w.root }.getOrNull() ?: continue
-            if (root.packageName?.toString() != SYSTEM_UI) continue
-            findNode(root, 0) { node ->
-                val label = (node.contentDescription ?: node.text)?.toString()?.lowercase().orEmpty()
-                AIRPLANE_LABELS.any { it in label }
-            }?.let { return it }
+    /** A SystemUI window taller than the status bar strip: the quick panel or the shade. */
+    private fun quickPanelOpen(): Boolean {
+        val maxBar = realSize().y * 0.12f
+        return windows.any { w ->
+            val b = android.graphics.Rect().also { w.getBoundsInScreen(it) }
+            w.type == AccessibilityWindowInfo.TYPE_SYSTEM && b.height() > maxBar &&
+                runCatching { w.root?.packageName?.toString() }.getOrNull() == SYSTEM_UI
         }
-        return null
     }
 
-    private fun findNode(node: AccessibilityNodeInfo, depth: Int, match: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo? {
-        if (depth > 30) return null
-        if (node.isVisibleToUser && match(node)) return node
+    /**
+     * The airplane-mode tile itself: a checkable or clickable node labelled with it. Plain text
+     * carrying the words (a header, a settings row) is never tapped, so a wrong hit opens nothing.
+     */
+    private fun findAirplaneTile(): AccessibilityNodeInfo? {
+        val maxBar = realSize().y * 0.12f
+        val candidates = ArrayList<AccessibilityNodeInfo>()
+        for (w in windows) {
+            val b = android.graphics.Rect().also { w.getBoundsInScreen(it) }
+            if (w.type != AccessibilityWindowInfo.TYPE_SYSTEM || b.height() <= maxBar) continue
+            val root = runCatching { w.root }.getOrNull() ?: continue
+            if (root.packageName?.toString() != SYSTEM_UI) continue
+            collectNodes(root, 0, candidates) { node ->
+                if (!node.isCheckable && !node.isClickable) return@collectNodes false
+                val label = (node.contentDescription ?: node.text)?.toString()?.trim()?.lowercase().orEmpty()
+                AIRPLANE_LABELS.any { label.startsWith(it) || label == it } && WRONG_LABELS.none { it in label }
+            }
+        }
+        // The tile is the innermost match: prefer checkable, then the smallest bounds.
+        return candidates.minWithOrNull(compareBy({ !it.isCheckable }, { android.graphics.Rect().also(it::getBoundsInScreen).let { r -> r.width() * r.height() } }))
+    }
+
+    private fun collectNodes(node: AccessibilityNodeInfo, depth: Int, out: MutableList<AccessibilityNodeInfo>, match: (AccessibilityNodeInfo) -> Boolean) {
+        if (depth > 30) return
+        if (node.isVisibleToUser && match(node)) out += node
         for (i in 0 until node.childCount) {
             val child = runCatching { node.getChild(i) }.getOrNull() ?: continue
-            findNode(child, depth + 1, match)?.let { return it }
+            collectNodes(child, depth + 1, out, match)
         }
-        return null
     }
 
     // --- IslandDirector.System ----------------------------------------------------------------
@@ -683,6 +711,7 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         private const val SYSTEM_UI = "com.android.systemui"
         private const val CHIP_SCAN_INTERVAL_MS = 400L
         private val AIRPLANE_LABELS = listOf("מצב טיסה", "airplane mode", "aeroplane mode", "flight mode")
+        private val WRONG_LABELS = listOf("wi-fi", "wifi", "הגדרות", "settings", "שיחות", "calling")
         private val HEADPHONE_TYPES = setOf(
             AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
             AudioDeviceInfo.TYPE_WIRED_HEADPHONES,

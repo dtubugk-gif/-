@@ -128,7 +128,13 @@ class IslandDirector(
 
     fun setActivities(list: List<LiveActivity>) {
         val known = activities.mapTo(HashSet()) { it.key }
+        // The same activities, only their numbers moved on: redraw, but leave the timers alone.
+        val sameSet = list.size == activities.size && list.zip(activities).all { (a, b) -> a.key == b.key && a.kind == b.kind }
         activities = list
+        if (sameSet && list.none { isRinging(it) && it.key !in known }) {
+            resolve(keepTimers = true)
+            return
+        }
         // A ringing call opens the island by itself, answer and decline buttons ready, like the iPhone.
         val incoming = list.firstOrNull { it.key !in known && isRinging(it) }
         if (incoming != null && active && config.liveActivities) {
@@ -367,7 +373,7 @@ class IslandDirector(
         resolve()
     }
 
-    private fun resolve(animate: Boolean = true) {
+    private fun resolve(animate: Boolean = true, keepTimers: Boolean = false) {
         // Nothing showing but notices waiting (queued behind a card that closed another way).
         if (!expanded && peek == null && queue.isNotEmpty()) peek = queue.removeFirst()
         val scene = when {
@@ -376,7 +382,7 @@ class IslandDirector(
             else -> compactScene() ?: IdleScene(config)
         }
         view.show(scene, animate)
-        schedule()
+        if (!keepTimers) schedule()
     }
 
     private fun schedule() {
