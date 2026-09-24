@@ -31,6 +31,8 @@ class IslandNotificationListener : NotificationListenerService() {
     /** Per notification key: its last `when` and a hash of its title and text. */
     private val seen = HashMap<String, Pair<Long, Int>>()
     private val labels = HashMap<String, String>()
+    /** One controls object per session, so an unchanged track compares equal and doesn't redraw. */
+    private val controls = HashMap<android.media.session.MediaSession.Token, MediaControls>()
     /** Keys currently shown as calls/timers, so an update that stops being one still refreshes them. */
     private var liveKeys: Set<String> = emptySet()
     private var artCache: Triple<Long, Bitmap, Int>? = null
@@ -100,7 +102,9 @@ class IslandNotificationListener : NotificationListenerService() {
                 title = title.ifBlank { appLabel(sbn.packageName) },
                 text = text.lineSequence().firstOrNull().orEmpty(),
                 open = n.contentIntent,
-                autoCancel = n.flags and Notification.FLAG_AUTO_CANCEL != 0,
+                // Clearing from here counts as a swipe-away; if the app listens for that (deleteIntent),
+                // leave it to the app, which clears its own notification when the chat opens.
+                autoCancel = n.flags and Notification.FLAG_AUTO_CANCEL != 0 && n.deleteIntent == null,
             ),
         )
     }
@@ -128,7 +132,12 @@ class IslandNotificationListener : NotificationListenerService() {
         if (previous != null) {
             val (previousWhen, previousContent) = previous
             if (previousWhen == n.`when`) return false
-            if (n.flags and Notification.FLAG_ONLY_ALERT_ONCE != 0 && previousContent == contentHash(n)) return false
+            if (n.flags and Notification.FLAG_ONLY_ALERT_ONCE != 0) {
+                // New text still counts for chats (a new message in the same conversation), but a
+                // silently refreshed status (delivery, score, download) stays silent, as on the phone.
+                val chat = n.category == Notification.CATEGORY_MESSAGE || n.extras.containsKey(Notification.EXTRA_MESSAGES)
+                if (!chat || previousContent == contentHash(n)) return false
+            }
         }
         val ranking = Ranking()
         if (currentRanking?.getRanking(sbn.key, ranking) == true) {
@@ -190,11 +199,15 @@ class IslandNotificationListener : NotificationListenerService() {
 
     /** Listens to every active session: the list itself doesn't change when another app starts playing. */
     private fun watch(list: List<MediaController>) {
+        // The system hands out fresh MediaController objects on every call, and a callback lives
+        // only as long as the object it was registered on. Keep the registered ones.
         val keep = list.map { it.sessionToken }.toSet()
+        val old = controllers.associateBy { it.sessionToken }
         controllers.filter { it.sessionToken !in keep }.forEach { runCatching { it.unregisterCallback(controllerCallback) } }
-        val known = controllers.map { it.sessionToken }.toSet()
-        list.filter { it.sessionToken !in known }.forEach { runCatching { it.registerCallback(controllerCallback, handler) } }
-        controllers = list
+        controls.keys.retainAll(keep)
+        controllers = list.map { c ->
+            old[c.sessionToken] ?: c.also { runCatching { it.registerCallback(controllerCallback, handler) } }
+        }
         pickController()
     }
 
@@ -237,13 +250,21 @@ class IslandNotificationListener : NotificationListenerService() {
                 // Buffering still shows the waveform, but the progress bar must not run ahead.
                 speed = if (state?.state == PlaybackState.STATE_BUFFERING) 0f else state?.playbackSpeed?.takeIf { it > 0f } ?: 1f,
                 durationMs = max(meta.getLong(MediaMetadata.METADATA_KEY_DURATION), 0L),
-                controls = object : MediaControls {
-                    override fun playPause() {
-                        val playing = c.playbackState?.state == PlaybackState.STATE_PLAYING
-                        if (playing) c.transportControls.pause() else c.transportControls.play()
+                controls = controls.getOrPut(c.sessionToken) {
+                    object : MediaControls {
+                        override fun playPause() {
+                            runCatching {
+                                val playing = c.playbackState?.state == PlaybackState.STATE_PLAYING
+                                if (playing) c.transportControls.pause() else c.transportControls.play()
+                            }
+                        }
+                        override fun next() {
+                            runCatching { c.transportControls.skipToNext() }
+                        }
+                        override fun previous() {
+                            runCatching { c.transportControls.skipToPrevious() }
+                        }
                     }
-                    override fun next() = c.transportControls.skipToNext()
-                    override fun previous() = c.transportControls.skipToPrevious()
                 },
                 openApp = c.sessionActivity,
             ),
@@ -259,23 +280,23 @@ class IslandNotificationListener : NotificationListenerService() {
             ?: meta.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON)
             ?: return null
         if (original.isRecycled || original.width <= 0 || original.height <= 0) return null
+        // Every play/pause re-sends the same cover: recognize it by the track, not by its pixels,
+        // before paying for a copy or a Palette pass.
+        val trackKey = listOf(
+            meta.getString(MediaMetadata.METADATA_KEY_TITLE),
+            meta.getString(MediaMetadata.METADATA_KEY_ARTIST),
+            meta.getString(MediaMetadata.METADATA_KEY_ALBUM),
+            original.width, original.height,
+        ).hashCode().toLong()
+        artCache?.let { (key, cached, accent) -> if (key == trackKey) return cached to accent }
         // Some players hand over GPU-only (HARDWARE) bitmaps: their pixels can't be read directly.
         val source = if (original.config == Bitmap.Config.HARDWARE) original.copy(Bitmap.Config.ARGB_8888, false) ?: return null else original
-        // Play/pause re-sends the same artwork; only a new cover is worth scaling and analyzing.
-        val signature = signature(source)
-        artCache?.let { (sig, cached, accent) -> if (sig == signature) return cached to accent }
         val bitmap = scaled(source)
         val palette = runCatching { Palette.from(bitmap).generate() }.getOrNull()
         val swatch = palette?.vibrantSwatch ?: palette?.lightVibrantSwatch ?: palette?.dominantSwatch
         val accent = swatch?.rgb?.let(::brighten) ?: DEFAULT_ACCENT
-        artCache = Triple(signature, bitmap, accent)
+        artCache = Triple(trackKey, bitmap, accent)
         return bitmap to accent
-    }
-
-    private fun signature(b: Bitmap): Long {
-        var h = b.width * 31L + b.height
-        for (i in 1..4) for (j in 1..4) h = h * 31 + b.getPixel(b.width * i / 5, b.height * j / 5)
-        return h
     }
 
     private fun scaled(b: Bitmap): Bitmap =
@@ -293,8 +314,18 @@ class IslandNotificationListener : NotificationListenerService() {
     // --- app info -----------------------------------------------------------------------------
 
     @Suppress("DEPRECATION") // The flags overload is Android 13+; this one works everywhere.
-    private fun appLabel(pkg: String): String = labels.getOrPut(pkg) {
-        runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg)
+    private fun appLabel(pkg: String): String {
+        labels[pkg]?.let { return it }
+        val label = runCatching { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrNull()
+            ?: return pkg
+        labels[pkg] = label
+        return label
+    }
+
+    /** App names follow the phone's language. */
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        labels.clear()
     }
 
     private fun appIcon(pkg: String): Drawable? = runCatching { packageManager.getApplicationIcon(pkg) }.getOrNull()

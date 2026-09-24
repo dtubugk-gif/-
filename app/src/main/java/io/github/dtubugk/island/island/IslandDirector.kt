@@ -32,7 +32,8 @@ class IslandDirector(
     interface System {
         fun openSettings()
         fun openNotifications()
-        fun launch(intent: PendingIntent)
+        /** Opens [intent]; true only if the system accepted it. */
+        fun launch(intent: PendingIntent): Boolean
         fun isLocked(): Boolean
         fun onWindowSizeNeeded(width: Int, height: Int) {}
         fun onShownChanged(shown: Boolean) {}
@@ -78,6 +79,8 @@ class IslandDirector(
     private var chip: RectF? = null
 
     private var expanded = false
+    /** The ringing call that opened the island by itself, if any. */
+    private var autoExpandedCall: String? = null
     private var peek: Peek? = null
     private val queue = ArrayDeque<Peek>()
     private var touching = false
@@ -85,6 +88,8 @@ class IslandDirector(
     private val handler = Handler(Looper.getMainLooper())
     private val timeout = Runnable { onTimeout() }
     private val endDemo = Runnable {
+        // A sample that opened the island (the incoming call) closes it when it ends.
+        if (demoActivity != null) expanded = false
         demoMedia = null
         demoActivity = null
         resolve()
@@ -114,6 +119,16 @@ class IslandDirector(
         if (incoming != null && active && config.liveActivities) {
             expanded = true
             peek = null
+            autoExpandedCall = incoming.key
+        }
+        // The call it opened for is gone (answered elsewhere, declined, missed): close with it.
+        val opened = autoExpandedCall
+        if (opened != null && list.none { it.key == opened }) {
+            autoExpandedCall = null
+            if (expanded) {
+                expanded = false
+                peek = queue.removeFirstOrNull()
+            }
         }
         resolve()
     }
@@ -134,6 +149,8 @@ class IslandDirector(
     }
 
     fun setChip(rect: RectF?) {
+        // A scan made while hidden (landscape, screen off) describes another geometry.
+        if (!active && rect != null) return
         val same = rect == chip || (rect != null && chip != null &&
             kotlin.math.abs(rect.left - chip!!.left) < 2f && kotlin.math.abs(rect.right - chip!!.right) < 2f)
         if (same) return
@@ -230,10 +247,13 @@ class IslandDirector(
                 schedule()
             }
             is Tap.Launch -> {
-                tap.intent?.let(system::launch)
+                val launched = tap.intent?.let(system::launch) == true
                 val current = peek
-                // Opening a message from the island clears it from the shade, like tapping it there.
-                if (current is Peek.Message && current.autoCancel && tap.intent != null) LiveBus.cancelNotification(current.key)
+                // Opening a message from the island clears it from the shade, like tapping it there;
+                // but not if nothing opened, or it opened behind the lock screen.
+                if (current is Peek.Message && current.autoCancel && launched && !system.isLocked()) {
+                    LiveBus.cancelNotification(current.key)
+                }
                 if (current != null) nextPeek() else collapse()
             }
         }
@@ -269,6 +289,7 @@ class IslandDirector(
 
     private fun collapse() {
         expanded = false
+        autoExpandedCall = null
         resolve()
     }
 

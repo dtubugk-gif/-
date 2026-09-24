@@ -348,7 +348,7 @@ private fun ActiveCard(config: IslandConfig, actions: IslandActions) {
 private object PreviewSystem : IslandDirector.System {
     override fun openSettings() = Unit
     override fun openNotifications() = Unit
-    override fun launch(intent: PendingIntent) = Unit
+    override fun launch(intent: PendingIntent) = false
     override fun isLocked() = false
 }
 

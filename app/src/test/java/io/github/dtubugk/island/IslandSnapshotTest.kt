@@ -51,7 +51,7 @@ class IslandSnapshotTest {
     private val noSystem = object : IslandDirector.System {
         override fun openSettings() = Unit
         override fun openNotifications() = Unit
-        override fun launch(intent: PendingIntent) = Unit
+        override fun launch(intent: PendingIntent) = false
         override fun isLocked() = false
     }
 

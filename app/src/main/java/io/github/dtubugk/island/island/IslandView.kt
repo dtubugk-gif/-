@@ -228,8 +228,14 @@ class IslandView(
         val target = if (isShownTarget) 1f else 0f
         if (target != shown.target) host?.onShownChanged(target > 0f)
         if (target == 0f) {
-            // The window turns untouchable now and may never see this finger lift.
+            // The window turns untouchable now and may never see this finger lift: end the gesture
+            // here, including a pending long press, which would otherwise still open the settings.
             press.snapTo(0f)
+            val now = SystemClock.uptimeMillis()
+            MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 0f, 0f, 0).also {
+                gestures.onTouchEvent(it)
+                it.recycle()
+            }
             host?.onTouching(false)
         }
         if (!animate || !animationsEnabled()) {
@@ -436,7 +442,7 @@ class IslandView(
             if (scale != 1f) canvas.scale(scale, scale, cx, if (sc.isCard) top else top + full.height / 2f)
             sc.draw(canvas, f, a)
             canvas.restore()
-            if (sc.refreshMs > 0L) refresh = min(refresh, sc.refreshMs)
+            if (sc.refreshMs > 0L) refresh = min(refresh, sc.nextRefreshDelay(f.nowMs).coerceAtLeast(16L))
         }
 
         if (visibility < 1f) canvas.restore()
@@ -445,11 +451,7 @@ class IslandView(
         // Waveforms and running clocks redraw on their own cadence while nothing else animates.
         // One pending tick at most, so extra invalidations never stack into parallel loops.
         removeCallbacks(tick)
-        if (!frameLoopRunning && refresh != Long.MAX_VALUE) {
-            // Running clocks tick right after each wall-clock second, so no second is ever skipped.
-            val delay = if (refresh >= 1000L) 1000L - System.currentTimeMillis() % 1000L + 15L else refresh
-            postDelayed(tick, delay)
-        }
+        if (!frameLoopRunning && refresh != Long.MAX_VALUE) postDelayed(tick, refresh)
     }
 
     /** A camera lens as it really looks inside a black island: barely there. */

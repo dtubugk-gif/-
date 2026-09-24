@@ -65,6 +65,9 @@ abstract class Scene(val key: String) {
     open val isCard: Boolean = false
     /** Redraw cadence while visible, for waveforms and running clocks. 0 = static. */
     open val refreshMs: Long = 0L
+
+    /** Milliseconds until this scene next looks different; defaults to [refreshMs]. */
+    open fun nextRefreshDelay(nowMs: Long): Long = refreshMs
     abstract fun draw(c: Canvas, f: Frame, alpha: Float)
     abstract fun tap(x: Float, y: Float, f: Frame): Tap
 }
@@ -158,11 +161,14 @@ class InfoScene(
         val tile = 50f * dp
         val tileRight = right - 16f * dp
         val tileLeft = tileRight - tile
-        // Built once per card, not per frame while the card animates.
-        val gradient = tileGradient ?: LinearGradient(tileLeft, row - tile / 2f, tileRight, row + tile / 2f, IslandColors.GRADIENT_START, IslandColors.GRADIENT_END, Shader.TileMode.CLAMP).also { tileGradient = it }
+        // Built once in tile-local coordinates and moved with the canvas, so it follows the tile.
+        val gradient = tileGradient ?: LinearGradient(0f, 0f, tile, tile, IslandColors.GRADIENT_START, IslandColors.GRADIENT_END, Shader.TileMode.CLAMP).also { tileGradient = it }
         p.fill.shader = gradient
         p.fill.alpha = (alpha * 255).roundToInt()
-        c.drawRoundRect(tileLeft, row - tile / 2f, tileRight, row + tile / 2f, 16f * dp, 16f * dp, p.fill)
+        c.save()
+        c.translate(tileLeft, row - tile / 2f)
+        c.drawRoundRect(0f, 0f, tile, tile, 16f * dp, 16f * dp, p.fill)
+        c.restore()
         p.fill.shader = null
         val avatar = config.text.ifBlank { IslandConfig.DEFAULT_TEXT }
         val fit = min(28f * dp, 28f * dp * (tile - 14f * dp) / max(p.measure(avatar, 28f * dp, p.bold), 1f))
@@ -350,6 +356,13 @@ class MediaCardScene(private val media: MediaState) : Scene("media-card:${media.
 
 private fun LiveActivity.accent() = if (kind == LiveKind.CALL) GREEN else ORANGE
 private fun LiveActivity.iconRes() = if (kind == LiveKind.CALL) R.drawable.ic_call else R.drawable.ic_timer
+/** Time until the shown seconds change, on the chronometer's own phase (up or down alike). */
+private fun LiveActivity.nextTick(nowMs: Long): Long {
+    if (chronometerBase <= 0L) return 0L
+    val ms = Math.floorMod(chronometerBase - nowMs, 1000L)
+    return (if (ms == 0L) 1000L else ms) + 15L
+}
+
 private fun LiveActivity.clock(nowMs: Long): String? {
     if (chronometerBase <= 0L) return null
     return IslandPainter.duration(if (countDown) chronometerBase - nowMs else nowMs - chronometerBase)
@@ -361,6 +374,7 @@ class LiveCompactScene(
     private val cover: RectF? = null,
 ) : Scene("live-c:${activity.key}") {
     override val refreshMs get() = if (activity.chronometerBase > 0L) 1000L else 0L
+    override fun nextRefreshDelay(nowMs: Long) = activity.nextTick(nowMs)
     override fun shape(l: IslandLayout) = l.compact.covering(cover, l)
 
     override fun draw(c: Canvas, f: Frame, alpha: Float) {
@@ -384,6 +398,7 @@ class LiveCompactScene(
 class LiveCardScene(private val activity: LiveActivity) : Scene("live-card:${activity.key}") {
     override val isCard = true
     override val refreshMs get() = if (activity.chronometerBase > 0L) 1000L else 0L
+    override fun nextRefreshDelay(nowMs: Long) = activity.nextTick(nowMs)
     private val actions = activity.actions.take(3)
     override fun shape(l: IslandLayout) = l.card((if (actions.isEmpty()) 76f else 128f) * l.density)
 

@@ -289,8 +289,8 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
     }
 
-    override fun launch(intent: PendingIntent) {
-        runCatching {
+    override fun launch(intent: PendingIntent): Boolean {
+        return runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 // Android 14+ only lets a PendingIntent open an app from the background if the
                 // sender opts in; the island is the user's own tap, so it does.
@@ -300,7 +300,7 @@ class IslandService : AccessibilityService(), IslandDirector.System {
             } else {
                 intent.send()
             }
-        }
+        }.isSuccess
     }
 
     override fun isLocked(): Boolean = getSystemService(KeyguardManager::class.java)?.isKeyguardLocked ?: false
