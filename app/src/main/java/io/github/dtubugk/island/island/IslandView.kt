@@ -112,13 +112,31 @@ class IslandView(
     private val lensPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     private var pulledDown = false
+    private var doubleTapped = false
     private val gestures = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent): Boolean = true
 
+        // The first tap acts at once (it expands the island); a second tap right after opens the
+        // app behind what is shown. That second tap's own "single tap" is swallowed, so it can
+        // never hit a button on the card the first tap just opened.
         override fun onSingleTapUp(e: MotionEvent): Boolean {
+            if (doubleTapped) {
+                doubleTapped = false
+                return true
+            }
             val tap = scene.tap(e.x, e.y, frame())
             haptic(HapticFeedbackConstants.VIRTUAL_KEY)
             host?.onTap(tap)
+            return true
+        }
+
+        override fun onDoubleTap(e: MotionEvent): Boolean {
+            doubleTapped = true
+            val app = scene.app
+            if (app != null) {
+                haptic(HapticFeedbackConstants.CONFIRM)
+                host?.onTap(Tap.Launch(app))
+            }
             return true
         }
 
@@ -352,6 +370,7 @@ class IslandView(
             }
             MotionEvent.ACTION_DOWN -> {
                 if (!hitIsland(event.x, event.y, slop = 8f * dp)) {
+                    doubleTapped = false
                     host?.onOutsideTouch()
                     return false
                 }

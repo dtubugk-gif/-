@@ -64,6 +64,8 @@ abstract class Scene(val key: String) {
     abstract fun shape(l: IslandLayout): IslandShape
     /** Cards grow down from the top edge; pills scale around their middle. */
     open val isCard: Boolean = false
+    /** The app behind what is shown, opened by a double tap; null when the island shows its own content. */
+    open val app: PendingIntent? get() = null
     /** Redraw cadence while visible, for waveforms and running clocks. 0 = static. */
     open val refreshMs: Long = 0L
 
@@ -310,6 +312,7 @@ class MediaCompactScene(
     private val cover: RectF? = null,
 ) : Scene("media-c:${media.packageName}") {
     override val refreshMs get() = if (media.playing) FRAME_MS else 0L
+    override val app get() = media.openApp
     override fun shape(l: IslandLayout) = l.compact.covering(cover, l)
 
     override fun draw(c: Canvas, f: Frame, alpha: Float) {
@@ -348,6 +351,7 @@ class MediaCompactScene(
 /** Artwork, title, progress and controls, the island's big music card. */
 class MediaCardScene(private val media: MediaState) : Scene("media-card:${media.packageName}") {
     override val isCard = true
+    override val app get() = media.openApp
     override val refreshMs get() = if (media.playing) MediaCompactScene.FRAME_MS else 0L
     override fun shape(l: IslandLayout) = l.card(CONTENT_DP * l.density)
 
@@ -472,6 +476,7 @@ class LiveCompactScene(
     private val cover: RectF? = null,
 ) : Scene("live-c:${activity.key}") {
     override val refreshMs get() = if (activity.chronometerBase > 0L) 1000L else 0L
+    override val app get() = activity.openApp
     override fun nextRefreshDelay(nowMs: Long) = activity.nextTick(nowMs)
     override fun shape(l: IslandLayout) = l.compact.covering(cover, l)
 
@@ -512,6 +517,7 @@ class LiveCardScene(
     private val system: SystemState = SystemState(),
 ) : Scene("live-card:${activity.key}") {
     override val isCard = true
+    override val app get() = activity.openApp
     override val refreshMs get() = if (activity.chronometerBase > 0L) 1000L else 0L
     override fun nextRefreshDelay(nowMs: Long) = activity.nextTick(nowMs)
     private val actions = activity.actions.take(3)
@@ -615,6 +621,7 @@ class MessageScene(
     key: String,
 ) : Scene("msg:$key") {
     override val isCard = true
+    override val app get() = open
     override fun shape(l: IslandLayout) = l.card(76f * l.density)
 
     override fun draw(c: Canvas, f: Frame, alpha: Float) {

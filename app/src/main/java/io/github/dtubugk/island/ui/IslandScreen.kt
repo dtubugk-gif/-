@@ -140,6 +140,7 @@ fun IslandScreen(
             Spacer(Modifier.height(20.dp))
             Text(
                 "לחיצה על האי פותחת כרטיס עם פנס, מצב טיסה, נא לא להפריע, צילום מסך ונעילה. " +
+                    "לחיצה כפולה פותחת את האפליקציה שמוצגת (נגן, ניווט, שיחה, הודעה). " +
                     "בשיחה: רמקול, השתקה ומצב טיסה. לחיצה ארוכה פותחת את המסך הזה. החלקה למטה פותחת את ההתראות.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
