@@ -15,7 +15,7 @@
 ## התקנה (פעם אחת, כ-2 דקות)
 
 1. בטלפון, מורידים את הקובץ:
-   **https://github.com/dtubugk-gif/-/releases/latest/download/dynamic-island.apk**
+   **https://github.com/dtubugk-gif/-/releases/download/dynamic-island/dynamic-island.apk**
 2. פותחים את הקובץ ומאשרים "התקנה ממקור לא ידוע" לדפדפן או ל"הקבצים שלי".
    ב-One UI 8, אם ההתקנה נחסמת: הגדרות ← אבטחה ופרטיות ← **חוסם אוטומטי** ← כיבוי זמני.
 3. פותחים את **אי דינמי** ולוחצים **הפעלת האי** ← אפליקציות מותקנות ← אי דינמי ← הפעלה.

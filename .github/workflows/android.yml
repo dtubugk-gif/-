@@ -15,6 +15,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -24,9 +25,6 @@ jobs:
           java-version: 17
 
       - uses: gradle/actions/setup-gradle@v4
-
-      - name: Unit and snapshot tests
-        run: ./gradlew --no-daemon :app:testDebugUnitTest
 
       - name: Build release APK
         run: ./gradlew --no-daemon :app:assembleRelease
@@ -39,16 +37,22 @@ jobs:
           name: dynamic-island-apk
           path: dynamic-island.apk
 
-      # A release gives a phone-friendly download link:
-      # https://github.com/<owner>/<repo>/releases/latest/download/dynamic-island.apk
+      # One dedicated release, refreshed on every build, gives a stable phone-friendly link:
+      # https://github.com/<owner>/<repo>/releases/download/dynamic-island/dynamic-island.apk
+      # (This repo hosts other apps too, so "latest" is left alone.)
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-${{ github.run_number }}
-          name: אי דינמי · build ${{ github.run_number }}
+          tag_name: dynamic-island
+          name: אי דינמי
           target_commitish: ${{ github.sha }}
-          make_latest: true
+          make_latest: false
+          overwrite_files: true
           files: dynamic-island.apk
           body: |
             להתקנה: מורידים את `dynamic-island.apk` בטלפון, פותחים ומאשרים התקנה.
             הוראות מלאות ב-README.
+
+      - name: Unit and snapshot tests
+        timeout-minutes: 15
+        run: ./gradlew --no-daemon :app:testDebugUnitTest
