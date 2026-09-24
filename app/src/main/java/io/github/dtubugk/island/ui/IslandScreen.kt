@@ -672,7 +672,7 @@ private fun BehaviorCard(config: IslandConfig, actions: IslandActions) {
         ToggleRow("רטט", "רטט עדין כשנוגעים באי", config.haptics) { v ->
             actions.update { it.copy(haptics = v) }
         }
-        ToggleRow("הסתרה באפליקציות במסך מלא", "האי נעלם כשסרטון או משחק מסתירים את שורת הסטטוס, וחוזר אחר כך", config.hideInFullscreen) { v ->
+        ToggleRow("הסתרה באפליקציות במסך מלא", "האי נעלם כשסרטון או משחק מסתירים את שורת הסטטוס, וחוזר אחר כך עם ההודעות שהגיעו בינתיים", config.hideInFullscreen) { v ->
             actions.update { it.copy(hideInFullscreen = v) }
         }
         ToggleRow("הצגה במסך הנעילה", "בלי זה האי מופיע רק אחרי הפתיחה. תוכן ההודעות לעולם לא מוצג במסך נעילה", config.showOnLockScreen) { v ->
@@ -765,7 +765,7 @@ private fun BlockedAppsCard(config: IslandConfig, actions: IslandActions) {
         SectionTitle("אילו אפליקציות מופיעות באי")
         Text(
             if (config.blockedApps.isEmpty()) "כל האפליקציות. אפשר לחסום אפליקציות שלא רוצים לראות באי."
-            else "${config.blockedApps.size} אפליקציות חסומות. ההתראות שלהן נשארות בלוח ההתראות בלבד.",
+            else "${config.blockedApps.size} אפליקציות חסומות. ההודעות, הטיימרים והמוזיקה שלהן נשארים מחוץ לאי.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

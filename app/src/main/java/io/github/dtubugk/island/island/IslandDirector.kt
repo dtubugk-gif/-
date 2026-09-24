@@ -93,6 +93,25 @@ class IslandDirector(
             }
         }
 
+    /**
+     * Out of sight for a while (a fullscreen video, the lock screen) but not gone: messages and
+     * API islands wait with their clocks stopped and show when the island returns. Momentary
+     * notices (charging, ringer, unlock) are not replayed later.
+     */
+    var held = false
+        set(value) {
+            if (value == field) return
+            field = value
+            if (value) {
+                handler.removeCallbacks(timeout)
+                armedFor = null
+            } else {
+                // A fresh clock, and a fresh "+N" for whatever queued meanwhile.
+                rearm()
+                resolve()
+            }
+        }
+
     private var media: MediaState? = null
     private var mediaPausedAt = 0L
     private var activities: List<LiveActivity> = emptyList()
@@ -235,6 +254,9 @@ class IslandDirector(
         }
         if (p is Peek.Custom) standing.remove(p.id)
         if (!active) return
+        // Hidden behind a fullscreen app: a moment's notice is stale by the time the island
+        // returns; a message or an API island is not.
+        if (held && p !is Peek.Message && p !is Peek.Custom) return
         // Charging is a brief notice: never interrupt a card the user opened on purpose.
         if (p is Peek.Charging && expanded) return
         // A newer message from the same chat replaces the waiting one instead of queueing twice.
@@ -264,14 +286,21 @@ class IslandDirector(
                 queue.removeAt(if (i >= 0) i else 0)
             }
             queue.addLast(p)
+            // The card on screen says how many wait behind it: keep that number live. Same
+            // scene key, so the view redraws in place and the running clock is left alone.
+            if (peek is Peek.Message) resolve(keepTimers = true)
         }
     }
 
     /** A notification left the shade: drop it from the island too, shown or queued. */
     fun onNotificationRemoved(key: String) {
-        queue.removeAll { it is Peek.Message && it.key == key }
+        val dropped = queue.removeAll { it is Peek.Message && it.key == key }
         val current = peek
-        if (current is Peek.Message && current.key == key) nextPeek()
+        when {
+            current is Peek.Message && current.key == key -> nextPeek()
+            // One fewer waiting: the "+N" on the shown card must not overcount.
+            dropped && current is Peek.Message -> resolve(keepTimers = true)
+        }
     }
 
     fun expand() {
@@ -494,6 +523,12 @@ class IslandDirector(
                     schedule()
                 }
             }
+            is Tap.Action -> {
+                tap.intent?.let(sys::launch)
+                // Unlike a tap on the message itself, a button never clears it from the shade:
+                // the app cancels it (mark as read) or keeps it (like, snooze), as in the shade.
+                if (peek != null) nextPeek() else collapse()
+            }
             is Tap.Launch -> {
                 val launched = tap.intent?.let(sys::launch) == true
                 val current = peek
@@ -639,7 +674,7 @@ class IslandDirector(
 
     private fun schedule() {
         handler.removeCallbacks(linger)
-        if (touching || !autoDismiss) {
+        if (touching || held || !autoDismiss) {
             handler.removeCallbacks(timeout)
             armedFor = null
             return

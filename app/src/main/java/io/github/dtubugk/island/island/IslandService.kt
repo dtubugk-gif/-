@@ -19,6 +19,7 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.hardware.display.DisplayManager
 import android.provider.Settings
+import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import android.widget.Toast
@@ -91,7 +92,11 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         private fun handle(context: Context, intent: Intent) {
             val d = director ?: return
             when (intent.action) {
-                Intent.ACTION_SCREEN_OFF -> updateVisibility(animate = false)
+                Intent.ACTION_SCREEN_OFF -> {
+                    // A reply box must not wake up on top of the lock screen.
+                    closeReply()
+                    updateVisibility(animate = false)
+                }
                 Intent.ACTION_SCREEN_ON -> updateVisibility(animate = true)
                 Intent.ACTION_USER_PRESENT -> {
                     // The island's Face ID moment: a short open-lock flash.
@@ -331,20 +336,30 @@ class IslandService : AccessibilityService(), IslandDirector.System {
 
     /** False while a fullscreen app hides the status bar (told by the overlay's insets). */
     private var statusBarVisible = true
+    private val statusBarHide = Runnable { if (!statusBarVisible) updateVisibility(animate = true) }
 
     override fun onStatusBarVisible(visible: Boolean) {
         if (statusBarVisible == visible) return
         statusBarVisible = visible
-        updateVisibility(animate = true)
+        handler.removeCallbacks(statusBarHide)
+        // Back at once; away only once the bar has stayed hidden a moment, so an app that hides
+        // it just while it launches doesn't blink the island out and in.
+        if (visible) updateVisibility(animate = true) else handler.postDelayed(statusBarHide, STATUS_BAR_HIDE_MS)
     }
 
     private fun updateVisibility(animate: Boolean) {
         val cfg = IslandSettings.config.value
-        val visible = isInteractive() &&
-            (cfg.showInLandscape || !isLandscape()) &&
-            (!cfg.hideInFullscreen || statusBarVisible) &&
-            (cfg.showOnLockScreen || !isLocked())
-        director?.active = visible
+        val interactive = isInteractive()
+        val locked = isLocked()
+        // The reply box never outlives a lit, unlocked screen.
+        if (!interactive || locked) closeReply()
+        // Content that genuinely cannot be shown is dropped (screen off, rotation)...
+        val canShow = interactive && (cfg.showInLandscape || !isLandscape())
+        // ...but merely out of sight for a while (a fullscreen app, the lock screen) it waits.
+        val covered = canShow && ((cfg.hideInFullscreen && !statusBarVisible) || (!cfg.showOnLockScreen && locked))
+        director?.active = canShow
+        director?.held = covered
+        val visible = canShow && !covered
         island?.setShown(visible, animate)
         if (visible) scheduleChipScan()
     }
@@ -729,7 +744,18 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         closeReply()
         val dp = resources.displayMetrics.density
         val ctx = android.view.ContextThemeWrapper(this, android.R.style.Theme_DeviceDefault_Dialog)
-        val box = android.widget.LinearLayout(ctx).apply {
+        val box = object : android.widget.LinearLayout(ctx) {
+            // BACK closes the box and its keyboard in one press, like a dialog; a plain layout
+            // has no window callback to do that. Closing is posted: never tear the window down
+            // inside its own input dispatch.
+            override fun dispatchKeyEventPreIme(event: android.view.KeyEvent): Boolean {
+                if (event.keyCode == android.view.KeyEvent.KEYCODE_BACK) {
+                    if (event.action == android.view.KeyEvent.ACTION_UP && !event.isCanceled) handler.post(::closeReply)
+                    return true
+                }
+                return super.dispatchKeyEventPreIme(event)
+            }
+        }.apply {
             orientation = android.widget.LinearLayout.VERTICAL
             layoutDirection = android.view.View.LAYOUT_DIRECTION_RTL
             background = android.graphics.drawable.GradientDrawable().apply {
@@ -749,9 +775,12 @@ class IslandService : AccessibilityService(), IslandDirector.System {
             setTextColor(Color.WHITE)
             setHintTextColor(0x66FFFFFF)
             textSize = 16f
-            maxLines = 3
-            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEND
+            // The field wraps up to three lines, but the keyboard is told it is single-line so
+            // it shows a Send key: a multi-line field gets a newline key instead.
             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            setRawInputType(android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES)
+            imeOptions = android.view.inputmethod.EditorInfo.IME_ACTION_SEND or android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI
+            maxLines = 3
             background = null
         }
         val row = android.widget.LinearLayout(ctx).apply { orientation = android.widget.LinearLayout.HORIZONTAL }
@@ -766,20 +795,45 @@ class IslandService : AccessibilityService(), IslandDirector.System {
             minHeight = (44f * dp).roundToInt()
             setOnClickListener { onClick() }
         }
-        val send = {
-            val text = input.text?.toString()?.trim().orEmpty()
-            if (text.isNotEmpty()) {
-                runCatching {
-                    val fill = Intent()
-                    android.app.RemoteInput.addResultsToIntent(arrayOf(action.remoteInput), fill, android.os.Bundle().apply { putCharSequence(action.remoteInput.resultKey, text) })
-                    action.intent.send(this, 0, fill)
-                }
-                Toast.makeText(this, "נשלח", Toast.LENGTH_SHORT).show()
+        fun send() {
+            // A lock that arrived with the screen on (lockdown): nothing is sent from the keyguard.
+            if (isLocked()) {
+                closeReply()
+                return
             }
-            closeReply()
+            val text = input.text?.toString()?.trim().orEmpty()
+            if (text.isEmpty()) {
+                closeReply()
+                return
+            }
+            val sent = runCatching {
+                val fill = Intent()
+                android.app.RemoteInput.addResultsToIntent(arrayOf(action.remoteInput), fill, android.os.Bundle().apply { putCharSequence(action.remoteInput.resultKey, text) })
+                android.app.RemoteInput.setResultsSource(fill, android.app.RemoteInput.SOURCE_FREE_FORM_INPUT)
+                action.intent.send(this, 0, fill)
+            }.onFailure { Log.w(TAG, "reply to ${message.packageName} failed", it) }.isSuccess
+            if (sent) {
+                Toast.makeText(this, "נשלח", Toast.LENGTH_SHORT).show()
+                closeReply()
+            } else {
+                // The app took its reply intent back (updated, force-stopped): the text stays on
+                // screen rather than vanishing behind a false "sent".
+                Toast.makeText(this, "השליחה נכשלה. אפשר להשיב מתוך האפליקציה", Toast.LENGTH_LONG).show()
+            }
         }
-        input.setOnEditorActionListener { _, id, _ -> if (id == android.view.inputmethod.EditorInfo.IME_ACTION_SEND) { send(); true } else false }
-        row.addView(button("שליחה", primary = true, onClick = send), android.widget.LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        input.setOnEditorActionListener { _, id, event ->
+            val softSend = event == null && id == android.view.inputmethod.EditorInfo.IME_ACTION_SEND
+            // A hardware Enter reaches a multi-line field as a key event with no action id.
+            val enterKey = event != null && event.action == android.view.KeyEvent.ACTION_DOWN && event.hasNoModifiers() &&
+                (event.keyCode == android.view.KeyEvent.KEYCODE_ENTER || event.keyCode == android.view.KeyEvent.KEYCODE_NUMPAD_ENTER)
+            if (softSend || enterKey) {
+                handler.post { send() }
+                true
+            } else {
+                false
+            }
+        }
+        row.addView(button("שליחה", primary = true, onClick = ::send), android.widget.LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         row.addView(android.view.View(ctx), android.widget.LinearLayout.LayoutParams((8f * dp).roundToInt(), 1))
         row.addView(button("ביטול", primary = false, onClick = ::closeReply), android.widget.LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         box.addView(title)
@@ -789,19 +843,31 @@ class IslandService : AccessibilityService(), IslandDirector.System {
             (realSize().x - (24f * dp).roundToInt()).coerceAtMost((420f * dp).roundToInt()),
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            // Not touch-modal: the phone stays usable around the box, and a tap anywhere else
+            // both reaches what is under it and closes the box, like a popup. Still focusable,
+            // so the keyboard comes up for it.
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
             y = (readScreen().statusBarHeight + 52f * dp).roundToInt()
             softInputMode = WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE or WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN
         }
+        // Outside touches arrive on the box itself, the window's root view.
+        box.setOnTouchListener { _, e ->
+            if (e.actionMasked == android.view.MotionEvent.ACTION_OUTSIDE) {
+                handler.post(::closeReply)
+                true
+            } else {
+                false
+            }
+        }
         runCatching {
             wm.addView(box, lp)
             replyBox = box
             input.requestFocus()
-            // Anywhere else closes it, like a dialog.
-            handler.postDelayed({ box.rootView.setOnTouchListener { _, e -> if (e.actionMasked == android.view.MotionEvent.ACTION_OUTSIDE) closeReply(); false } }, 100)
         }
     }
 
@@ -924,6 +990,8 @@ class IslandService : AccessibilityService(), IslandDirector.System {
     private fun tearDown() {
         _running.value = false
         handler.removeCallbacks(chipScan)
+        handler.removeCallbacks(statusBarHide)
+        statusBarVisible = true
         chipScanPending = false
         // A later reconnect must learn the already-connected headphones again, not announce them.
         audioCallbackPrimed = false
@@ -1009,9 +1077,12 @@ class IslandService : AccessibilityService(), IslandDirector.System {
         /** True while the system has the service bound, i.e. the island is live. */
         val running: StateFlow<Boolean> = _running.asStateFlow()
 
+        private const val TAG = "IslandService"
         private val LOW_THRESHOLDS = listOf(20, 10)
         private const val SYSTEM_UI = "com.android.systemui"
         private const val CHIP_SCAN_INTERVAL_MS = 400L
+        /** How long the status bar must stay hidden before the island leaves with it. */
+        private const val STATUS_BAR_HIDE_MS = 350L
         private val AIRPLANE_LABELS = listOf("מצב טיסה", "airplane", "aeroplane", "flight mode")
         private val WRONG_LABELS = listOf("wi-fi", "wifi", "הגדרות", "settings", "שיחות", "calling")
         private val CONFIRM_WORDS = listOf("הפעל", "הפעלה", "אישור", "turn on", "ok", "אשר", "כן", "yes")

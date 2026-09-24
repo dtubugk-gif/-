@@ -121,3 +121,15 @@ can rebase cleanly.
 ## Log
 
 - 2026-09-24 — first session: app built, reviewed and pushed; this handoff written.
+- 2026-09-24 — first session: competitor-parity batch (per-app filter, notification buttons +
+  inline reply, auto-hide in fullscreen, lock-screen toggle, stacking count, pop-up duration,
+  corner radius, border, animation speed, landscape, screenshot notice) and its adversarial review
+  fixes: status-bar visibility is read from insets on Android 11+ only and from the legacy
+  system-UI flag on 9/10 (the insets of this window are structurally empty there, which hid the
+  island forever); the reply window is not touch-modal, closes on outside tap / BACK / screen-off /
+  lock, shows a Send key, reports a failed `PendingIntent.send`; `IslandDirector.held` keeps
+  messages and API islands (clocks stopped) while the island is merely covered (fullscreen app,
+  lock screen) instead of dropping them; "+N" redraws in place when the queue changes;
+  notification buttons are `Tap.Action` (never auto-cancel the notification); the app filter also
+  applies to live activities and media, re-applied when the set changes; screenshot failure
+  notifications are not announced as saved; the border is drawn after the opaque band.

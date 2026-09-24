@@ -16,6 +16,14 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import androidx.palette.graphics.Palette
 import io.github.dtubugk.island.data.IslandSettings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlin.math.max
 
 /**
@@ -91,9 +99,23 @@ class IslandNotificationListener : NotificationListenerService() {
             statusKind(it)?.let { k -> statusKeys[it.key] = k }
         }
         runCatching { publishActivities() }
+        // Blocking or unblocking an app takes effect at once, mid-song or mid-timer.
+        scope?.cancel()
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate).also { s ->
+            s.launch {
+                IslandSettings.config.map { it.blockedApps }.distinctUntilChanged().drop(1).collect {
+                    runCatching { publishActivities() }
+                    runCatching { pickController() }
+                }
+            }
+        }
     }
 
+    private var scope: CoroutineScope? = null
+
     override fun onListenerDisconnected() {
+        scope?.cancel()
+        scope = null
         runCatching { sessions?.removeOnActiveSessionsChangedListener(sessionsListener) }
         controllers.forEach { runCatching { it.unregisterCallback(controllerCallback) } }
         controllers = emptyList()
@@ -132,8 +154,12 @@ class IslandNotificationListener : NotificationListenerService() {
         val text = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
             ?: extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
         if (title.isBlank() && text.isBlank()) return
-        // A screenshot saved: a short notice with a camera glyph rather than a message.
-        if (sbn.packageName in SCREENSHOT_PACKAGES && SCREENSHOT_WORDS.any { it in (title + " " + text).lowercase() }) {
+        // A screenshot saved: a short notice with a camera glyph rather than a message. "Couldn't
+        // save screenshot" mentions one too; that stays a plain message with its real text.
+        val shotText = (title + " " + text).lowercase()
+        if (sbn.packageName in SCREENSHOT_PACKAGES && SCREENSHOT_WORDS.any { it in shotText } &&
+            n.category != Notification.CATEGORY_ERROR && SCREENSHOT_FAIL_WORDS.none { it in shotText }
+        ) {
             LiveBus.peek(Peek.Screenshot(n.contentIntent))
             return
         }
@@ -242,8 +268,10 @@ class IslandNotificationListener : NotificationListenerService() {
     }
 
     private fun publishActivities() {
+        // The user's per-app filter applies to timers, rides and downloads too, not only messages.
+        val blocked = IslandSettings.config.value.blockedApps
         val list = runCatching { activeNotifications }.getOrNull().orEmpty()
-            .filter { it.packageName != packageName && isLiveCandidate(it) && !it.notification.extras.containsKey(Notification.EXTRA_MEDIA_SESSION) }
+            .filter { it.packageName != packageName && it.packageName !in blocked && isLiveCandidate(it) && !it.notification.extras.containsKey(Notification.EXTRA_MEDIA_SESSION) }
             .mapNotNull { sbn ->
                 val n = sbn.notification
                 val extras = n.extras
@@ -302,9 +330,11 @@ class IslandNotificationListener : NotificationListenerService() {
 
     /** Prefer whatever is playing; otherwise the most recent session with a track loaded. */
     private fun pickController() {
-        controller = controllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
-            ?: controllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_BUFFERING }
-            ?: controllers.firstOrNull { it.metadata != null }
+        val blocked = IslandSettings.config.value.blockedApps
+        val usable = controllers.filter { it.packageName !in blocked }
+        controller = usable.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
+            ?: usable.firstOrNull { it.playbackState?.state == PlaybackState.STATE_BUFFERING }
+            ?: usable.firstOrNull { it.metadata != null }
         publishMedia()
     }
 
@@ -429,6 +459,11 @@ class IslandNotificationListener : NotificationListenerService() {
         val HOTSPOT_WORDS = listOf("hotspot", "נקודה חמה", "tethering", "שיתוף אינטרנט")
         val SCREENSHOT_PACKAGES = setOf("com.samsung.android.app.smartcapture", "com.android.systemui")
         val SCREENSHOT_WORDS = listOf("screenshot", "צילום מסך", "screen capture")
+        // AOSP's own strings use the typographic apostrophe ("Couldn’t save screenshot").
+        val SCREENSHOT_FAIL_WORDS = listOf(
+            "couldn't", "couldn’t", "can't", "can’t", "unable", "fail", "not allowed", "isn't allowed", "isn’t allowed",
+            "לא ניתן", "נכשל", "אין אפשרות",
+        )
         const val STATUS_HOTSPOT = 1
         // Android 16 keys, spelled out so the app builds against older SDKs too.
         const val EXTRA_REQUEST_PROMOTED_ONGOING = "android.requestPromotedOngoing"

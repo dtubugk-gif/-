@@ -31,6 +31,8 @@ sealed class Tap {
     object Next : Tap()
     object Previous : Tap()
     data class Launch(val intent: PendingIntent?) : Tap()
+    /** One of a notification's own buttons: the app decides what becomes of its notification. */
+    data class Action(val intent: PendingIntent?) : Tap()
     data class Act(val action: IslandAction) : Tap()
     /** Switch to another concurrent activity (a tab in the card). */
     data class Select(val key: String) : Tap()
@@ -652,7 +654,7 @@ class LiveCardScene(
     override fun tap(x: Float, y: Float, f: Frame): Tap {
         Tabs.hit(x, y, f, shape(f.layout), tabs)?.let { return Tap.Select(it.key) }
         if (actions.isNotEmpty() && abs(y - actionsY(f)) <= 26f * f.dp) {
-            actionRects(f).forEachIndexed { i, (l, r) -> if (x in l..r) return Tap.Launch(actions[i].intent) }
+            actionRects(f).forEachIndexed { i, (l, r) -> if (x in l..r) return Tap.Action(actions[i].intent) }
         }
         tools?.hit(x, y, f, shape(f.layout), toolsY(f))?.let { return Tap.Act(it) }
         return Tap.Launch(activity.openApp)
@@ -730,7 +732,7 @@ class MessageScene(
     override val app get() = open
     /** The notification's buttons, and "reply" first when the app offers one. */
     private val pills: List<Pair<String, Tap>> =
-        (if (canReply) listOf("השב" to Tap.Reply) else emptyList()) + actions.take(3).map { it.title to Tap.Launch(it.intent) }
+        (if (canReply) listOf("השב" to Tap.Reply) else emptyList()) + actions.take(3).map { it.title to Tap.Action(it.intent) }
     override fun shape(l: IslandLayout) = l.card((76f + if (pills.isEmpty()) 0f else 52f) * l.density)
 
     override fun draw(c: Canvas, f: Frame, alpha: Float) {

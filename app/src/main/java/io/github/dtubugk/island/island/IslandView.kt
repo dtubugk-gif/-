@@ -220,6 +220,12 @@ class IslandView(
         contentDescription = context.getString(R.string.app_name)
         layers.add(Layer(scene, Spring(1f, 0.002f)))
         snapShape()
+        // Android 9/10: the global fullscreen flag is sent to every window that listens for it.
+        // Set before the window is added, so the window manager knows to tell this one.
+        if (isOverlay && android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) {
+            @Suppress("DEPRECATION")
+            setOnSystemUiVisibilityChangeListener { vis -> host?.onStatusBarVisible((vis and SYSTEM_UI_FLAG_FULLSCREEN) == 0) }
+        }
     }
 
     // --- public API ---------------------------------------------------------------------------
@@ -515,18 +521,6 @@ class IslandView(
         islandPaint.alpha = (255 * opacity).roundToInt()
         canvas.drawRoundRect(rect, r, r, islandPaint)
         islandPaint.alpha = 255
-        // An optional colored outline, drawn inside the edge so the shape stays the same.
-        val border = config.borderWidthDp.coerceIn(0f, IslandConfig.MAX_BORDER_DP) * dp
-        if (border > 0.5f) {
-            val c = IslandColors.of(config.borderColorIndex)
-            borderPaint.color = when (c) {
-                IslandColors.GRADIENT -> IslandColors.GRADIENT_END
-                IslandColors.SYSTEM -> painter.systemAccent()
-                else -> c
-            }
-            borderPaint.strokeWidth = border
-            canvas.drawRoundRect(left + border / 2f, top + border / 2f, left + w - border / 2f, top + h - border / 2f, max(r - border / 2f, 0f), max(r - border / 2f, 0f), borderPaint)
-        }
         if (opacity < 1f) {
             // Transparency is for the card body only: the strip over the status bar and the
             // collar around the camera stay hardware-black, so nothing shows through them.
@@ -538,6 +532,19 @@ class IslandView(
             canvas.drawRect(left, top, left + w, min(top + layout.bandHeight, top + h), islandPaint)
             canvas.drawCircle(centerX() + layout.holeOffsetX, top + layout.holeCenterY, layout.holeRadius + 6f * dp, islandPaint)
             canvas.restore()
+        }
+        // An optional colored outline, drawn inside the edge so the shape stays the same. After
+        // the opaque strip, which would otherwise paint over its top half.
+        val border = config.borderWidthDp.coerceIn(0f, IslandConfig.MAX_BORDER_DP) * dp
+        if (border > 0.5f) {
+            val c = IslandColors.of(config.borderColorIndex)
+            borderPaint.color = when (c) {
+                IslandColors.GRADIENT -> IslandColors.GRADIENT_END
+                IslandColors.SYSTEM -> painter.systemAccent()
+                else -> c
+            }
+            borderPaint.strokeWidth = border
+            canvas.drawRoundRect(left + border / 2f, top + border / 2f, left + w - border / 2f, top + h - border / 2f, max(r - border / 2f, 0f), max(r - border / 2f, 0f), borderPaint)
         }
         if (drawLens) drawLens(canvas, centerX() + layout.holeOffsetX, top + layout.holeCenterY)
 
@@ -586,14 +593,10 @@ class IslandView(
      * hides the status bar, this overlay hears it here.
      */
     override fun onApplyWindowInsets(insets: android.view.WindowInsets): android.view.WindowInsets {
-        if (isOverlay) {
-            val visible = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                insets.isVisible(android.view.WindowInsets.Type.statusBars())
-            } else {
-                @Suppress("DEPRECATION")
-                insets.systemWindowInsetTop > 0
-            }
-            host?.onStatusBarVisible(visible)
+        // Below Android 11 this window's insets are always empty (it lays out without limits),
+        // so they say nothing about the bar; 9/10 listen to the legacy flag instead (see init).
+        if (isOverlay && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+            host?.onStatusBarVisible(insets.isVisible(android.view.WindowInsets.Type.statusBars()))
         }
         return super.onApplyWindowInsets(insets)
     }
