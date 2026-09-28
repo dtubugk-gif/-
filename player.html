@@ -20,6 +20,8 @@
     --pink: #C04F74;
     --pink-soft: #F3D9E2;
     --whitech: #66788C;
+    --brown: #8A5A3C;
+    --music: #2F7A8A;
     --on-pink: #FFFFFF;
     --focus: #2F6FB5;
     --display: "Frank Ruhl Libre", "David Libre", "Times New Roman", serif;
@@ -36,6 +38,8 @@
       --pink: #EE9AB4;
       --pink-soft: #3A2530;
       --whitech: #C3CEDA;
+      --brown: #C99B76;
+      --music: #7CC4D4;
       --on-pink: #1A1016;
       --focus: #8DB8EA;
     }
@@ -50,6 +54,8 @@
     --pink: #EE9AB4;
     --pink-soft: #3A2530;
     --whitech: #C3CEDA;
+    --brown: #C99B76;
+    --music: #7CC4D4;
     --on-pink: #1A1016;
     --focus: #8DB8EA;
   }
@@ -62,7 +68,7 @@
     line-height: 1.55;
   }
   .wrap {
-    max-width: 560px;
+    max-width: 640px;
     margin: 0 auto;
     padding-inline: 16px;
     padding-block: 28px 40px;
@@ -79,25 +85,40 @@
     text-wrap: balance;
   }
   h1 .p { color: var(--pink); }
-  .lede { margin: 0; color: var(--muted); max-width: 46ch; }
+  .lede { margin: 0; color: var(--muted); max-width: 50ch; }
 
-  .scope {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 12px 12px 8px;
-    display: grid;
-    gap: 6px;
+  /* ---------- scenery stage ---------- */
+  .stage {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    max-width: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #0A0F1F;
   }
-  .scope canvas { width: 100%; height: 180px; display: block; }
-  .legend {
-    display: flex; flex-wrap: wrap; gap: 4px 16px;
-    font-size: 13px; color: var(--muted);
+  .stage canvas { width: 100%; height: 100%; display: block; }
+  .stage.immersive {
+    position: fixed; inset: 0; z-index: 50;
+    aspect-ratio: auto; border-radius: 0;
   }
-  .legend span { display: inline-flex; align-items: center; gap: 6px; }
-  .sw { width: 18px; height: 0; border-top: 2px solid; display: inline-block; }
-  .sw.theory { border-top-style: dashed; border-color: var(--muted); }
-  .sw.live { border-color: var(--pink); }
+  .stage:fullscreen { border-radius: 0; aspect-ratio: auto; width: 100%; height: 100%; }
+  .tag {
+    position: absolute; bottom: 10px; inset-inline-start: 12px;
+    color: #FFFFFF; font-size: 14px; font-weight: 600;
+    background: rgba(8, 10, 24, .38);
+    padding: 3px 12px; border-radius: 999px;
+    backdrop-filter: blur(6px);
+  }
+  .stage.immersive .tag, .stage:fullscreen .tag { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+  .fs {
+    position: absolute; top: 10px; inset-inline-end: 10px;
+    width: 38px; height: 38px; border-radius: 50%;
+    border: none; background: rgba(8, 10, 24, .38); color: #FFFFFF;
+    display: grid; place-items: center; cursor: pointer;
+    backdrop-filter: blur(6px);
+  }
+  .stage.immersive .fs { top: calc(12px + env(safe-area-inset-top, 0px)); }
+  .fs svg { width: 18px; height: 18px; }
 
   .transport { display: flex; align-items: center; gap: 16px; }
   .play {
@@ -134,7 +155,6 @@
   .chip[aria-pressed="true"] {
     background: var(--pink-soft);
     border-color: var(--pink);
-    color: var(--ink);
   }
 
   .channels { display: grid; }
@@ -148,12 +168,14 @@
   .ch:last-child { border-bottom: 1px solid var(--line); }
   .ch-name { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
   .ch-name b { font-size: 17px; }
-  .ch-name .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; align-self: center; }
-  .spec { font-size: 13px; color: var(--muted); direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; align-self: center; }
+  .spec { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .val { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 14px; min-width: 3ch; text-align: left; }
   .ch input[type="range"] { grid-column: 1 / -1; width: 100%; }
   .toggles { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
   input[type="range"] { accent-color: var(--pink); height: 28px; }
+  #vMusic { accent-color: var(--music); }
+  #vBrown { accent-color: var(--brown); }
   #vWhite { accent-color: var(--whitech); }
 
   button:focus-visible, input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
@@ -163,7 +185,7 @@
     display: grid; gap: 6px;
     padding-top: 4px;
   }
-  .notes p { margin: 0; max-width: 62ch; }
+  .notes p { margin: 0; max-width: 64ch; }
   .notes b { color: var(--ink); font-weight: 600; }
 
   @media (prefers-reduced-motion: reduce) {
@@ -174,14 +196,25 @@
 <main class="wrap" dir="rtl" lang="he">
   <header>
     <h1>ערש <span class="p">רעש</span></h1>
-    <p class="lede">רעש לבן ורעש ורוד שנוצרים בזמן אמת בדפדפן. הלולאה אינסופית ובלי תפר, ואפשר לערבב בין השניים כמו שנוח לכם להירדם.</p>
+    <p class="lede">מוזיקה רכה, רעש חום, ורוד ולבן, ונופים שזזים לאט. הכל נוצר בזמן אמת בדפדפן, בלי סוף ובלי חזרות.</p>
   </header>
 
-  <section class="scope" aria-label="ספקטרום התדרים של המיקס">
-    <canvas id="scope" role="img" aria-label="גרף עוצמה לפי תדר: הרעש הלבן שטוח, הרעש הוורוד יורד 3 דציבל בכל אוקטבה"></canvas>
-    <div class="legend">
-      <span><i class="sw theory"></i>צורת המיקס הנוכחי</span>
-      <span><i class="sw live"></i>מדידה חיה בזמן ניגון</span>
+  <div class="stage" id="stage">
+    <canvas id="scene" role="img" aria-label="נוף מונפש"></canvas>
+    <span class="tag" id="sceneTag">שקיעה בים</span>
+    <button class="fs" id="fs" type="button" aria-label="מסך מלא">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    </button>
+  </div>
+
+  <section>
+    <p class="label">נוף</p>
+    <div class="chips" id="scenes">
+      <button class="chip" type="button" id="sAuto" data-scene="auto" aria-pressed="true">מתחלף לבד</button>
+      <button class="chip" type="button" id="sSunset" data-scene="sunset" aria-pressed="false">שקיעה בים</button>
+      <button class="chip" type="button" id="sAurora" data-scene="aurora" aria-pressed="false">זוהר צפוני</button>
+      <button class="chip" type="button" id="sMist" data-scene="mist" aria-pressed="false">הרים בערפל</button>
+      <button class="chip" type="button" id="sMoon" data-scene="moon" aria-pressed="false">ליל ירח</button>
     </div>
   </section>
 
@@ -192,14 +225,16 @@
     </button>
     <div class="status">
       <strong id="stTitle">מוכן לניגון</strong>
-      <small id="stSub">מיקס מרגיע · בלי טיימר</small>
+      <small id="stSub">הכל ביחד · בלי טיימר</small>
     </div>
   </div>
 
   <section>
     <p class="label">מצב</p>
     <div class="chips" id="presets">
-      <button class="chip" type="button" id="pMix" data-preset="mix" aria-pressed="true">מיקס מרגיע</button>
+      <button class="chip" type="button" id="pAll" data-preset="all" aria-pressed="true">הכל ביחד</button>
+      <button class="chip" type="button" id="pMusic" data-preset="music" aria-pressed="false">מוזיקה בלבד</button>
+      <button class="chip" type="button" id="pBrown" data-preset="brown" aria-pressed="false">חום בלבד</button>
       <button class="chip" type="button" id="pPink" data-preset="pink" aria-pressed="false">ורוד בלבד</button>
       <button class="chip" type="button" id="pWhite" data-preset="white" aria-pressed="false">לבן בלבד</button>
     </div>
@@ -207,14 +242,24 @@
 
   <section class="channels" aria-label="ערוצים">
     <div class="ch">
+      <div class="ch-name"><i class="dot" style="background: var(--music)"></i><b>מוזיקה</b><span class="spec">רה מז׳ור · אקורד כל 15 שניות</span></div>
+      <span class="val" id="vMusicOut">90</span>
+      <input type="range" id="vMusic" min="0" max="100" value="90" aria-label="עוצמת מוזיקה">
+    </div>
+    <div class="ch">
+      <div class="ch-name"><i class="dot" style="background: var(--brown)"></i><b>רעש חום</b><span class="spec" dir="ltr">−6 dB / octave</span></div>
+      <span class="val" id="vBrownOut">50</span>
+      <input type="range" id="vBrown" min="0" max="100" value="50" aria-label="עוצמת רעש חום">
+    </div>
+    <div class="ch">
       <div class="ch-name"><i class="dot" style="background: var(--pink)"></i><b>רעש ורוד</b><span class="spec" dir="ltr">−3 dB / octave</span></div>
-      <span class="val" id="vPinkOut">80</span>
-      <input type="range" id="vPink" min="0" max="100" value="80" aria-label="עוצמת רעש ורוד">
+      <span class="val" id="vPinkOut">45</span>
+      <input type="range" id="vPink" min="0" max="100" value="45" aria-label="עוצמת רעש ורוד">
     </div>
     <div class="ch">
       <div class="ch-name"><i class="dot" style="background: var(--whitech)"></i><b>רעש לבן</b><span class="spec" dir="ltr">0 dB / octave</span></div>
-      <span class="val" id="vWhiteOut">50</span>
-      <input type="range" id="vWhite" min="0" max="100" value="50" aria-label="עוצמת רעש לבן">
+      <span class="val" id="vWhiteOut">45</span>
+      <input type="range" id="vWhite" min="0" max="100" value="45" aria-label="עוצמת רעש לבן">
       <div class="toggles">
         <button class="chip" type="button" id="tSoft" aria-pressed="true">ריכוך מעל 5 קה״ץ</button>
         <button class="chip" type="button" id="tWaves" aria-pressed="true">גלים · 6 בדקה</button>
@@ -239,38 +284,408 @@
   </section>
 
   <footer class="notes">
-    <p><b>גלים:</b> הרעש הלבן מתנפח ונסוג בקצב של 0.1 הרץ, גל כל 10 שניות. זה קצב נשימה של 6 נשימות בדקה, קצב נפוץ בתרגילי הרגעה.</p>
-    <p><b>באייפון:</b> אם אין קול, בדקו שמתג השקט כבוי. דפדפנים בטלפון עוצרים את הצליל כשהמסך ננעל, ולכן ללילה שלם עדיף לנגן את קובצי ה-MP3 שבמאגר.</p>
-    <p><b>עוצמה:</b> לשינה כדאי להשאיר את הרעש נמוך, בערך בעוצמה של מקלחת רחוקה.</p>
+    <p><b>המוזיקה:</b> ארבעה אקורדים רכים, <span dir="ltr">Dmaj9 · Bm9 · Gmaj9 · Asus2</span>, ופעמונים בסולם פנטטוני. הפעמונים נבחרים באקראי, כך שהמנגינה לא חוזרת על עצמה.</p>
+    <p><b>גלים:</b> הרעש הלבן מתנפח ונסוג בקצב של 0.1 הרץ, גל כל 10 שניות, וגם הים בנוף נושם באותו קצב. זה קצב של 6 נשימות בדקה, נפוץ בתרגילי הרגעה.</p>
+    <p><b>באייפון:</b> אם אין קול, בדקו שמתג השקט כבוי. דפדפנים בטלפון עוצרים את הצליל כשהמסך ננעל, ולכן ללילה שלם עדיף לנגן את קובצי ה-MP3.</p>
   </footer>
 </main>
 
 <script>
-(() => {
-  const $ = (id) => document.getElementById(id);
-  const LOOP_SEC = 30, XFADE_SEC = 2;
-  const RMS_WHITE = 0.1, RMS_PINK = 0.15;   // white sits lower: it is perceived as louder
-  const WAVE_HZ = 0.1;
+/* ======================================================================
+   Scenery: four slow, procedurally drawn landscapes. Everything is a pure
+   function of time t (seconds) and swell s (0..1), so the same code renders
+   the live page and the exported video.
+   ====================================================================== */
+const Scenes = (() => {
+  const TAU = Math.PI * 2;
+  const rng = (seed) => () => {
+    seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const layer = (w, h) => { const c = document.createElement("canvas"); c.width = w; c.height = h; return c; };
+  const vgrad = (c, y0, y1, stops) => { const g = c.createLinearGradient(0, y0, 0, y1); stops.forEach(([o, col]) => g.addColorStop(o, col)); return g; };
 
-  const state = {
-    pink: 80, white: 50, master: 70,
-    soft: true, waves: true, timerMin: 0,
-    preset: "mix", playing: false, endAt: 0
+  // A ridge line that tiles seamlessly across width w (integer periods only).
+  function ridgeFn(w, seed, octaves, sharp) {
+    const r = rng(seed), comps = [];
+    for (let k = 0; k < octaves; k++) {
+      comps.push({ n: Math.round((1 + k * 1.9) * (1 + r() * 0.8)), a: 1 / Math.pow(k + 1, 1.25), p: r() * TAU });
+    }
+    const norm = comps.reduce((s, c) => s + c.a, 0);
+    return (x) => {
+      let v = 0;
+      for (const c of comps) v += c.a * Math.sin((TAU * c.n * x) / w + c.p);
+      v /= norm;
+      return sharp ? 1 - Math.abs(v) * 1.6 : v;   // sharp: peaky mountain crests
+    };
+  }
+  function drawRidge(c, w, h, fn, base, amp, fill) {
+    c.fillStyle = fill;
+    c.beginPath(); c.moveTo(0, h);
+    for (let x = 0; x <= w; x += 2) c.lineTo(x, base - amp * fn(x));
+    c.lineTo(w, h); c.closePath(); c.fill();
+  }
+  function starField(c, w, h, maxY, count, seed) {
+    const r = rng(seed), S = h / 720;
+    for (let i = 0; i < count; i++) {
+      const y = Math.pow(r(), 1.4) * maxY;
+      c.globalAlpha = (0.25 + r() * 0.75) * (1 - y / maxY * 0.6);
+      c.fillStyle = r() < 0.15 ? "#FFE9C8" : "#FFFFFF";
+      c.beginPath(); c.arc(r() * w, y, (0.4 + r() * 1.1) * S, 0, TAU); c.fill();
+    }
+    c.globalAlpha = 1;
+  }
+  function glowSprite(size, rgb) {
+    const s = layer(size, size), c = s.getContext("2d");
+    const g = c.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    g.addColorStop(0, `rgba(${rgb},1)`); g.addColorStop(0.18, `rgba(${rgb},.55)`); g.addColorStop(1, `rgba(${rgb},0)`);
+    c.fillStyle = g; c.fillRect(0, 0, size, size);
+    return s;
+  }
+  function softBlob(ctx, x, y, rx, ry, rgba0) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(1, ry / rx);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+    g.addColorStop(0, rgba0); g.addColorStop(1, rgba0.replace(/[\d.]+\)$/, "0)"));
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, rx, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+
+  // ---------------------------------------------------------------- sunset
+  const sunset = {
+    name: "שקיעה בים",
+    init(w, h) {
+      const L = { hz: h * 0.6 }, S = h / 720, r = rng(11);
+      const sky = layer(w, h), c = sky.getContext("2d");
+      c.fillStyle = vgrad(c, 0, L.hz, [[0, "#1D2152"], [0.42, "#58407F"], [0.72, "#D26F7E"], [0.9, "#F4A57C"], [1, "#FCD69C"]]);
+      c.fillRect(0, 0, w, L.hz);
+      c.fillStyle = vgrad(c, L.hz, h, [[0, "#8C6488"], [0.18, "#54416F"], [1, "#12132E"]]);
+      c.fillRect(0, L.hz, w, h - L.hz);
+      L.sky = sky;
+      L.sunR = Math.min(w, h) * 0.075;
+      L.sunX = w * 0.62; L.sunY = L.hz - L.sunR * 0.45;
+      L.clouds = Array.from({ length: 8 }, () => ({
+        y: L.hz * (0.16 + r() * 0.62), len: w * (0.22 + r() * 0.35), th: (5 + r() * 12) * S,
+        x0: r() * w * 1.6, sp: (3 + r() * 5) * S, a: 0.22 + r() * 0.3
+      }));
+      L.rows = Array.from({ length: 64 }, (_, i) => {
+        const d = (i + 1) / 64;
+        return { d, y: L.hz + (h - L.hz) * d * d, ph: r() * TAU, x0: r() * w, sp: (4 + r() * 8) * S * (0.3 + d), len: w * (0.015 + d * 0.07) };
+      });
+      return L;
+    },
+    draw(ctx, w, h, t, s, L) {
+      const S = h / 720;
+      ctx.drawImage(L.sky, 0, 0);
+      const g = ctx.createRadialGradient(L.sunX, L.sunY, 0, L.sunX, L.sunY, L.sunR * 8);
+      g.addColorStop(0, "rgba(255,220,160,.6)"); g.addColorStop(0.28, "rgba(255,160,120,.2)"); g.addColorStop(1, "rgba(255,140,120,0)");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, L.hz);
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, w, L.hz); ctx.clip();
+      ctx.fillStyle = vgrad(ctx, L.sunY - L.sunR, L.sunY + L.sunR, [[0, "#FFF3CF"], [1, "#FFB164"]]);
+      ctx.beginPath(); ctx.arc(L.sunX, L.sunY, L.sunR, 0, TAU); ctx.fill();
+      ctx.restore();
+      for (const c of L.clouds) {
+        const span = w * 1.6, x = (((c.x0 - c.sp * t) % span) + span) % span - w * 0.3;
+        const warm = c.y / L.hz;   // lower clouds catch more of the sun
+        const col = `rgba(${Math.round(150 + 105 * warm)},${Math.round(120 + 70 * warm)},${Math.round(190 - 10 * warm)},`;
+        const gr = ctx.createLinearGradient(x, 0, x + c.len, 0);
+        gr.addColorStop(0, col + "0)"); gr.addColorStop(0.5, col + c.a + ")"); gr.addColorStop(1, col + "0)");
+        ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(x + c.len / 2, c.y, c.len / 2, c.th, 0, 0, TAU); ctx.fill();
+      }
+      // sea: drifting wave strokes, then the sun's glitter path
+      ctx.lineCap = "round";
+      for (const row of L.rows) {
+        const lift = Math.sin(t * 0.5 + row.ph) * row.d * 3 * S * (0.6 + s);
+        ctx.strokeStyle = `rgba(255,190,210,${0.05 + row.d * 0.08})`;
+        ctx.lineWidth = (0.6 + row.d * 2.2) * S;
+        for (let k = 0; k < 4; k++) {
+          const x = (((row.x0 + k * w / 4 + row.sp * t) % w) + w) % w;
+          ctx.beginPath(); ctx.moveTo(x, row.y + lift); ctx.lineTo(x + row.len, row.y + lift); ctx.stroke();
+        }
+      }
+      ctx.globalCompositeOperation = "lighter";
+      for (const row of L.rows) {
+        const spread = L.sunR * (0.8 + row.d * 5);
+        for (let k = 0; k < 3; k++) {
+          const a = Math.max(0, Math.sin(t * (0.7 + k * 0.23) + row.ph * (k + 1))) * (0.55 - row.d * 0.3) * (0.75 + 0.25 * s);
+          const x = L.sunX + Math.sin(t * 0.21 + row.ph + k * 2.1) * spread;
+          ctx.strokeStyle = `rgba(255,196,130,${a})`;
+          ctx.lineWidth = (0.8 + row.d * 3) * S;
+          const len = (6 + row.d * 40) * S;
+          ctx.beginPath(); ctx.moveTo(x - len / 2, row.y); ctx.lineTo(x + len / 2, row.y); ctx.stroke();
+        }
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
   };
 
-  let ctx = null, nodes = null, stopTimer = null;
+  // ---------------------------------------------------------------- aurora
+  const aurora = {
+    name: "זוהר צפוני",
+    init(w, h) {
+      const L = { hz: h * 0.66 }, r = rng(23);
+      const sky = layer(w, h), c = sky.getContext("2d");
+      c.fillStyle = vgrad(c, 0, L.hz, [[0, "#03060F"], [0.6, "#0A1A2C"], [1, "#143449"]]);
+      c.fillRect(0, 0, w, L.hz);
+      starField(c, w, h, L.hz, Math.round(w * h / 2600), 5);
+      L.sky = sky;
+      const mt = layer(w, h), m = mt.getContext("2d");
+      drawRidge(m, w, L.hz, ridgeFn(w, 3, 6, true), L.hz - h * 0.05, h * 0.13, "#0B1726");
+      drawRidge(m, w, L.hz, ridgeFn(w, 9, 5, false), L.hz - h * 0.01, h * 0.035, "#050B14");
+      L.mt = mt;
+      const strip = layer(1, 256), sc = strip.getContext("2d");
+      sc.fillStyle = vgrad(sc, 0, 256, [[0, "rgba(170,90,255,0)"], [0.25, "rgba(160,100,255,.28)"], [0.55, "rgba(70,210,170,.45)"], [0.9, "rgba(110,255,190,.95)"], [1, "rgba(110,255,190,0)"]]);
+      sc.fillRect(0, 0, 1, 256);
+      L.strip = strip;
+      L.curtains = [
+        { y: 0.40, h: 0.30, sp: 1.0, a: 0.55, p: [r() * TAU, r() * TAU, r() * TAU, r() * TAU] },
+        { y: 0.30, h: 0.24, sp: 0.7, a: 0.40, p: [r() * TAU, r() * TAU, r() * TAU, r() * TAU] },
+        { y: 0.50, h: 0.20, sp: 1.3, a: 0.35, p: [r() * TAU, r() * TAU, r() * TAU, r() * TAU] }
+      ];
+      L.tw = Array.from({ length: 50 }, () => ({ x: r() * w, y: Math.pow(r(), 1.5) * L.hz * 0.8, f: 0.4 + r() * 1.2, p: r() * TAU }));
+      return L;
+    },
+    draw(ctx, w, h, t, s, L) {
+      const S = h / 720;
+      ctx.drawImage(L.sky, 0, 0);
+      ctx.fillStyle = "#FFFFFF";
+      for (const st of L.tw) {
+        ctx.globalAlpha = 0.35 + 0.65 * Math.pow(0.5 + 0.5 * Math.sin(t * st.f + st.p), 3);
+        ctx.beginPath(); ctx.arc(st.x, st.y, 1.3 * S, 0, TAU); ctx.fill();
+      }
+      ctx.globalCompositeOperation = "lighter";
+      const step = Math.max(2, Math.round(w / 360));
+      for (const c of L.curtains) {
+        for (let x = 0; x < w; x += step) {
+          const u = x / w, T = t * c.sp;
+          const base = h * c.y + h * 0.06 * Math.sin(u * TAU * 1.2 + T * 0.05 + c.p[0]) + h * 0.025 * Math.sin(u * TAU * 3.1 - T * 0.08 + c.p[1]);
+          let inten = 0.5 + 0.5 * Math.sin(u * TAU * 1.9 + T * 0.09 + c.p[2]);
+          inten = inten * inten * (0.75 + 0.25 * Math.sin(u * TAU * 21 + T * 0.35));
+          const hh = h * c.h * (0.6 + 0.4 * Math.sin(u * TAU * 1.5 + T * 0.06 + c.p[3]));
+          ctx.globalAlpha = c.a * inten;
+          ctx.drawImage(L.strip, 0, 0, 1, 256, x, base - hh, step + 1, hh * 1.05);
+        }
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+      ctx.drawImage(L.mt, 0, 0);
+      // still lake: mirror the sky above the shoreline
+      const R = h - L.hz;
+      ctx.save();
+      ctx.translate(0, 2 * L.hz); ctx.scale(1, -1);
+      ctx.globalAlpha = 0.5;
+      ctx.drawImage(ctx.canvas, 0, L.hz - R, w, R, 0, L.hz - R, w, R);
+      ctx.restore();
+      ctx.fillStyle = vgrad(ctx, L.hz, h, [[0, "rgba(3,8,16,.35)"], [1, "rgba(3,8,16,.85)"]]);
+      ctx.fillRect(0, L.hz, w, R);
+      ctx.strokeStyle = "rgba(160,230,220,.10)"; ctx.lineWidth = 1.2 * S;
+      for (let i = 0; i < 14; i++) {
+        const d = (i + 1) / 14, y = L.hz + R * d * d;
+        const x = ((i * 197 + t * (6 + i)) % (w * 1.3)) - w * 0.15;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + w * (0.05 + d * 0.1), y); ctx.stroke();
+      }
+    }
+  };
 
-  // ---------- noise buffers (crossfaded so the loop has no seam) ----------
+  // ---------------------------------------------------------------- mist
+  const mist = {
+    name: "הרים בערפל",
+    init(w, h) {
+      const L = {}, r = rng(41);
+      const sky = layer(w, h), c = sky.getContext("2d");
+      c.fillStyle = vgrad(c, 0, h, [[0, "#7C92BC"], [0.38, "#C3B6CB"], [0.62, "#F2CDB6"], [1, "#F7DFC7"]]);
+      c.fillRect(0, 0, w, h);
+      const sx = w * 0.32, sy = h * 0.46, g = c.createRadialGradient(sx, sy, 0, sx, sy, h * 0.5);
+      g.addColorStop(0, "rgba(255,244,222,.95)"); g.addColorStop(0.08, "rgba(255,236,210,.7)"); g.addColorStop(1, "rgba(255,226,200,0)");
+      c.fillStyle = g; c.fillRect(0, 0, w, h);
+      L.sky = sky;
+      const specs = [
+        { base: 0.52, amp: 0.10, col: "#A7A3C3", sp: 1.0 },
+        { base: 0.60, amp: 0.11, col: "#8985AC", sp: 2.0 },
+        { base: 0.69, amp: 0.10, col: "#67658F", sp: 3.5 },
+        { base: 0.79, amp: 0.11, col: "#474870", sp: 5.5 },
+        { base: 0.92, amp: 0.10, col: "#2B2E4E", sp: 8.0 }
+      ];
+      L.layers = specs.map((sp, i) => {
+        const cv = layer(w, h), lc = cv.getContext("2d");
+        const top = h * (sp.base - sp.amp);
+        lc.fillStyle = vgrad(lc, top, h * (sp.base + 0.12), [[0, sp.col], [1, "rgba(238,214,206,1)"]]);
+        const fn = ridgeFn(w, 100 + i * 7, 6, i < 2);
+        lc.beginPath(); lc.moveTo(0, h);
+        for (let x = 0; x <= w; x += 2) lc.lineTo(x, h * sp.base - h * sp.amp * fn(x));
+        lc.lineTo(w, h); lc.closePath(); lc.fill();
+        return { cv, sp: sp.sp * h / 720, fogY: h * (sp.base + 0.02) };
+      });
+      L.fog = Array.from({ length: 7 }, (_, i) => ({ li: 1 + (i % 4), x0: r() * w, rx: w * (0.25 + r() * 0.2), sp: (4 + r() * 6) * h / 720, a: 0.18 + r() * 0.16 }));
+      L.birds = Array.from({ length: 3 }, (_, i) => ({ off: i * 0.07, y: 0.24 + i * 0.03, p: r() * TAU }));
+      return L;
+    },
+    draw(ctx, w, h, t, s, L) {
+      const S = h / 720;
+      ctx.drawImage(L.sky, 0, 0);
+      // a small flock glides across every 90 s
+      const lap = (t % 90) / 90;
+      ctx.strokeStyle = "rgba(60,54,86,.75)"; ctx.lineWidth = 1.6 * S; ctx.lineCap = "round";
+      for (const b of L.birds) {
+        const u = 1.15 - (lap + b.off) * 1.3, x = u * w, y = h * b.y + Math.sin(t * 0.4 + b.p) * 6 * S;
+        const flap = Math.sin(t * 3 + b.p) * 4 * S, span = 9 * S;
+        ctx.beginPath(); ctx.moveTo(x - span, y - flap); ctx.quadraticCurveTo(x - span / 2, y - 3 * S, x, y); ctx.quadraticCurveTo(x + span / 2, y - 3 * S, x + span, y - flap); ctx.stroke();
+      }
+      L.layers.forEach((ly, i) => {
+        const off = ((ly.sp * t) % w + w) % w;
+        ctx.drawImage(ly.cv, -off, 0); ctx.drawImage(ly.cv, w - off, 0);
+        for (const f of L.fog) {
+          if (f.li !== i) continue;
+          const span = w + f.rx * 2, x = (((f.x0 + f.sp * t) % span) + span) % span - f.rx;
+          softBlob(ctx, x, ly.fogY, f.rx, f.rx * 0.16, `rgba(255,246,240,${f.a * (0.8 + 0.2 * s)})`);
+        }
+      });
+    }
+  };
+
+  // ---------------------------------------------------------------- moon
+  const moon = {
+    name: "ליל ירח",
+    init(w, h) {
+      const L = {}, r = rng(77), S = h / 720;
+      const sky = layer(w, h), c = sky.getContext("2d");
+      c.fillStyle = vgrad(c, 0, h, [[0, "#060A1D"], [0.55, "#131B3D"], [0.8, "#26305A"], [1, "#26305A"]]);
+      c.fillRect(0, 0, w, h);
+      starField(c, w, h, h * 0.75, Math.round(w * h / 3200), 8);
+      L.mx = w * 0.72; L.my = h * 0.22; L.mr = Math.min(w, h) * 0.055;
+      const g = c.createRadialGradient(L.mx, L.my, L.mr, L.mx, L.my, L.mr * 9);
+      g.addColorStop(0, "rgba(200,210,255,.35)"); g.addColorStop(1, "rgba(200,210,255,0)");
+      c.fillStyle = g; c.fillRect(0, 0, w, h);
+      c.fillStyle = vgrad(c, L.my - L.mr, L.my + L.mr, [[0, "#FFFCEB"], [1, "#E4E2D4"]]);
+      c.beginPath(); c.arc(L.mx, L.my, L.mr, 0, TAU); c.fill();
+      c.fillStyle = "rgba(150,150,140,.12)";
+      for (const [dx, dy, rr] of [[-0.3, -0.2, 0.22], [0.25, 0.1, 0.3], [-0.05, 0.4, 0.16], [0.35, -0.35, 0.12]]) {
+        c.beginPath(); c.arc(L.mx + dx * L.mr, L.my + dy * L.mr, rr * L.mr, 0, TAU); c.fill();
+      }
+      L.sky = sky;
+      const hills = layer(w, h), hc = hills.getContext("2d");
+      drawRidge(hc, w, h, ridgeFn(w, 51, 3, false), h * 0.70, h * 0.05, "#1A2345");
+      drawRidge(hc, w, h, ridgeFn(w, 57, 3, false), h * 0.80, h * 0.05, "#111831");
+      const near = ridgeFn(w, 63, 2, false);
+      drawRidge(hc, w, h, near, h * 0.90, h * 0.04, "#0A0F20");
+      // a lone tree on the near hill
+      const tx = w * 0.2, ty = h * 0.90 - h * 0.04 * near(tx);
+      hc.strokeStyle = "#070B18"; hc.lineCap = "round";
+      const tr = rng(5);
+      const branch = (x, y, len, ang, wd, depth) => {
+        const x2 = x + Math.cos(ang) * len, y2 = y + Math.sin(ang) * len;
+        hc.lineWidth = wd; hc.beginPath(); hc.moveTo(x, y); hc.lineTo(x2, y2); hc.stroke();
+        if (depth === 0) {
+          hc.fillStyle = "#070B18";
+          hc.beginPath(); hc.ellipse(x2, y2, len * 1.1, len * 0.7, 0, 0, TAU); hc.fill();
+          return;
+        }
+        const n = 2 + (tr() < 0.4 ? 1 : 0);
+        for (let i = 0; i < n; i++) branch(x2, y2, len * (0.66 + tr() * 0.14), ang + (i - (n - 1) / 2) * 0.55 + (tr() - 0.5) * 0.3, wd * 0.68, depth - 1);
+      };
+      branch(tx, ty + 4 * S, h * 0.11, -Math.PI / 2, 9 * S, 6);
+      L.hills = hills;
+      L.clouds = Array.from({ length: 4 }, () => ({ y: h * (0.12 + r() * 0.3), rx: w * (0.18 + r() * 0.15), x0: r() * w * 1.6, sp: (3 + r() * 4) * S }));
+      L.flies = Array.from({ length: 46 }, () => ({ fx: r(), fy: r(), a: r() * TAU, b: r() * TAU, c: r() * TAU, sp: 0.6 + r() * 0.8 }));
+      L.glow = glowSprite(64, "255,236,140");
+      return L;
+    },
+    draw(ctx, w, h, t, s, L) {
+      const S = h / 720;
+      ctx.drawImage(L.sky, 0, 0);
+      for (const c of L.clouds) {
+        const span = w * 1.6, x = (((c.x0 + c.sp * t) % span) + span) % span - w * 0.3;
+        softBlob(ctx, x, c.y, c.rx, c.rx * 0.12, "rgba(170,182,230,.16)");
+      }
+      ctx.drawImage(L.hills, 0, 0);
+      ctx.globalCompositeOperation = "lighter";
+      for (const f of L.flies) {
+        const x = w * (f.fx + 0.035 * Math.sin(t * 0.13 * f.sp + f.a));
+        const y = h * (0.72 + 0.26 * f.fy + 0.025 * Math.sin(t * 0.17 * f.sp + f.b));
+        const on = Math.pow(Math.max(0, Math.sin(t * 0.8 * f.sp + f.c)), 3);
+        if (on < 0.02) continue;
+        const size = (14 + 10 * on) * S;
+        ctx.globalAlpha = on * 0.9;
+        ctx.drawImage(L.glow, x - size / 2, y - size / 2, size, size);
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+    }
+  };
+
+  const LIST = { sunset, aurora, mist, moon };
+  const ORDER = ["sunset", "aurora", "mist", "moon"];
+  const SCENE_SEC = 150, FADE_SEC = 8;
+  const cache = new Map();
+  let buffer = null;
+
+  function state(name, w, h) {
+    const key = name + w + "x" + h;
+    if (!cache.has(key)) {
+      for (const k of cache.keys()) if (k.startsWith(name)) cache.delete(k);
+      cache.set(key, LIST[name].init(w, h));
+    }
+    return cache.get(key);
+  }
+  function drawOne(ctx, name, t, s) {
+    const { width: w, height: h } = ctx.canvas;
+    LIST[name].draw(ctx, w, h, t, s, state(name, w, h));
+  }
+  // mode: a scene name, or "auto" to cycle every 150 s with an 8 s cross-fade.
+  function render(canvas, mode, t, s) {
+    const ctx = canvas.getContext("2d");
+    if (mode !== "auto") { drawOne(ctx, mode, t, s); return LIST[mode].name; }
+    const i = Math.floor(t / SCENE_SEC) % ORDER.length, ph = t % SCENE_SEC;
+    drawOne(ctx, ORDER[i], t, s);
+    const k = (ph - (SCENE_SEC - FADE_SEC)) / FADE_SEC;
+    if (k > 0) {
+      if (!buffer || buffer.width !== canvas.width || buffer.height !== canvas.height) buffer = layer(canvas.width, canvas.height);
+      const nxt = ORDER[(i + 1) % ORDER.length];
+      drawOne(buffer.getContext("2d"), nxt, t, s);
+      ctx.globalAlpha = k * k * (3 - 2 * k);
+      ctx.drawImage(buffer, 0, 0);
+      ctx.globalAlpha = 1;
+      return k > 0.5 ? LIST[nxt].name : LIST[ORDER[i]].name;
+    }
+    return LIST[ORDER[i]].name;
+  }
+  return { render, names: Object.fromEntries(ORDER.map((k) => [k, LIST[k].name])) };
+})();
+window.__scenes = Scenes;   // used by the video renderer
+
+/* ======================================================================
+   Audio: noise beds from looped buffers, music from a live sequencer.
+   ====================================================================== */
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const LOOP_SEC = 30, XFADE_SEC = 2, WAVE_HZ = 0.1;
+  const RMS = { white: 0.1, pink: 0.15, brown: 0.15 };
+  // Channel gain at slider 100, so each solo channel lands near the MP3 levels.
+  const CAL = { white: 0.79, pink: 0.75, brown: 1.16, music: 1.3 };
+  const CHORDS = [[50, 57, 61, 64, 66], [47, 54, 57, 61, 62], [43, 50, 54, 57, 59], [45, 52, 57, 59, 64]];
+  const BELLS = [69, 71, 74, 76, 78, 81, 83, 86];
+  const CHORD_SEC = 15, PAD_AMP = 0.04, BELL_AMP = 0.16;
+  const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+
+  const state = {
+    music: 90, brown: 50, pink: 45, white: 45, master: 70,
+    soft: true, waves: true, timerMin: 0, scene: "auto",
+    preset: "all", playing: false, endAt: 0
+  };
+  let ctx = null, nodes = null, seq = null, stopTimer = null, lfoStart = 0;
+
   function makeBuffer(kind) {
     const sr = ctx.sampleRate, len = sr * LOOP_SEC, xf = sr * XFADE_SEC;
     const buf = ctx.createBuffer(2, len, sr);
     for (let c = 0; c < 2; c++) {
       const raw = new Float32Array(len + xf);
-      let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+      let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0, br = 0;
       for (let i = 0; i < raw.length; i++) {
         const w = Math.random() * 2 - 1;
         if (kind === "white") { raw[i] = w; continue; }
-        // Paul Kellet's refined pink filter, accurate to about ±0.05 dB above 9 Hz
+        if (kind === "brown") { br = 0.997 * br + w * 0.05; raw[i] = br; continue; }
+        // Paul Kellet's refined pink filter
         b0 = 0.99886 * b0 + w * 0.0555179;
         b1 = 0.99332 * b1 + w * 0.0750759;
         b2 = 0.96900 * b2 + w * 0.1538520;
@@ -281,63 +696,135 @@
         b6 = w * 0.115926;
       }
       const out = buf.getChannelData(c);
-      for (let i = 0; i < len; i++) out[i] = raw[i];
-      // equal-power crossfade of the overhang into the start
-      for (let i = 0; i < xf; i++) {
-        const t = (i / xf) * Math.PI / 2;
-        out[i] = raw[i] * Math.sin(t) + raw[len + i] * Math.cos(t);
+      out.set(raw.subarray(0, len));
+      for (let i = 0; i < xf; i++) {   // equal-power crossfade of the overhang into the start
+        const a = (i / xf) * Math.PI / 2;
+        out[i] = raw[i] * Math.sin(a) + raw[len + i] * Math.cos(a);
       }
       let sum = 0;
       for (let i = 0; i < len; i++) sum += out[i] * out[i];
-      const k = (kind === "white" ? RMS_WHITE : RMS_PINK) / Math.sqrt(sum / len);
+      const k = RMS[kind] / Math.sqrt(sum / len);
       for (let i = 0; i < len; i++) out[i] *= k;
     }
     return buf;
   }
 
+  function makeIR(seconds, rt60) {
+    const sr = ctx.sampleRate, n = Math.floor(sr * seconds), ir = ctx.createBuffer(2, n, sr);
+    for (let c = 0; c < 2; c++) {
+      const d = ir.getChannelData(c);
+      let lp = 0;
+      for (let i = 0; i < n; i++) {
+        lp = lp * 0.82 + (Math.random() * 2 - 1) * 0.18;   // darken the tail
+        d[i] = i < sr * 0.02 ? 0 : lp * Math.exp((-6.9 * i) / (sr * rt60));
+      }
+    }
+    return ir;
+  }
+
   function build() {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const src = (buf) => { const s = ctx.createBufferSource(); s.buffer = buf; s.loop = true; return s; };
     const n = {};
-    n.pinkSrc = src(makeBuffer("pink"));
-    n.whiteSrc = src(makeBuffer("white"));
-    n.pinkGain = ctx.createGain();
-    n.whiteGain = ctx.createGain();
-    n.soft = ctx.createBiquadFilter();
-    n.soft.type = "lowpass"; n.soft.Q.value = 0.707;
+    const src = (kind) => { const s = ctx.createBufferSource(); s.buffer = makeBuffer(kind); s.loop = true; return s; };
+    n.master = ctx.createGain();
+    n.fade = ctx.createGain();
+    n.master.connect(n.fade).connect(ctx.destination);
+
+    n.whiteSrc = src("white"); n.pinkSrc = src("pink"); n.brownSrc = src("brown");
+    n.white = ctx.createGain(); n.pink = ctx.createGain(); n.brown = ctx.createGain(); n.music = ctx.createGain();
+    n.soft = ctx.createBiquadFilter(); n.soft.type = "lowpass"; n.soft.Q.value = 0.707;
+    n.brownHp = ctx.createBiquadFilter(); n.brownHp.type = "highpass"; n.brownHp.frequency.value = 30; n.brownHp.Q.value = 0.707;
     n.swell = ctx.createGain();
     n.lfo = ctx.createOscillator(); n.lfo.frequency.value = WAVE_HZ;
     n.lfoDepth = ctx.createGain();
-    n.master = ctx.createGain();
-    n.fade = ctx.createGain();
-    n.analyser = ctx.createAnalyser();
-    n.analyser.fftSize = 8192; n.analyser.smoothingTimeConstant = 0.9;
 
-    n.pinkSrc.connect(n.pinkGain).connect(n.master);
-    n.whiteSrc.connect(n.soft).connect(n.swell).connect(n.whiteGain).connect(n.master);
+    n.whiteSrc.connect(n.soft).connect(n.swell).connect(n.white).connect(n.master);
+    n.pinkSrc.connect(n.pink).connect(n.master);
+    n.brownSrc.connect(n.brownHp).connect(n.brown).connect(n.master);
     n.lfo.connect(n.lfoDepth).connect(n.swell.gain);
-    n.master.connect(n.fade).connect(ctx.destination);
-    n.fade.connect(n.analyser);
+    n.music.connect(n.master);
+
+    // music bus: pad + bells -> dry/wet hall reverb
+    n.bus = ctx.createGain();
+    n.dry = ctx.createGain(); n.dry.gain.value = 0.55 * 1.4;
+    n.wet = ctx.createGain(); n.wet.gain.value = 0.45 * 1.4;
+    n.verb = ctx.createConvolver(); n.verb.buffer = makeIR(4, 3.6);
+    n.bus.connect(n.dry).connect(n.music);
+    n.bus.connect(n.verb).connect(n.wet).connect(n.music);
+    n.padLp = ctx.createBiquadFilter(); n.padLp.type = "lowpass"; n.padLp.frequency.value = 2200;
+    n.padLp.connect(n.bus);
+    n.padWave = ctx.createPeriodicWave(new Float32Array([0, 0, 0, 0]), new Float32Array([0, 1, 0.18, 0.06]), { disableNormalization: true });
 
     nodes = n;
     applyAll(true);
-    n.pinkSrc.start(); n.whiteSrc.start(); n.lfo.start();
+    const t0 = ctx.currentTime + 0.05;
+    n.whiteSrc.start(t0); n.pinkSrc.start(t0); n.brownSrc.start(t0); n.lfo.start(t0);
+    lfoStart = t0;
+    seq = { chord: 0, nextChord: t0, nextBell: t0 + 3, bell: 3 };
+    setInterval(schedule, 250);
+    schedule();
+  }
+
+  function playChord(notes, start) {
+    for (const m of notes) {
+      const amp = PAD_AMP / (1 + (m - 45) / 24);
+      for (const [det, pan] of [[1, 0], [1.0017, -0.7], [0.9983, 0.7]]) {
+        const o = ctx.createOscillator(), g = ctx.createGain(), p = ctx.createStereoPanner();
+        o.setPeriodicWave(nodes.padWave); o.frequency.value = hz(m) * det;
+        p.pan.value = pan;
+        g.gain.setValueAtTime(0, start);
+        g.gain.linearRampToValueAtTime(amp, start + 5);
+        g.gain.setValueAtTime(amp, start + CHORD_SEC);
+        g.gain.linearRampToValueAtTime(0, start + CHORD_SEC + 5);
+        o.connect(g).connect(p).connect(nodes.padLp);
+        o.start(start); o.stop(start + CHORD_SEC + 5.1);
+      }
+    }
+  }
+
+  function playBell(t) {
+    const steps = [-2, -1, -1, 0, 1, 1, 2];
+    seq.bell = Math.max(0, Math.min(BELLS.length - 1, seq.bell + steps[Math.floor(Math.random() * steps.length)]));
+    const f = hz(BELLS[seq.bell]), vel = 0.45 + Math.random() * 0.55;
+    const p = ctx.createStereoPanner(); p.pan.value = (Math.random() - 0.5);
+    p.connect(nodes.bus);
+    const partial = (mult, level, tau) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = f * mult;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(level * vel * BELL_AMP, t + 0.012);
+      g.gain.setTargetAtTime(0, t + 0.012, tau);
+      o.connect(g).connect(p);
+      o.start(t); o.stop(t + 7);
+    };
+    partial(1, 1, 1.3); partial(2.76, 0.25, 0.4); partial(5.4, 0.08, 0.2);
+  }
+
+  function schedule() {
+    if (!ctx || ctx.state !== "running") return;
+    const ahead = ctx.currentTime + 2.5;
+    while (seq.nextChord < ahead) {
+      playChord(CHORDS[seq.chord % CHORDS.length], seq.nextChord);
+      seq.chord++; seq.nextChord += CHORD_SEC;
+    }
+    while (seq.nextBell < ahead) {
+      if (Math.random() > 0.22) playBell(seq.nextBell);
+      seq.nextBell += 2 + Math.random() * 2.8;
+    }
   }
 
   const curve = (v) => (v / 100) ** 2;          // perceptual slider taper
   const swellBase = () => (state.waves ? 0.62 : 1);
   const swellDepth = () => (state.waves ? 0.38 : 0);
-  const softHz = () => (state.soft ? 5000 : 20000);
 
   function applyAll(instant) {
     if (!nodes) return;
-    const t = ctx.currentTime, tc = instant ? 0.001 : 0.08;
-    nodes.pinkGain.gain.setTargetAtTime(curve(state.pink), t, tc);
-    nodes.whiteGain.gain.setTargetAtTime(curve(state.white), t, tc);
-    nodes.master.gain.setTargetAtTime(curve(state.master) * 1.6, t, tc);
-    nodes.soft.frequency.setTargetAtTime(softHz(), t, instant ? 0.001 : 0.3);
-    nodes.swell.gain.setTargetAtTime(swellBase(), t, instant ? 0.001 : 0.8);
-    nodes.lfoDepth.gain.setTargetAtTime(swellDepth(), t, instant ? 0.001 : 0.8);
+    const t = ctx.currentTime, tc = instant ? 0.001 : 0.08, slow = instant ? 0.001 : 0.6;
+    for (const k of ["white", "pink", "brown", "music"]) nodes[k].gain.setTargetAtTime(curve(state[k]) * CAL[k], t, tc);
+    nodes.master.gain.setTargetAtTime(curve(state.master) * 2.04, t, tc);
+    nodes.soft.frequency.setTargetAtTime(state.soft ? 5000 : 20000, t, slow);
+    nodes.swell.gain.setTargetAtTime(swellBase(), t, slow);
+    nodes.lfoDepth.gain.setTargetAtTime(swellDepth(), t, slow);
   }
 
   // ---------- transport & timer ----------
@@ -376,25 +863,25 @@
     }
     render();
   }
-
   $("play").addEventListener("click", () => (state.playing ? pause(false) : play()));
 
   // ---------- controls ----------
   const PRESETS = {
-    mix:   { pink: 80, white: 50, soft: true,  waves: true  },
-    pink:  { pink: 85, white: 0,  soft: true,  waves: false },
-    white: { pink: 0,  white: 80, soft: false, waves: false }
+    all:   { music: 90, brown: 50, pink: 45, white: 45, soft: true,  waves: true  },
+    music: { music: 90, brown: 0,  pink: 0,  white: 0,  soft: true,  waves: true  },
+    brown: { music: 0,  brown: 85, pink: 0,  white: 0,  soft: true,  waves: false },
+    pink:  { music: 0,  brown: 0,  pink: 85, white: 0,  soft: true,  waves: false },
+    white: { music: 0,  brown: 0,  pink: 0,  white: 80, soft: false, waves: false }
   };
-  const PRESET_NAMES = { mix: "מיקס מרגיע", pink: "ורוד בלבד", white: "לבן בלבד", custom: "מיקס אישי" };
+  const PRESET_NAMES = { all: "הכל ביחד", music: "מוזיקה בלבד", brown: "חום בלבד", pink: "ורוד בלבד", white: "לבן בלבד", custom: "מיקס אישי" };
+  const SLIDERS = { music: "vMusic", brown: "vBrown", pink: "vPink", white: "vWhite", master: "vMaster" };
 
   $("presets").addEventListener("click", (e) => {
     const b = e.target.closest("[data-preset]"); if (!b) return;
     Object.assign(state, PRESETS[b.dataset.preset], { preset: b.dataset.preset });
     applyAll(false); render();
   });
-
-  for (const key of ["pink", "white", "master"]) {
-    const id = "v" + key[0].toUpperCase() + key.slice(1);
+  for (const [key, id] of Object.entries(SLIDERS)) {
     $(id).addEventListener("input", (e) => {
       state[key] = +e.target.value;
       if (key !== "master") state.preset = "custom";
@@ -404,17 +891,22 @@
   $("tSoft").addEventListener("click", () => { state.soft = !state.soft; state.preset = "custom"; applyAll(false); render(); });
   $("tWaves").addEventListener("click", () => { state.waves = !state.waves; state.preset = "custom"; applyAll(false); render(); });
 
+  const store = (k, v) => { try { localStorage.setItem(k, String(v)); } catch (_) {} };
+  const load = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
   $("timers").addEventListener("click", (e) => {
     const b = e.target.closest("[data-min]"); if (!b) return;
-    state.timerMin = +b.dataset.min;
-    try { localStorage.setItem("noise.timer", String(state.timerMin)); } catch (_) {}
+    state.timerMin = +b.dataset.min; store("noise.timer", state.timerMin);
     if (state.playing) scheduleTimer();
     render();
   });
-  try {
-    const saved = localStorage.getItem("noise.timer");
-    if (saved !== null && [0, 15, 30, 60, 90].includes(+saved)) state.timerMin = +saved;
-  } catch (_) {}
+  $("scenes").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-scene]"); if (!b) return;
+    state.scene = b.dataset.scene; store("noise.scene", state.scene);
+    render();
+  });
+  const savedTimer = load("noise.timer"), savedScene = load("noise.scene");
+  if (savedTimer !== null && [0, 15, 30, 60, 90].includes(+savedTimer)) state.timerMin = +savedTimer;
+  if (savedScene && (savedScene === "auto" || savedScene in Scenes.names)) state.scene = savedScene;
 
   const fmt = (ms) => {
     const s = Math.max(0, Math.round(ms / 1000));
@@ -424,146 +916,68 @@
   };
 
   function render() {
-    $("icoPlay").hidden = state.playing;
-    $("icoPause").hidden = !state.playing;
+    $("icoPlay").toggleAttribute("hidden", state.playing);
+    $("icoPause").toggleAttribute("hidden", !state.playing);
     $("play").setAttribute("aria-label", state.playing ? "השהה" : "נגן");
     $("stTitle").textContent = state.playing ? "מתנגן" : (ctx ? "מושהה" : "מוכן לניגון");
     const timerTxt = state.playing && state.endAt
       ? `נעצר בעוד ⁦${fmt(state.endAt - Date.now())}⁩`
       : state.timerMin ? `טיימר ${state.timerMin} דק׳` : "בלי טיימר";
     $("stSub").textContent = `${PRESET_NAMES[state.preset]} · ${timerTxt}`;
-
     for (const b of document.querySelectorAll("[data-preset]")) b.setAttribute("aria-pressed", String(b.dataset.preset === state.preset));
     for (const b of document.querySelectorAll("[data-min]")) b.setAttribute("aria-pressed", String(+b.dataset.min === state.timerMin));
+    for (const b of document.querySelectorAll("[data-scene]")) b.setAttribute("aria-pressed", String(b.dataset.scene === state.scene));
     $("tSoft").setAttribute("aria-pressed", String(state.soft));
     $("tWaves").setAttribute("aria-pressed", String(state.waves));
-    for (const k of ["pink", "white", "master"]) {
-      const id = "v" + k[0].toUpperCase() + k.slice(1);
-      $(id).value = state[k];
-      $(id + "Out").textContent = state[k];
-    }
-    if (!state.playing) drawScope();
+    for (const [k, id] of Object.entries(SLIDERS)) { $(id).value = state[k]; $(id + "Out").textContent = state[k]; }
   }
   setInterval(() => { if (state.playing && state.endAt) render(); }, 1000);
 
-  // ---------- spectrum ----------
-  const cv = $("scope"), g2 = cv.getContext("2d");
-  const F_MIN = 40, F_MAX = 16000, DB_TOP = 15, DB_BOT = -25;
-  const PAD = { l: 34, r: 8, t: 8, b: 22 };
-  let live = null;
-
-  const tok = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-
-  function geometry() {
-    const dpr = window.devicePixelRatio || 1;
-    const w = cv.clientWidth, h = cv.clientHeight;
-    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
-      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
-    }
-    g2.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const pw = w - PAD.l - PAD.r, ph = h - PAD.t - PAD.b;
-    const x = (f) => PAD.l + (Math.log(f / F_MIN) / Math.log(F_MAX / F_MIN)) * pw;
-    const fx = (px) => F_MIN * Math.pow(F_MAX / F_MIN, (px - PAD.l) / pw);
-    const y = (db) => PAD.t + ((DB_TOP - Math.max(DB_BOT, Math.min(DB_TOP, db))) / (DB_TOP - DB_BOT)) * ph;
-    return { w, h, pw, ph, x, fx, y };
+  // ---------- scenery loop ----------
+  const stage = $("stage"), cv = $("scene");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const T0 = performance.now();
+  let lastTag = "";
+  function fit() {
+    const r = cv.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const scale = Math.min(window.devicePixelRatio || 1, Math.sqrt(2.4e6 / (r.width * r.height)));
+    const w = Math.round(r.width * scale), h = Math.round(r.height * scale);
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
   }
-
-  // Expected power spectral density of the current mix, from the same constants the audio uses.
-  function theoryDb(freqs) {
-    const nyq = (ctx ? ctx.sampleRate : 48000) / 2;
-    const gw = curve(state.white), gp = curve(state.pink);
-    const sw = state.waves ? swellBase() : 1;
-    const q = 0.707, fc = softHz();
-    const psd = freqs.map((f) => {
-      const r = f / fc;
-      const h2 = 1 / ((1 - r * r) ** 2 + (r / q) ** 2);    // 2nd-order low-pass |H|²
-      const white = (gw * sw * RMS_WHITE) ** 2 / nyq * h2;
-      const pink = (gp * RMS_PINK) ** 2 / (f * Math.log(nyq / 9));
-      return white + pink;
-    });
-    return psd;
+  new ResizeObserver(fit).observe(cv);
+  function frame(now) {
+    const t = ((now - T0) / 1000) * (reduced ? 0.4 : 1) + 40;
+    let s;
+    if (ctx && state.playing && state.waves) s = 0.5 + 0.5 * Math.sin(2 * Math.PI * WAVE_HZ * (ctx.currentTime - lfoStart));
+    else s = 0.5 - 0.5 * Math.cos(2 * Math.PI * WAVE_HZ * t);
+    if (cv.width > 0) {
+      const tag = Scenes.render(cv, state.scene, t, s);
+      if (tag !== lastTag) { $("sceneTag").textContent = tag; lastTag = tag; }
+    }
+    requestAnimationFrame(frame);
   }
+  fit();
+  requestAnimationFrame(frame);
 
-  function drawScope() {
-    const G = geometry();
-    const ink = tok("--ink"), muted = tok("--muted"), line = tok("--line"), pink = tok("--pink");
-    g2.clearRect(0, 0, G.w, G.h);
-    g2.font = `12px ${getComputedStyle(document.body).fontFamily}`;
-    g2.direction = "ltr";
-
-    // grid
-    g2.lineWidth = 1; g2.strokeStyle = line; g2.fillStyle = muted;
-    g2.textAlign = "right"; g2.textBaseline = "middle";
-    for (const db of [10, 0, -10, -20]) {
-      const yy = Math.round(G.y(db)) + 0.5;
-      g2.beginPath(); g2.moveTo(PAD.l, yy); g2.lineTo(G.w - PAD.r, yy); g2.stroke();
-      g2.fillText((db > 0 ? "+" : db < 0 ? "−" : "") + Math.abs(db), PAD.l - 6, yy);
-    }
-    g2.textAlign = "center"; g2.textBaseline = "top";
-    for (const [f, label] of [[100, "100"], [1000, "1k"], [10000, "10k Hz"]]) {
-      const xx = Math.round(G.x(f)) + 0.5;
-      g2.beginPath(); g2.moveTo(xx, PAD.t); g2.lineTo(xx, G.h - PAD.b); g2.stroke();
-      g2.fillText(label, Math.min(xx, G.w - PAD.r - 22), G.h - PAD.b + 5);
-    }
-
-    // theory curve, normalized to 0 dB at 1 kHz
-    const xs = [];
-    for (let px = PAD.l; px <= G.w - PAD.r; px += 2) xs.push(px);
-    const fs = xs.map(G.fx);
-    const p = theoryDb(fs), ref = theoryDb([1000])[0];
-    if (ref > 0) {
-      g2.setLineDash([5, 4]); g2.strokeStyle = muted; g2.lineWidth = 1.5;
-      g2.beginPath();
-      xs.forEach((px, i) => { const yy = G.y(10 * Math.log10(p[i] / ref)); i ? g2.lineTo(px, yy) : g2.moveTo(px, yy); });
-      g2.stroke(); g2.setLineDash([]);
-    } else {
-      g2.fillStyle = muted; g2.textAlign = "center"; g2.textBaseline = "middle";
-      g2.fillText("שני הערוצים על אפס", PAD.l + G.pw / 2, PAD.t + G.ph / 2);
-    }
-
-    // live measurement
-    if (state.playing && live) {
-      g2.strokeStyle = pink; g2.lineWidth = 2;
-      g2.beginPath();
-      live.forEach((v, i) => { const yy = G.y(v); i ? g2.lineTo(live.xs[i], yy) : g2.moveTo(live.xs[i], yy); });
-      g2.stroke();
-    }
+  // ---------- full screen ----------
+  let wakeLock = null;
+  async function enterFull() {
+    try { await stage.requestFullscreen(); }
+    catch (_) { stage.classList.add("immersive"); }
+    try { wakeLock = await navigator.wakeLock?.request("screen"); } catch (_) {}
   }
-
-  function measure() {
-    if (state.playing && nodes) {
-      const G = geometry();
-      const a = nodes.analyser, bins = new Float32Array(a.frequencyBinCount);
-      a.getFloatFrequencyData(bins);
-      const hz = ctx.sampleRate / a.fftSize;
-      const band = (f0, f1) => {
-        let i0 = Math.max(1, Math.floor(f0 / hz)), i1 = Math.max(i0, Math.ceil(f1 / hz));
-        let s = 0, n = 0;
-        for (let i = i0; i <= i1 && i < bins.length; i++) { s += 10 ** (bins[i] / 10); n++; }
-        return n ? s / n : 1e-12;
-      };
-      const ref = band(900, 1110);
-      const xs = [], vals = [];
-      for (let px = PAD.l; px <= G.w - PAD.r; px += 3) {
-        xs.push(px);
-        vals.push(10 * Math.log10(band(G.fx(px), G.fx(px + 3)) / ref));
-      }
-      if (ref > 1e-11) {
-        if (live && live.length === vals.length) vals.forEach((v, i) => (vals[i] = live[i] * 0.8 + v * 0.2));
-        live = vals; live.xs = xs;
-      } else live = null;
-      drawScope();
-    }
-    requestAnimationFrame(measure);
+  function exitFull() {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    stage.classList.remove("immersive");
+    wakeLock?.release?.().catch(() => {}); wakeLock = null;
   }
-
-  new ResizeObserver(() => drawScope()).observe(cv);
-  new MutationObserver(() => drawScope()).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-  matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => drawScope());
-  document.fonts?.ready.then(() => drawScope());
+  const isFull = () => document.fullscreenElement === stage || stage.classList.contains("immersive");
+  $("fs").addEventListener("click", () => (isFull() ? exitFull() : enterFull()));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && stage.classList.contains("immersive")) exitFull(); });
+  document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement) { wakeLock?.release?.().catch(() => {}); wakeLock = null; } });
 
   render();
-  requestAnimationFrame(measure);
 })();
 </script>
 </body>
