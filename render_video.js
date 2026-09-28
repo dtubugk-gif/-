@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * Render the player's landscapes into an MP4 with the "all together" mix.
+ * Render the player's landscapes into an MP4 with the guided ASMR relaxation mix.
  *
  * The scenes in player.html are pure functions of time, so each frame is drawn
  * in headless Chromium, grabbed as JPEG and piped to ffmpeg. Frames are split
@@ -29,7 +29,7 @@ const MINUTES = arg("minutes", 10), FPS = arg("fps", 30), W = arg("width", 1280)
 const WORKERS = Math.max(1, Math.min(4, os.cpus().length));
 const BATCH = 20;
 const ROOT = __dirname;
-const AUDIO = path.join(ROOT, "audio", "all_together.mp3");
+const AUDIO = path.join(ROOT, "audio", "asmr_relaxation.mp3");
 const OUT = path.join(ROOT, "video", "relaxing_scenes.mp4");
 const FFMPEG = process.env.FFMPEG ||
   execFileSync("python3", ["-c", "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())"]).toString().trim();

@@ -20,11 +20,18 @@ Tracks:
   relaxing_music.mp3  - original generative ambient music in D major: slow
                         pad chords (Dmaj9 - Bm9 - Gmaj9 - Asus2, 15 s each)
                         with sparse pentatonic bells and a long reverb
-  all_together.mp3    - the music over brown, pink and softened white noise
-                        with the 0.1 Hz swell
+  water_drops.mp3     - water dripping in a cave: five leaks with their own
+                        irregular rhythm and pitch, each drop a rising
+                        "plink" (the ringing of the air bubble it traps)
+  all_together.mp3    - the music over the water drops and brown, pink and
+                        softened white noise with the 0.1 Hz swell
+  asmr_relaxation.mp3 - the deep guided ASMR voice (audio/asmr_voice.mp3, made
+                        by generate_voice.py) over all_together, with the
+                        music ducking gently whenever the voice speaks
 
 Usage:
   pip install numpy imageio-ffmpeg
+  python3 generate_voice.py                  # optional: the guided voice
   python3 generate_noise.py [--minutes 10] [--out audio]
 """
 
@@ -187,6 +194,67 @@ def music(n, rng):
     return mix / np.sqrt(np.mean(mix**2))
 
 
+# ---------------------------------------------------------------- water
+
+DRIP_SOURCES = [   # period s, pitch Hz, pan 0..1, level
+    (2.3, 1850, 0.30, 1.0),
+    (3.1, 1250, 0.70, 0.8),
+    (4.7, 2400, 0.15, 0.6),
+    (6.9, 900, 0.55, 0.7),
+    (11.0, 1550, 0.85, 0.5),
+]
+
+
+def drop(rng, f0):
+    """One drip: a click of impact, then a decaying tone whose pitch rises
+    toward an octave as the trapped bubble shrinks."""
+    tau = rng.uniform(0.03, 0.07)
+    tt = np.arange(int(0.35 * SAMPLE_RATE)) / SAMPLE_RATE
+    phase = 2 * np.pi * f0 * (2 * tt - tau * (1 - np.exp(-tt / tau)))
+    tone = np.sin(phase) * (1 - np.exp(-tt / 0.001)) * np.exp(-tt / tau)
+    click = np.diff(rng.standard_normal(len(tt) + 1)) * np.exp(-tt / 0.0015) * 0.08
+    return tone + click
+
+
+def drips(n, rng):
+    """Cave drips over the whole file, wrapping at the end so it loops."""
+    out = np.zeros((n, 2), np.float32)
+    for period, pitch, pan, level in DRIP_SOURCES:
+        t0 = rng.uniform(0, period)
+        while t0 < n / SAMPLE_RATE:
+            d = drop(rng, pitch * rng.uniform(0.9, 1.1)) * level * rng.uniform(0.6, 1.0)
+            pos = (int(t0 * SAMPLE_RATE) + np.arange(len(d))) % n
+            out[pos, 0] += (d * np.sqrt(1 - pan)).astype(np.float32)
+            out[pos, 1] += (d * np.sqrt(pan)).astype(np.float32)
+            t0 += period * rng.lognormal(0, 0.18)
+    wet = reverb(out, rng, seconds=3.5, rt60=2.6, wet=0.5)
+    return wet / np.sqrt(np.mean(wet**2))
+
+
+def load_voice(path, n):
+    raw = subprocess.run(
+        [ffmpeg_exe(), "-loglevel", "error", "-i", path, "-f", "f32le", "-ac", "2", "-ar", str(SAMPLE_RATE), "-"],
+        capture_output=True, check=True).stdout
+    v = np.frombuffer(raw, np.float32).reshape(-1, 2)[:n]
+    return np.concatenate([v, np.zeros((n - len(v), 2), np.float32)])
+
+
+def duck(voice, depth_db=-6):
+    """Gain curve that dips while the voice speaks (0.3 s attack, 2 s release),
+    computed on 10 ms frames and interpolated back to samples."""
+    n, hop = len(voice), SAMPLE_RATE // 100
+    frames = -(-n // hop)
+    env = np.pad(np.abs(voice).max(axis=1), (0, frames * hop - n)).reshape(frames, hop).max(axis=1)
+    talking = np.convolve(env > db(-40), np.ones(60), mode="same") > 0   # +-0.3 s around speech
+    target = np.where(talking, db(depth_db), 1.0)
+    g = np.empty(frames)
+    g[0], up, down = target[0], np.exp(-1 / 200), np.exp(-1 / 30)
+    for i in range(1, frames):
+        a = down if target[i] < g[i - 1] else up
+        g[i] = a * g[i - 1] + (1 - a) * target[i]
+    return np.interp(np.arange(n) / hop, np.arange(frames), g).astype(np.float32)[:, None]
+
+
 # ---------------------------------------------------------------- output
 
 def db(x):
@@ -237,13 +305,25 @@ def main():
     tune = music(n, rng)
     write_mp3(out("relaxing_music.mp3"), tune * db(-21))
 
-    # Everything together: the music on top, noise beds 7-14 dB beneath it so
-    # they fill the room without masking the melody.
-    mix = (tune * db(-22)
-           + brown_bed * db(-29)
-           + stereo(n, rng, pink) * db(-33)
-           + stereo(n, rng, soft_white) * db(-36) * swell(n))
-    write_mp3(out("all_together.mp3"), mix)
+    water = drips(n, rng)
+    room = stereo(n, rng, brown) * db(-44)   # a faint cave room tone
+    write_mp3(out("water_drops.mp3"), water * db(-26) + room)
+    del room
+
+    # Everything together: the music on top, the drips and noise beds beneath
+    # it so they fill the room without masking the melody.
+    beds = (water * db(-31)
+            + brown_bed * db(-29)
+            + stereo(n, rng, pink) * db(-33)
+            + stereo(n, rng, soft_white) * db(-36) * swell(n))
+    del brown_bed, water
+    write_mp3(out("all_together.mp3"), tune * db(-22) + beds)
+
+    voice_path = out("asmr_voice.mp3")
+    if os.path.exists(voice_path):
+        voice = load_voice(voice_path, n)
+        # The voice leads; the music steps back while it speaks.
+        write_mp3(out("asmr_relaxation.mp3"), voice * db(-2.5) + tune * db(-25) * duck(voice) + beds * db(-3))
 
 
 if __name__ == "__main__":

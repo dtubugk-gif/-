@@ -22,6 +22,8 @@
     --whitech: #66788C;
     --brown: #8A5A3C;
     --music: #2F7A8A;
+    --water: #2D6FA3;
+    --voice: #6B4E9B;
     --on-pink: #FFFFFF;
     --focus: #2F6FB5;
     --display: "Frank Ruhl Libre", "David Libre", "Times New Roman", serif;
@@ -40,6 +42,8 @@
       --whitech: #C3CEDA;
       --brown: #C99B76;
       --music: #7CC4D4;
+      --water: #7FB4E6;
+      --voice: #B9A0E6;
       --on-pink: #1A1016;
       --focus: #8DB8EA;
     }
@@ -56,6 +60,8 @@
     --whitech: #C3CEDA;
     --brown: #C99B76;
     --music: #7CC4D4;
+    --water: #7FB4E6;
+    --voice: #B9A0E6;
     --on-pink: #1A1016;
     --focus: #8DB8EA;
   }
@@ -175,6 +181,8 @@
   .toggles { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
   input[type="range"] { accent-color: var(--pink); height: 28px; }
   #vMusic { accent-color: var(--music); }
+  #vWater { accent-color: var(--water); }
+  #vVoice { accent-color: var(--voice); }
   #vBrown { accent-color: var(--brown); }
   #vWhite { accent-color: var(--whitech); }
 
@@ -196,7 +204,7 @@
 <main class="wrap" dir="rtl" lang="he">
   <header>
     <h1>ערש <span class="p">רעש</span></h1>
-    <p class="lede">מוזיקה רכה, רעש חום, ורוד ולבן, ונופים שזזים לאט. הכל נוצר בזמן אמת בדפדפן, בלי סוף ובלי חזרות.</p>
+    <p class="lede">קול מנחה עמוק, מוזיקה רכה, טפטוף מים במערה, רעש חום, ורוד ולבן, ונופים שזזים לאט. הכל נוצר בזמן אמת בדפדפן, בלי סוף ובלי חזרות.</p>
   </header>
 
   <div class="stage" id="stage">
@@ -234,6 +242,7 @@
     <div class="chips" id="presets">
       <button class="chip" type="button" id="pAll" data-preset="all" aria-pressed="true">הכל ביחד</button>
       <button class="chip" type="button" id="pMusic" data-preset="music" aria-pressed="false">מוזיקה בלבד</button>
+      <button class="chip" type="button" id="pWater" data-preset="water" aria-pressed="false">טפטוף בלבד</button>
       <button class="chip" type="button" id="pBrown" data-preset="brown" aria-pressed="false">חום בלבד</button>
       <button class="chip" type="button" id="pPink" data-preset="pink" aria-pressed="false">ורוד בלבד</button>
       <button class="chip" type="button" id="pWhite" data-preset="white" aria-pressed="false">לבן בלבד</button>
@@ -242,9 +251,23 @@
 
   <section class="channels" aria-label="ערוצים">
     <div class="ch">
+      <div class="ch-name"><i class="dot" style="background: var(--voice)"></i><b>קול מנחה</b><span class="spec" id="voiceProg">הנחיה של 8 דקות</span></div>
+      <span class="val" id="vVoiceOut">80</span>
+      <input type="range" id="vVoice" min="0" max="100" value="80" aria-label="עוצמת קול מנחה">
+      <div class="toggles">
+        <button class="chip" type="button" id="voiceRestart">מההתחלה</button>
+      </div>
+      <audio id="voiceEl" src="audio/asmr_voice.mp3" preload="metadata"></audio>
+    </div>
+    <div class="ch">
       <div class="ch-name"><i class="dot" style="background: var(--music)"></i><b>מוזיקה</b><span class="spec">רה מז׳ור · אקורד כל 15 שניות</span></div>
       <span class="val" id="vMusicOut">90</span>
       <input type="range" id="vMusic" min="0" max="100" value="90" aria-label="עוצמת מוזיקה">
+    </div>
+    <div class="ch">
+      <div class="ch-name"><i class="dot" style="background: var(--water)"></i><b>טפטוף מים</b><span class="spec">חמש נזילות · הדהוד של מערה</span></div>
+      <span class="val" id="vWaterOut">64</span>
+      <input type="range" id="vWater" min="0" max="100" value="64" aria-label="עוצמת טפטוף מים">
     </div>
     <div class="ch">
       <div class="ch-name"><i class="dot" style="background: var(--brown)"></i><b>רעש חום</b><span class="spec" dir="ltr">−6 dB / octave</span></div>
@@ -284,6 +307,8 @@
   </section>
 
   <footer class="notes">
+    <p><b>הקול:</b> קול עברי סינתטי, לא הקלטה של אדם. הוא הועמק ועובד בסגנון ASMR: חום של מיקרופון קרוב, שכבת לחישה עדינה ותנועה איטית בין האוזן הימנית לשמאלית. הוראות הנשימה מתוזמנות לגלים. כדאי להאזין באוזניות.</p>
+    <p><b>הטפטוף:</b> כל טיפה היא צליל קצר שעולה בגובהו, כמו בועת האוויר שהטיפה כולאת במים. חמש נזילות, כל אחת בקצב ובמקום משלה.</p>
     <p><b>המוזיקה:</b> ארבעה אקורדים רכים, <span dir="ltr">Dmaj9 · Bm9 · Gmaj9 · Asus2</span>, ופעמונים בסולם פנטטוני. הפעמונים נבחרים באקראי, כך שהמנגינה לא חוזרת על עצמה.</p>
     <p><b>גלים:</b> הרעש הלבן מתנפח ונסוג בקצב של 0.1 הרץ, גל כל 10 שניות, וגם הים בנוף נושם באותו קצב. זה קצב של 6 נשימות בדקה, נפוץ בתרגילי הרגעה.</p>
     <p><b>באייפון:</b> אם אין קול, בדקו שמתג השקט כבוי. דפדפנים בטלפון עוצרים את הצליל כשהמסך ננעל, ולכן ללילה שלם עדיף לנגן את קובצי ה-MP3.</p>
@@ -662,14 +687,18 @@ window.__scenes = Scenes;   // used by the video renderer
   const LOOP_SEC = 30, XFADE_SEC = 2, WAVE_HZ = 0.1;
   const RMS = { white: 0.1, pink: 0.15, brown: 0.15 };
   // Channel gain at slider 100, so each solo channel lands near the MP3 levels.
-  const CAL = { white: 0.79, pink: 0.75, brown: 1.16, music: 1.3 };
+  const CAL = { white: 0.79, pink: 0.75, brown: 1.16, music: 1.3, water: 1.0, voice: 1.17 };
   const CHORDS = [[50, 57, 61, 64, 66], [47, 54, 57, 61, 62], [43, 50, 54, 57, 59], [45, 52, 57, 59, 64]];
   const BELLS = [69, 71, 74, 76, 78, 81, 83, 86];
   const CHORD_SEC = 15, PAD_AMP = 0.04, BELL_AMP = 0.16;
+  // Five leaks: period s, pitch Hz, pan, level. Same model as water_drops.mp3.
+  const DRIPS = [[2.3, 1850, -0.4, 1.0], [3.1, 1250, 0.4, 0.8], [4.7, 2400, -0.7, 0.6], [6.9, 900, 0.1, 0.7], [11.0, 1550, 0.7, 0.5]];
+  const DRIP_AMP = 1.7;
+  const voiceEl = $("voiceEl");
   const hz = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
   const state = {
-    music: 90, brown: 50, pink: 45, white: 45, master: 70,
+    voice: 80, music: 90, water: 64, brown: 50, pink: 45, white: 45, master: 70,
     soft: true, waves: true, timerMin: 0, scene: "auto",
     preset: "all", playing: false, endAt: 0
   };
@@ -732,6 +761,7 @@ window.__scenes = Scenes;   // used by the video renderer
 
     n.whiteSrc = src("white"); n.pinkSrc = src("pink"); n.brownSrc = src("brown");
     n.white = ctx.createGain(); n.pink = ctx.createGain(); n.brown = ctx.createGain(); n.music = ctx.createGain();
+    n.water = ctx.createGain(); n.voice = ctx.createGain(); n.musicDuck = ctx.createGain();
     n.soft = ctx.createBiquadFilter(); n.soft.type = "lowpass"; n.soft.Q.value = 0.707;
     n.brownHp = ctx.createBiquadFilter(); n.brownHp.type = "highpass"; n.brownHp.frequency.value = 30; n.brownHp.Q.value = 0.707;
     n.swell = ctx.createGain();
@@ -742,7 +772,22 @@ window.__scenes = Scenes;   // used by the video renderer
     n.pinkSrc.connect(n.pink).connect(n.master);
     n.brownSrc.connect(n.brownHp).connect(n.brown).connect(n.master);
     n.lfo.connect(n.lfoDepth).connect(n.swell.gain);
-    n.music.connect(n.master);
+    n.music.connect(n.musicDuck).connect(n.master);
+    n.water.connect(n.master);
+    n.voiceSrc = ctx.createMediaElementSource(voiceEl);
+    n.voiceSrc.connect(n.voice).connect(n.master);
+
+    // drips: dry + a long cave reverb
+    n.dripBus = ctx.createGain();
+    n.caveDry = ctx.createGain(); n.caveDry.gain.value = 0.5;
+    n.caveWet = ctx.createGain(); n.caveWet.gain.value = 0.5;
+    n.cave = ctx.createConvolver(); n.cave.buffer = makeIR(3.5, 2.6);
+    n.dripBus.connect(n.caveDry).connect(n.water);
+    n.dripBus.connect(n.cave).connect(n.caveWet).connect(n.water);
+    n.click = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.02), ctx.sampleRate);
+    const cd = n.click.getChannelData(0);
+    let prev = 0;
+    for (let i = 0; i < cd.length; i++) { const w = Math.random() * 2 - 1; cd[i] = (w - prev) * 0.08 * Math.exp(-i / (ctx.sampleRate * 0.0015)); prev = w; }
 
     // music bus: pad + bells -> dry/wet hall reverb
     n.bus = ctx.createGain();
@@ -760,7 +805,7 @@ window.__scenes = Scenes;   // used by the video renderer
     const t0 = ctx.currentTime + 0.05;
     n.whiteSrc.start(t0); n.pinkSrc.start(t0); n.brownSrc.start(t0); n.lfo.start(t0);
     lfoStart = t0;
-    seq = { chord: 0, nextChord: t0, nextBell: t0 + 3, bell: 3 };
+    seq = { chord: 0, nextChord: t0, nextBell: t0 + 3, bell: 3, drips: DRIPS.map((d) => t0 + 0.5 + Math.random() * d[0]) };
     setInterval(schedule, 250);
     schedule();
   }
@@ -800,6 +845,21 @@ window.__scenes = Scenes;   // used by the video renderer
     partial(1, 1, 1.3); partial(2.76, 0.25, 0.4); partial(5.4, 0.08, 0.2);
   }
 
+  function playDrop([, pitch, pan, level], t) {
+    // pitch rises toward an octave as the trapped bubble shrinks
+    const f0 = pitch * (0.9 + Math.random() * 0.2), tau = 0.03 + Math.random() * 0.04;
+    const amp = DRIP_AMP * level * (0.6 + Math.random() * 0.4);
+    const o = ctx.createOscillator(), g = ctx.createGain(), p = ctx.createStereoPanner();
+    p.pan.value = pan; p.connect(nodes.dripBus);
+    o.frequency.setValueAtTime(f0, t); o.frequency.setTargetAtTime(2 * f0, t, tau);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(amp, t + 0.001); g.gain.setTargetAtTime(0, t + 0.001, tau);
+    o.connect(g).connect(p); o.start(t); o.stop(t + 0.5);
+    const c = ctx.createBufferSource(), cg = ctx.createGain();
+    c.buffer = nodes.click; cg.gain.value = amp;
+    c.connect(cg).connect(p); c.start(t);
+  }
+  const gauss = () => Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.cos(2 * Math.PI * Math.random());
+
   function schedule() {
     if (!ctx || ctx.state !== "running") return;
     const ahead = ctx.currentTime + 2.5;
@@ -811,6 +871,9 @@ window.__scenes = Scenes;   // used by the video renderer
       if (Math.random() > 0.22) playBell(seq.nextBell);
       seq.nextBell += 2 + Math.random() * 2.8;
     }
+    DRIPS.forEach((d, i) => {
+      while (seq.drips[i] < ahead) { playDrop(d, seq.drips[i]); seq.drips[i] += d[0] * Math.exp(0.18 * gauss()); }
+    });
   }
 
   const curve = (v) => (v / 100) ** 2;          // perceptual slider taper
@@ -820,12 +883,23 @@ window.__scenes = Scenes;   // used by the video renderer
   function applyAll(instant) {
     if (!nodes) return;
     const t = ctx.currentTime, tc = instant ? 0.001 : 0.08, slow = instant ? 0.001 : 0.6;
-    for (const k of ["white", "pink", "brown", "music"]) nodes[k].gain.setTargetAtTime(curve(state[k]) * CAL[k], t, tc);
+    for (const k of ["white", "pink", "brown", "music", "water", "voice"]) nodes[k].gain.setTargetAtTime(curve(state[k]) * CAL[k], t, tc);
     nodes.master.gain.setTargetAtTime(curve(state.master) * 2.04, t, tc);
     nodes.soft.frequency.setTargetAtTime(state.soft ? 5000 : 20000, t, slow);
     nodes.swell.gain.setTargetAtTime(swellBase(), t, slow);
     nodes.lfoDepth.gain.setTargetAtTime(swellDepth(), t, slow);
   }
+
+  // The guided voice plays once through; the music steps back while it runs.
+  function voiceSync() {
+    const want = state.playing && state.voice > 0 && !voiceEl.ended;
+    if (want && voiceEl.paused) voiceEl.play().catch(() => {});
+    if (!want && !voiceEl.paused) voiceEl.pause();
+    if (nodes) nodes.musicDuck.gain.setTargetAtTime(want ? 0.6 : 1, ctx.currentTime, 0.5);
+  }
+  voiceEl.addEventListener("ended", () => { voiceSync(); render(); });
+  voiceEl.addEventListener("loadedmetadata", () => render());
+  $("voiceRestart").addEventListener("click", () => { voiceEl.currentTime = 0; voiceSync(); render(); });
 
   // ---------- transport & timer ----------
   function scheduleTimer() {
@@ -847,11 +921,13 @@ window.__scenes = Scenes;   // used by the video renderer
     if (!ctx) build(); else await ctx.resume();
     state.playing = true;
     scheduleTimer();
+    voiceSync();
     render();
   }
   async function pause(fromTimer) {
     clearTimeout(stopTimer);
     state.playing = false; state.endAt = 0;
+    voiceSync();
     if (ctx) {
       if (!fromTimer) {
         const g = nodes.fade.gain, now = ctx.currentTime;
@@ -867,25 +943,26 @@ window.__scenes = Scenes;   // used by the video renderer
 
   // ---------- controls ----------
   const PRESETS = {
-    all:   { music: 90, brown: 50, pink: 45, white: 45, soft: true,  waves: true  },
-    music: { music: 90, brown: 0,  pink: 0,  white: 0,  soft: true,  waves: true  },
-    brown: { music: 0,  brown: 85, pink: 0,  white: 0,  soft: true,  waves: false },
-    pink:  { music: 0,  brown: 0,  pink: 85, white: 0,  soft: true,  waves: false },
-    white: { music: 0,  brown: 0,  pink: 0,  white: 80, soft: false, waves: false }
+    all:   { voice: 80, music: 90, water: 64, brown: 50, pink: 45, white: 45, soft: true,  waves: true  },
+    music: { voice: 0,  music: 90, water: 0,  brown: 0,  pink: 0,  white: 0,  soft: true,  waves: true  },
+    water: { voice: 0,  music: 0,  water: 85, brown: 0,  pink: 0,  white: 0,  soft: true,  waves: false },
+    brown: { voice: 0,  music: 0,  water: 0,  brown: 85, pink: 0,  white: 0,  soft: true,  waves: false },
+    pink:  { voice: 0,  music: 0,  water: 0,  brown: 0,  pink: 85, white: 0,  soft: true,  waves: false },
+    white: { voice: 0,  music: 0,  water: 0,  brown: 0,  pink: 0,  white: 80, soft: false, waves: false }
   };
-  const PRESET_NAMES = { all: "הכל ביחד", music: "מוזיקה בלבד", brown: "חום בלבד", pink: "ורוד בלבד", white: "לבן בלבד", custom: "מיקס אישי" };
-  const SLIDERS = { music: "vMusic", brown: "vBrown", pink: "vPink", white: "vWhite", master: "vMaster" };
+  const PRESET_NAMES = { all: "הכל ביחד", music: "מוזיקה בלבד", water: "טפטוף בלבד", brown: "חום בלבד", pink: "ורוד בלבד", white: "לבן בלבד", custom: "מיקס אישי" };
+  const SLIDERS = { voice: "vVoice", music: "vMusic", water: "vWater", brown: "vBrown", pink: "vPink", white: "vWhite", master: "vMaster" };
 
   $("presets").addEventListener("click", (e) => {
     const b = e.target.closest("[data-preset]"); if (!b) return;
     Object.assign(state, PRESETS[b.dataset.preset], { preset: b.dataset.preset });
-    applyAll(false); render();
+    applyAll(false); voiceSync(); render();
   });
   for (const [key, id] of Object.entries(SLIDERS)) {
     $(id).addEventListener("input", (e) => {
       state[key] = +e.target.value;
       if (key !== "master") state.preset = "custom";
-      applyAll(false); render();
+      applyAll(false); voiceSync(); render();
     });
   }
   $("tSoft").addEventListener("click", () => { state.soft = !state.soft; state.preset = "custom"; applyAll(false); render(); });
@@ -924,6 +1001,12 @@ window.__scenes = Scenes;   // used by the video renderer
       ? `נעצר בעוד ⁦${fmt(state.endAt - Date.now())}⁩`
       : state.timerMin ? `טיימר ${state.timerMin} דק׳` : "בלי טיימר";
     $("stSub").textContent = `${PRESET_NAMES[state.preset]} · ${timerTxt}`;
+    const dur = voiceEl.duration;
+    const running = !voiceEl.ended && voiceEl.currentTime > 0 && dur;
+    $("voiceProg").dir = running ? "ltr" : "rtl";
+    $("voiceProg").textContent = voiceEl.ended ? "ההנחיה הסתיימה"
+      : running ? `${fmt(voiceEl.currentTime * 1000)} / ${fmt(dur * 1000)}`
+      : dur ? `הנחיה של ${Math.round(dur / 60)} דקות` : "הנחיה של 8 דקות";
     for (const b of document.querySelectorAll("[data-preset]")) b.setAttribute("aria-pressed", String(b.dataset.preset === state.preset));
     for (const b of document.querySelectorAll("[data-min]")) b.setAttribute("aria-pressed", String(+b.dataset.min === state.timerMin));
     for (const b of document.querySelectorAll("[data-scene]")) b.setAttribute("aria-pressed", String(b.dataset.scene === state.scene));
@@ -931,7 +1014,7 @@ window.__scenes = Scenes;   // used by the video renderer
     $("tWaves").setAttribute("aria-pressed", String(state.waves));
     for (const [k, id] of Object.entries(SLIDERS)) { $(id).value = state[k]; $(id + "Out").textContent = state[k]; }
   }
-  setInterval(() => { if (state.playing && state.endAt) render(); }, 1000);
+  setInterval(() => { if (state.playing) render(); }, 1000);
 
   // ---------- scenery loop ----------
   const stage = $("stage"), cv = $("scene");
