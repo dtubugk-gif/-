@@ -29,6 +29,7 @@ body.playing.touch #pad{display:flex}
 #dpad[data-dir="r"]{background:linear-gradient(90deg,#00000030 0 50%,#ffffff55 50%)}
 .btns{display:flex;gap:min(3vw,18px);align-items:flex-end}
 .btns button{border-radius:50%;border:3px solid #1a0f0c;color:#1a0f0c;font:800 min(5.2vh,22px) Rubik,sans-serif;box-shadow:0 3px 0 #0006,inset 0 6px 0 #ffffff44;padding:0}
+#padD{width:min(14vh,60px);height:min(14vh,60px);background:#bfe3ff;margin-bottom:min(2vh,12px)}
 #padB{width:min(19vh,86px);height:min(19vh,86px);background:#cfd8ee;margin-bottom:min(2vh,12px)}
 #padA{width:min(24vh,108px);height:min(24vh,108px);background:var(--gold)}
 .btns button.on{transform:translateY(2px);filter:brightness(1.15)}
@@ -44,7 +45,7 @@ body.playing.touch #pad{display:flex}
 <div class="hud"><button id="btnMute" type="button" aria-label="צליל">🔊</button><button id="btnPause" type="button" aria-label="השהיה">⏸</button></div>
 <div id="pad">
   <div id="dpad" data-dir=""><span>◀</span><span>▶</span></div>
-  <div class="btns"><button id="padB" data-k="run" type="button" aria-label="ריצה / בעיטה">B</button><button id="padA" data-k="jump" type="button" aria-label="קפיצה">A</button></div>
+  <div class="btns"><button id="padD" data-k="down" type="button" aria-label="כניסה לצינור">▼</button><button id="padB" data-k="run" type="button" aria-label="ריצה / בעיטה">B</button><button id="padA" data-k="jump" type="button" aria-label="קפיצה">A</button></div>
 </div>
 <div id="rotate"><i>📱</i><div>סובבו את המכשיר לרוחב</div></div>
 <script>try{if(matchMedia('(pointer:coarse)').matches||'ontouchstart' in window||/[?&]touch/.test(location.search))document.body.classList.add('touch')}catch(e){}</script>

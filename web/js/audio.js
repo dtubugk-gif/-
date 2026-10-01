@@ -48,6 +48,11 @@ const SFX = {
   star: () => seq([784, 988, 1175, 1568, 1175, 988, 784, 988, 1175, 1568], 0.045),
   boss: () => { tone(120, 0.35, 'sawtooth', 0.12, 60); noise(0.2, 0.2); },
   select: () => tone(880, 0.06, 'square', 0.06),
+  spring: () => tone(220, 0.28, 'square', 0.1, 900),
+  swim: () => tone(420, 0.12, 'sine', 0.12, 620),
+  warp: () => tone(500, 0.35, 'square', 0.08, 120),
+  bullet: () => { noise(0.1, 0.2); tone(140, 0.12, 'sawtooth', 0.08, 60); },
+  fire: () => tone(300, 0.15, 'sawtooth', 0.06, 700),
   go: () => seq([523, 659, 784], 0.07),
 };
 
@@ -61,6 +66,12 @@ const TRACKS = {
   snow:   { root: 76, scale: 'penta', bass: [48, 52, 55, 52, 45, 50, 53, 50], sp: 0.21, seed: 41, lead: 'triangle' },
   sky:    { root: 74, scale: 'major', bass: [50, 55, 52, 57, 50, 55, 52, 47], sp: 0.17, seed: 53, lead: 'square' },
   lava:   { root: 67, scale: 'minor', bass: [43, 43, 46, 41, 43, 43, 48, 46], sp: 0.16, seed: 67, lead: 'sawtooth' },
+  under:  { root: 62, scale: 'minor', bass: [38, 41, 38, 36, 38, 43, 41, 38], sp: 0.22, seed: 83, lead: 'square' },
+  sea:    { root: 72, scale: 'penta', bass: [48, 50, 52, 50, 45, 47, 50, 48], sp: 0.27, seed: 97, lead: 'triangle' },
+  night:  { root: 69, scale: 'minor', bass: [45, 41, 43, 45, 40, 41, 43, 40], sp: 0.21, seed: 101, lead: 'triangle' },
+  ash:    { root: 64, scale: 'phryg', bass: [40, 41, 40, 38, 40, 41, 43, 40], sp: 0.17, seed: 113, lead: 'sawtooth' },
+  castle: { root: 60, scale: 'minor', bass: [36, 36, 39, 34, 36, 36, 41, 39], sp: 0.18, seed: 127, lead: 'sawtooth' },
+  void:   { root: 58, scale: 'phryg', bass: [34, 35, 34, 32, 34, 35, 37, 34], sp: 0.15, seed: 131, lead: 'sawtooth' },
   boss:   { root: 65, scale: 'phryg', bass: [41, 42, 41, 39, 41, 42, 44, 41], sp: 0.13, seed: 79, lead: 'sawtooth' },
 };
 const melCache = {};
