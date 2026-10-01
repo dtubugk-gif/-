@@ -1,0 +1,43 @@
+plugins { id 'com.android.application' }
+
+// Game files come from build/web (staged by tools/stage.sh), icons from build/res (tools/make_icons.py).
+def ksFile = file(System.getenv('SFB_KEYSTORE') ?: "$rootDir/../.local-keystore/release.jks")
+
+android {
+    namespace 'com.superfacebros.game'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.superfacebros.game'
+        minSdk 21
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+    signingConfigs {
+        release {
+            storeFile ksFile
+            storePassword System.getenv('SFB_KS_PASS') ?: 'superfacebros'
+            keyAlias 'sfb'
+            keyPassword System.getenv('SFB_KS_PASS') ?: 'superfacebros'
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            // Falls back to the debug key when no release keystore exists, so a fresh clone still builds.
+            signingConfig ksFile.exists() ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+    sourceSets {
+        main {
+            assets.srcDirs = ["$rootDir/../build/web"]
+            res.srcDirs = ['src/main/res', "$rootDir/../build/res"]
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    lint { abortOnError false }
+}

@@ -1,0 +1,9 @@
+.local-faces/
+build/
+android/build/
+android/.gradle/
+android/app/build/
+android/local.properties
+*.apk
+.local-keystore/
+dist/

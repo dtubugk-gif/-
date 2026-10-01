@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="he">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0a0614">
+<title>Super Face Bros.</title>
+<style>
+@font-face{font-family:"Press Start 2P";src:url(assets/fonts/ps2p.woff2) format("woff2");font-display:block}
+@font-face{font-family:Rubik;font-weight:500 800;src:url(assets/fonts/rubik-he.woff2) format("woff2");unicode-range:U+0307-0308,U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F;font-display:block}
+@font-face{font-family:Rubik;font-weight:500 800;src:url(assets/fonts/rubik-lat.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122;font-display:block}
+:root{--ink:#1a0f0c;--gold:#ffb02e;color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#0a0614;overflow:hidden;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none;font-family:Rubik,system-ui,sans-serif}
+#stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 40%,#2a1450,#0a0614)}
+canvas{width:100%;height:100%;object-fit:contain;display:block;outline:none}
+
+.hud{position:fixed;top:max(6px,env(safe-area-inset-top));right:max(8px,env(safe-area-inset-right));display:none;gap:8px;z-index:5}
+body.playing .hud{display:flex}
+.hud button{width:42px;height:42px;border-radius:50%;border:2px solid #ffffff55;background:#00000066;color:#fff;font-size:18px;line-height:1;padding:0;cursor:pointer;backdrop-filter:blur(2px)}
+.hud button:active{background:#ffffff44}
+
+#pad{position:fixed;left:0;right:0;bottom:0;display:none;justify-content:space-between;align-items:flex-end;padding:0 max(16px,env(safe-area-inset-left)) max(14px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-right));pointer-events:none;z-index:5}
+body.playing.touch #pad{display:flex}
+#pad *{pointer-events:auto;touch-action:none}
+#dpad{position:relative;width:min(40vw,220px);height:min(22vh,92px);border-radius:60px;background:#00000030;border:2px solid #ffffff3a;display:flex}
+#dpad span{flex:1;display:flex;align-items:center;justify-content:center;color:#ffffffcc;font-size:min(7vh,34px);pointer-events:none}
+#dpad[data-dir="l"]{background:linear-gradient(90deg,#ffffff55 0 50%,#00000030 50%)}
+#dpad[data-dir="r"]{background:linear-gradient(90deg,#00000030 0 50%,#ffffff55 50%)}
+.btns{display:flex;gap:min(3vw,18px);align-items:flex-end}
+.btns button{border-radius:50%;border:3px solid #1a0f0c;color:#1a0f0c;font:800 min(5.2vh,22px) Rubik,sans-serif;box-shadow:0 3px 0 #0006,inset 0 6px 0 #ffffff44;padding:0}
+#padB{width:min(19vh,86px);height:min(19vh,86px);background:#cfd8ee;margin-bottom:min(2vh,12px)}
+#padA{width:min(24vh,108px);height:min(24vh,108px);background:var(--gold)}
+.btns button.on{transform:translateY(2px);filter:brightness(1.15)}
+
+#rotate{position:fixed;inset:0;background:#0a0614;color:#fff;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;text-align:center;font:800 20px Rubik,sans-serif;z-index:20;padding:24px}
+#rotate i{font-style:normal;font-size:54px;animation:rot 1.8s ease-in-out infinite}
+@keyframes rot{0%,30%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
+@media (orientation:portrait) and (pointer:coarse){#rotate{display:flex}}
+</style>
+</head>
+<body>
+<div id="stage"><canvas id="game" tabindex="0" aria-label="Super Face Bros."></canvas></div>
+<div class="hud"><button id="btnMute" type="button" aria-label="צליל">🔊</button><button id="btnPause" type="button" aria-label="השהיה">⏸</button></div>
+<div id="pad">
+  <div id="dpad" data-dir=""><span>◀</span><span>▶</span></div>
+  <div class="btns"><button id="padB" data-k="run" type="button" aria-label="ריצה / בעיטה">B</button><button id="padA" data-k="jump" type="button" aria-label="קפיצה">A</button></div>
+</div>
+<div id="rotate"><i>📱</i><div>סובבו את המכשיר לרוחב</div></div>
+<script>try{if(matchMedia('(pointer:coarse)').matches||'ontouchstart' in window||/[?&]touch/.test(location.search))document.body.classList.add('touch')}catch(e){}</script>
+<script src="js/levels.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/art.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
