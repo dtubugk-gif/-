@@ -125,7 +125,7 @@ setInterval(musicTick,30);
 
 /* ---------------- input ---------------- */
 const keys={},pressed={};
-let touchMode=false,stick=null,touchDash=false,mx=-1,my=-1;
+let touchMode=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches),stick=null,touchDash=false,mx=-1,my=-1;
 addEventListener('keydown',e=>{
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
   if(!keys[e.code])pressed[e.code]=true;
@@ -771,7 +771,7 @@ function drawMenu(dt){
   txt('SURVIVE THE SWARM.  TOGETHER.',W/2,238,22,'#ffe14a','center',12);
   button(W/2-250,290,230,84,'1 PLAYER',()=>newGame(1),'#27f0ff',28);
   button(W/2+20,290,230,84,'2 PLAYERS',()=>newGame(2),'#ff3df2',28);
-  txt('press 1 or 2  ·  or ENTER',W/2,396,15,'#8f84d6');
+  txt(touchMode?'drag left side to move  ·  tap right side to dash':'press 1 or 2  ·  or ENTER',W/2,396,15,'#8f84d6');
   // controls card
   rr(W/2-380,430,760,200,18);ctx.fillStyle='rgba(12,8,34,.8)';ctx.fill();ctx.strokeStyle='#4a3fa8';ctx.lineWidth=2;ctx.stroke();
   txt('HOW TO PLAY',W/2,456,18,'#fff');
@@ -840,6 +840,14 @@ function draw(dt){
     else if(state==='over')drawOver();
   }
   ctx.restore();
+  if(vh>vw*1.1){
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const fs=Math.max(13,Math.min(20,vw/22));
+    ctx.fillStyle='rgba(255,225,74,.95)';ctx.font='900 '+fs+'px '+FONT;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('↻ TURN YOUR PHONE SIDEWAYS',vw/2,Math.max(24,oy/2-fs*.7));
+    ctx.fillStyle='rgba(207,200,255,.9)';ctx.font='700 '+(fs*.75)+'px '+FONT;
+    ctx.fillText('for a much bigger game',vw/2,Math.max(24,oy/2-fs*.7)+fs*1.4);
+  }
 }
 
 /* ---------------- main loop ---------------- */
