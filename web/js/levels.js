@@ -429,7 +429,15 @@ const LEVELS = [
 function buildLevel(i) {
   const def = LEVELS[i], b = new LB(); def.fn(b); b.finish();
   b.def = def; b.checks.sort((a, c) => a - c);
-  b.groundRow = (tx) => { for (let r = 0; r < ROWS; r++) { const t = (b.map[r] && b.map[r][tx]) || 0; if (t > 0 && t < 20) return r; } return 13; };
+  // standing surface at a column: lowest solid tile, then up through the contiguous stack.
+  // (scanning from the top would land on ceilings / floating blocks and put the hero off screen)
+  b.groundRow = (tx) => {
+    const solid = r => { const t = (b.map[r] && b.map[r][tx]) || 0; return t > 0 && t < 20; };
+    let r = ROWS - 1; while (r >= 4 && !solid(r)) r--;
+    if (r < 4) return 13;
+    while (r - 1 >= 4 && solid(r - 1)) r--;
+    return r;
+  };
   return b;
 }
 
