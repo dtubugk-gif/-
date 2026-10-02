@@ -75,7 +75,7 @@ function drawTile(t, x, y, ty, tx, th, frame, above) {
       if (!above) { R(x, y, 16, 3, '#ffffff'); R(x + 2, y + 3, 4, 2, '#ffffff'); R(x + 10, y + 3, 3, 1, '#ffffff'); }
       break;
     }
-    case TILE.BRK: case TILE.BRKM: {
+    case TILE.BRK: case TILE.BRKM: case TILE.BRKS: case TILE.BRKU: case TILE.BRKP: {
       const b = T_.br; R(x, y, 16, 16, b[0]); R(x, y, 16, 1, b[2]);
       for (let i = 0; i < 4; i++) { R(x, y + i * 4 + 3, 16, 1, b[1]); const o = i % 2 ? 3 : 7; R(x + o, y + i * 4, 1, 3, b[1]); R(x + o + 8, y + i * 4, 1, 3, b[1]); }
       break;

@@ -16,8 +16,9 @@ function resize() {
 addEventListener('resize', resize); resize();
 
 // ---------- save ----------
-const save = { unlocked: 1, best: LEVELS.map(() => 0) };
-try { const s = JSON.parse(localStorage.getItem('sfb-save') || 'null'); if (s) { save.unlocked = Math.max(1, Math.min(LEVELS.length, s.unlocked | 0)); (s.best || []).forEach((v, i) => { if (i < save.best.length) save.best[i] = v | 0; }); save.hardUnlocked = !!s.hardUnlocked; save.hardOn = !!(s.hardOn && s.hardUnlocked); } } catch (e) {}
+// v1 saves (18 levels): old levels 2-18 are now bonus levels 14-30, so their best scores move up by 12
+const save = { v: 2, unlocked: 1, best: LEVELS.map(() => 0) };
+try { const s = JSON.parse(localStorage.getItem('sfb-save') || 'null'); if (s) { save.unlocked = Math.max(1, Math.min(LEVELS.length, s.unlocked | 0)); (s.best || []).forEach((v, i) => { const j = s.v >= 2 ? i : i + 12; if (i > 0 || s.v >= 2) if (j < save.best.length) save.best[j] = v | 0; }); save.hardUnlocked = !!s.hardUnlocked; save.hardOn = !!(s.hardOn && s.hardUnlocked); } } catch (e) {}
 function persist() { try { localStorage.setItem('sfb-save', JSON.stringify(save)); } catch (e) {} }
 
 // ---------- state ----------
@@ -149,6 +150,12 @@ function switchArea() {
     if (w.level < LEVELS.length) { levelScore0 = score; save.unlocked = Math.max(save.unlocked, w.level + 1); persist(); checkTx = -1; startLevel(w.level); }
     return false;
   }
+  if (!inRoom && w.exit) {                             // exit pipe inside the main area (1-2 style): pop out further ahead
+    if (w.theme) { theme = w.theme; seedWeather(theme); Audio.music.track = theme; }
+    P.x = w.retTx * T + 16 - P.w / 2; P.y = w.retTop * T; P.vx = 0; P.vy = 0; P.warping = true;
+    cam = Math.max(0, Math.min(P.x - VW * 0.42, camLimit())); warpSt.rise = true; warpSt.riseTop = w.retTop * T;
+    return true;
+  }
   if (!inRoom) {
     mainSnap = pack(); curWarp = w; roomIdx = w.room; const R = L.rooms[w.room];
     if (R.rt) unpack(R.rt); else loadArea(R, -999, R.theme);
@@ -253,7 +260,9 @@ function bumpTile(tx, ty) {
   if (t === TILE.QC) { used(); items.push({ type: 'coinpop', x: tx * T, y: ty * T - 16, vy: -5, t: 26 }); addCoin(); }
   else if (t === TILE.QP) { used(); spawnItem(P.big ? 'ball' : 'bolt', tx, ty); }
   else if (t === TILE.QS) { used(); spawnItem('star', tx, ty); }
-  else if (t === TILE.QU) { used(); spawnItem('heart', tx, ty); }
+  else if (t === TILE.QU || t === TILE.BRKU) { used(); spawnItem('heart', tx, ty); }
+  else if (t === TILE.BRKS) { used(); spawnItem('star', tx, ty); }
+  else if (t === TILE.BRKP) { used(); spawnItem(P.big ? 'ball' : 'bolt', tx, ty); }
   else if (t === TILE.QV) { used(); vines.push({ x: tx * T, top: ty * T, bottom: ty * T, def: Object.assign({ viaVine: true }, L.vines[tx + ',' + ty] || {}) }); SFX.vine(); }
   else if (t === TILE.BRKM) {
     const key = tx + ',' + ty; mcoin[key] = (mcoin[key] === undefined ? 6 : mcoin[key]) - 1;
@@ -357,6 +366,7 @@ function updatePlayer() {
       for (let i = 0; i < 2; i++) bubs.push({ x: P.x + P.w / 2 + (i ? 4 : -4), y: P.y + 6, vy: -0.5 - Math.random() * 0.4, t: 50 });
     }
     P.vy += 0.13; if (P.vy > 1.7) P.vy = 1.7;
+    if (!inRoom && L.currents.some(z => P.x / T >= z[0] && P.x / T <= z[1])) P.vy = Math.min(P.vy + 0.09, 2.4);   // whirlpool pull
   } else {
     if (P.onGround) coyote = 6; else if (coyote > 0) coyote--;
     if (jumpBuf > 0 && coyote > 0) { P.vy = -(6.4 + Math.abs(P.vx) * 0.25); jumpBuf = 0; coyote = 0; P.onGround = false; P.ride = null; SFX.jump(); }
@@ -517,6 +527,10 @@ function spawners() {
   if (L.lakZones.length) {
     if (lakCD > 0) lakCD--;
     if (lakCD <= 0 && L.lakZones.some(z => tx >= z[0] && tx <= z[1]) && !enemies.some(e => e.k === 'lakitu' && !e.dead)) { const l = mkEnemy('lakitu', cam + VW + 10, 30); l.active = true; enemies.push(l); lakCD = 60; }
+  }
+  if (L.swimZones.some(z => tx >= z[0] && tx <= z[1]) && --fishCD <= 0) {
+    fishCD = 80 + (frame * 17) % 60;
+    const f = mkEnemy('fish', cam + VW + 10, (3 + ((frame * 7) % 8)) * T); f.vx = -(0.7 + Math.random() * 0.6); f.baseY = f.y; f.active = true; enemies.push(f);
   }
   if (L.fishZones.some(z => tx >= z[0] && tx <= z[1]) && --fishCD <= 0) {
     fishCD = 55 + (frame * 13) % 50;
@@ -910,7 +924,7 @@ function drawSelect() {
     rrect(x + 2, y + 2, cw - 4, ch - 4, 5, g, sel ? '#fff' : '#1a0f0c', sel ? 2.5 : 1.5);
     rrect(x + 2, y + ch - 17, cw - 4, 15, 5, th.g.body); ctx.fillStyle = th.g.top; ctx.fillRect(x + 3, y + ch - 17, cw - 6, 4);
     if (!open) { rrect(x + 2, y + 2, cw - 4, ch - 4, 5, '#000000a0'); ctx.fillStyle = '#ddd'; ctx.fillRect(x + cw / 2 - 6, y + 17, 12, 9); ctx.strokeStyle = '#ddd'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x + cw / 2, y + 17, 4.5, Math.PI, 0); ctx.stroke(); }
-    txt(String(lv.id), x + 6, y + 5, 11, '#fff');
+    txt(lv.tag || String(lv.id), x + 6, y + 5, lv.tag ? 9 : 11, lv.tag ? '#ffe14a' : '#fff');
     fitTxt(lv.name, x + cw / 2, y + ch - 15, cw - 8, 8, open ? '#fff' : '#bbb', 'center', HEB);
     if (open && save.best[i] > 0) txt(String(save.best[i]), x + cw - 6, y + 7, 5, '#ffe14a', 'right');
     if (open && i + 1 < save.unlocked) { Art.star5(x + cw - 12, y + 23, 6, '#1a0f0c'); Art.star5(x + cw - 12, y + 23, 4.8, '#ffe14a'); }
@@ -927,7 +941,7 @@ function drawSelect() {
 function drawIntro() {
   rrect(0, 0, VW, VH, 0, '#0a0614');
   const th = Art.THEMES[theme], g = ctx.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, th.sky[0]); g.addColorStop(1, th.sky[1]); ctx.globalAlpha = 0.35; ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH); ctx.globalAlpha = 1;
-  txt('שלב ' + (lvl + 1), VW / 2, 52, 24, '#ffe14a', 'center', HEB);
+  txt(L.def.tag ? 'עולם ' + L.def.tag : 'שלב בונוס ' + (lvl - 12), VW / 2, 52, 24, '#ffe14a', 'center', HEB);
   txt(L.def.name, VW / 2, 88, 20, '#fff', 'center', HEB);
   txt(L.def.en, VW / 2, 118, 8, '#c9bcc4', 'center');
   if (L.def.hint) fitTxt(L.def.hint, VW / 2, 138, VW - 30, 10, '#ffe9a8', 'center', HEB);
