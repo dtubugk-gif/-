@@ -53,6 +53,10 @@ const SFX = {
   warp: () => tone(500, 0.35, 'square', 0.08, 120),
   bullet: () => { noise(0.1, 0.2); tone(140, 0.12, 'sawtooth', 0.08, 60); },
   fire: () => tone(300, 0.15, 'sawtooth', 0.06, 700),
+  hammer: () => tone(600, 0.06, 'square', 0.05, 900),
+  vine: () => seq([523, 587, 659, 698, 784, 880, 988, 1047], 0.05, 'triangle', 0.08),
+  firework: () => { noise(0.3, 0.25); tone(90, 0.3, 'triangle', 0.2, 50); },
+  collapse: () => { noise(0.08, 0.15); tone(160, 0.08, 'square', 0.05, 90); },
   go: () => seq([523, 659, 784], 0.07),
 };
 
@@ -72,6 +76,10 @@ const TRACKS = {
   ash:    { root: 64, scale: 'phryg', bass: [40, 41, 40, 38, 40, 41, 43, 40], sp: 0.17, seed: 113, lead: 'sawtooth' },
   castle: { root: 60, scale: 'minor', bass: [36, 36, 39, 34, 36, 36, 41, 39], sp: 0.18, seed: 127, lead: 'sawtooth' },
   void:   { root: 58, scale: 'phryg', bass: [34, 35, 34, 32, 34, 35, 37, 34], sp: 0.15, seed: 131, lead: 'sawtooth' },
+  tree:   { root: 74, scale: 'major', bass: [50, 55, 57, 55, 50, 52, 55, 50], sp: 0.19, seed: 137, lead: 'square' },
+  coast:  { root: 71, scale: 'penta', bass: [47, 52, 54, 52, 47, 49, 52, 47], sp: 0.2, seed: 149, lead: 'triangle' },
+  dusk:   { root: 67, scale: 'major', bass: [43, 48, 45, 47, 43, 48, 50, 47], sp: 0.22, seed: 151, lead: 'triangle' },
+  autumn: { root: 69, scale: 'minor', bass: [45, 48, 43, 45, 41, 43, 45, 40], sp: 0.18, seed: 163, lead: 'square' },
   boss:   { root: 65, scale: 'phryg', bass: [41, 42, 41, 39, 41, 42, 44, 41], sp: 0.13, seed: 79, lead: 'sawtooth' },
 };
 const melCache = {};

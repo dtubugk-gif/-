@@ -2,8 +2,10 @@
 (function () {
 'use strict';
 const T = 16, ROWS = 15;
-const TILE = { E: 0, GND: 1, BRK: 2, QC: 3, QP: 4, USED: 5, HARD: 6, PTL: 7, PTR: 8, PL: 9, PR: 10, ICE: 11, QS: 12, QU: 13, CLOUD: 14, GATE: 15, BRKM: 16, CANNON: 17, SPK: 20, HID: 21 };
-const CH = { '.': 0, B: TILE.BRK, Q: TILE.QC, P: TILE.QP, S: TILE.QS, U: TILE.QU, H: TILE.HARD, C: TILE.CLOUD, I: TILE.ICE, M: TILE.BRKM };
+const TILE = { E: 0, GND: 1, BRK: 2, QC: 3, QP: 4, USED: 5, HARD: 6, PTL: 7, PTR: 8, PL: 9, PR: 10, ICE: 11, QS: 12, QU: 13, CLOUD: 14, GATE: 15, BRKM: 16, CANNON: 17, QV: 18, TREE: 19, SPK: 20, HID: 21, TRUNK: 22, STEM: 23, MUSH: 40, BRIDGE: 41 };
+// solid tiles: 1..19 and 40+ ; 20..39 are see-through decorations / hazards
+const isSolid = t => t > 0 && (t < 20 || t >= 40);
+const CH = { '.': 0, B: TILE.BRK, Q: TILE.QC, P: TILE.QP, S: TILE.QS, U: TILE.QU, H: TILE.HARD, C: TILE.CLOUD, I: TILE.ICE, M: TILE.BRKM, V: TILE.QV };
 
 class Sec {
   constructor(b, x0, n, base) { this.b = b; this.x0 = x0; this.n = n; this.base = base; }
@@ -32,6 +34,12 @@ class Sec {
   thwomp(dx, r) { this.b.en.push({ k: 'thwomp', tx: this.x0 + dx, row: r }); return this; }
   pod(dx) { this.b.en.push({ k: 'pod', tx: this.x0 + dx, row: 14 }); return this; }
   check(dx) { this.b.checks.push(this.x0 + dx); return this; }
+  tag(dx, key) { this.b.tags[key] = { tx: this.x0 + dx, top: 0 }; return this; }
+  // block that grows a climbable vine up into a bonus room in the sky
+  vine(dx, r, opts) { this.b.set(this.x0 + dx, r, TILE.QV); this.b.vines[(this.x0 + dx) + ',' + r] = opts; return this; }
+  // see-saw pair: standing on one lowers it and raises the other; too far and the rope snaps
+  balance(dx1, dx2, r, w) { const i = this.b.plats.length; this.b.plats.push({ x: (this.x0 + dx1) * T, y: r * T, w: w * T, type: 'bal', pair: i + 1 }, { x: (this.x0 + dx2) * T, y: r * T, w: w * T, type: 'bal', pair: i }); return this; }
+  fallLift(dx, r, w) { this.b.plats.push({ x: (this.x0 + dx) * T, y: r * T, w: w * T, type: 'fall' }); return this; }
   mover(dx, r, w, axis, range, speed, phase) {
     this.b.plats.push({ x: (this.x0 + dx) * T, y: r * T, w: w * T, axis, range: range * T, speed, phase: phase || 0 });
     return this;
@@ -43,6 +51,7 @@ class LB {
     this.map = []; for (let r = 0; r < ROWS; r++) this.map.push([]);
     this.x = 0; this.en = []; this.coins = []; this.plats = []; this.checks = []; this.arena = null; this.poleTx = 0; this.castleX = 0;
     this.warps = []; this.rooms = []; this.springs = []; this.fbars = []; this.hidden = {}; this.tags = {}; this.water = false;
+    this.vines = {}; this.fishZones = []; this.lakZones = []; this.loops = [];
   }
   set(x, r, t) { if (x < 0 || r < 0 || r >= ROWS) return; const row = this.map[r]; while (row.length <= x) row.push(0); row[x] = t; }
   run(n, fn, tile) {
@@ -56,14 +65,22 @@ class LB {
     this.x += n; if (fn) fn(new Sec(this, x0, n, top - 1)); return this;
   }
   pit(n) { this.x += n; return this; }
+  // treetop / mushroom / bridge platforms over a void
+  tree(n, top, fn) { const x0 = this.x; for (let i = 0; i < n; i++) this.set(x0 + i, top, TILE.TREE); const c = x0 + (n >> 1) - 1; for (let r = top + 1; r < ROWS; r++) { this.set(c, r, TILE.TRUNK); this.set(c + 1, r, TILE.TRUNK); } this.x += n; if (fn) fn(new Sec(this, x0, n, top - 1)); return this; }
+  mush(n, top, fn) { const x0 = this.x; for (let i = 0; i < n; i++) this.set(x0 + i, top, TILE.MUSH); const c = x0 + ((n - 1) >> 1); for (let r = top + 1; r < ROWS; r++) { this.set(c, r, TILE.STEM); if (n % 2 === 0) this.set(c + 1, r, TILE.STEM); } this.x += n; if (fn) fn(new Sec(this, x0, n, top - 1)); return this; }
+  bridge(n, row, fn) { const x0 = this.x; for (let i = 0; i < n; i++) this.set(x0 + i, row, TILE.BRIDGE); this.x += n; if (fn) fn(new Sec(this, x0, n, row - 1)); return this; }
+  fishZone(a, b) { this.fishZones.push([a, b]); return this; }
+  lakituZone(a, b) { this.lakZones.push([a, b]); return this; }
+  // castle maze: reaching tx on the wrong route (high/low) sends the hero back to `back`
+  mazeLoop(tx, back, need) { this.loops.push({ tx, back, need }); return this; }
   lavaPit(n) { this.en.push({ k: 'pod', tx: this.x + (n >> 1), row: 14 }); this.x += n; return this; }
   hole(a, b) { for (let x = a; x <= b; x++) { this.set(x, 13, 0); this.set(x, 14, 0); } return this; }
   at(x0, fn) { fn(new Sec(this, x0, 0, 12)); return this; }
   // solid ceiling strip (underground / castle / sea) over [a,b], `rows` thick
   ceiling(a, b, rows, tile) { for (let x = a; x <= b; x++) for (let r = 0; r < rows; r++) this.set(x, r, tile || TILE.HARD); return this; }
   // a self-contained bonus room reachable through a warp pipe; fn builds it with absolute coords (36 columns wide)
-  room(theme, fn) {
-    const r = new LB(); r.theme = theme; r.isRoom = true; r.spawnTx = 4;
+  room(theme, fn, opts) {
+    const r = new LB(); r.theme = theme; r.isRoom = true; r.spawnTx = 4; Object.assign(r, opts || {});
     r.run(36);
     for (let y = 0; y <= 12; y++) { r.set(0, y, TILE.HARD); r.set(35, y, TILE.HARD); }
     fn(r); r.finish(); this.rooms.push(r); return this.rooms.length - 1;
@@ -73,9 +90,15 @@ class LB {
     this.poleTx = x0 + 4; this.set(this.poleTx, 12, TILE.HARD); this.castleX = (x0 + 8) * T; return this;
   }
   bossArena(cfg) {
-    const x0 = this.x, n = 34; this.run(n);
-    this.arena = Object.assign({ x0, x1: x0 + n - 1, trigger: x0 + 3, bossTx: x0 + n - 8, hp: 3, shots: 0, jump: 70, spd: 0.8 }, cfg || {});
+    const x0 = this.x, n = 34; cfg = cfg || {};
+    if (cfg.bridge) {
+      this.run(6);                                             // entry floor
+      this.bridge(n - 12, 13);                                 // bridge over lava
+      this.run(6);                                             // axe platform
+    } else this.run(n);
+    this.arena = Object.assign({ x0, x1: x0 + n - 1, trigger: x0 + 3, bossTx: x0 + n - 8 - (cfg.bridge ? 2 : 0), hp: 3, shots: 0, jump: 70, spd: 0.8 }, cfg);
     for (let r = 5; r <= 12; r++) this.set(x0 + n - 1, r, TILE.GATE);
+    if (cfg.bridge) { this.arena.axe = { tx: x0 + n - 3, row: 12 }; this.arena.br = [x0 + 6, x0 + n - 7]; }
     return this;
   }
   finish() {
@@ -83,6 +106,7 @@ class LB {
     for (const row of this.map) while (row.length < cols) row.push(0);
     this.cols = cols;
     // resolve return pipes
+    for (const k in this.vines) { const v = this.vines[k]; if (v.ret) { const t = this.tags[v.ret]; v.retTx = t.tx; } }
     for (const w of this.warps) { if (w.ret) { const t = this.tags[w.ret]; w.retTx = t.tx; w.retTop = t.top; } else { w.retTx = w.tx; w.retTop = w.top; } }
     return this;
   }
@@ -246,8 +270,7 @@ function level6(b) { // lava castle + boss
   b.run(22, s => { s.pipe(4, 3).pipe(11, 4).plant(11, 4); s.mob('spiky', 8).mob('fast', 15); s.t(7, 5, TILE.QU); });
   b.lavaPit(3);
   b.run(8);
-  b.bossArena();
-  b.goal();
+  b.bossArena({ bridge: true });
 }
 
 function level7(b) { // underground: warp pipes to coin rooms, plants, shells
@@ -382,8 +405,7 @@ function level11(b) { // thunder fortress: thwomps, fire bars, cannons, mini-bos
   b.run(10, s => { s.mob('walk', 7); });
   b.run(20, s => { s.thwomp(6, 2); s.pipe(12, 3).plant(12, 3); s.mob('spiky', 9); s.row(3, 9, 'BQB'); });
   b.run(8);
-  b.bossArena({ hp: 4, shots: 150, jump: 60, spd: 0.9 });
-  b.goal();
+  b.bossArena({ hp: 4, shots: 150, jump: 60, spd: 0.9, bridge: true });
 }
 
 function level12(b) { // shadow fortress: everything + final boss
@@ -407,8 +429,140 @@ function level12(b) { // shadow fortress: everything + final boss
   b.run(10, s => { s.mob('walk', 7); });
   b.run(26, s => { s.thwomp(5, 2); s.thwomp(12, 2); s.firebar(19, 9, 5, 0.03, 1); s.mob('walk', 9).mob('shell', 16); s.check(0); });
   b.run(8);
-  b.bossArena({ hp: 5, shots: 110, jump: 50, spd: 1.0, minion: 'shell' });
+  b.bossArena({ hp: 5, shots: 110, jump: 50, spd: 1.0, minion: 'shell', bridge: true });
+}
+
+function level13(b) { // treetops: red shells patrol platforms, winged shells, falling & balance lifts
+  b.run(12, s => { s.mob('walk', 9); s.coins(3, 10, 4); });
+  b.pit(2);
+  b.tree(6, 11, s => { s.mob('rshell', 3); });
+  b.pit(3);
+  b.tree(8, 9, s => { s.coins(1, 7, 6); s.mob('para', 5); });
+  b.pit(3);
+  b.tree(5, 11, s => { s.t(2, 7, TILE.QP); });
+  b.pit(5);
+  b.at(b.x - 4, s => { s.fallLift(0, 10, 3); s.coins(1, 8, 2); });
+  b.tree(7, 10, s => { s.mob('rshell', 4); s.check(1); });
+  b.pit(3);
+  b.mush(5, 9, s => { s.coins(1, 7, 3); });
+  b.pit(2);
+  b.mush(4, 11);
+  b.pit(3);
+  b.tree(9, 10, s => { s.mob('rshell', 3).mob('para', 7); s.row(2, 6, 'BQB'); });
+  b.pit(6);
+  b.at(b.x - 5, s => { s.balance(0, 3, 10, 2); s.coins(0, 8, 5); });
+  b.tree(6, 10, s => { s.mob('para', 3); s.coins(1, 8, 4); });
+  b.pit(3);
+  b.mush(6, 10, s => { s.t(3, 6, TILE.QU); });
+  b.pit(3);
+  b.tree(5, 12, s => { s.mob('rshell', 2); });
+  b.pit(5);
+  b.at(b.x - 4, s => { s.fallLift(0, 11, 3); });
+  b.tree(8, 10, s => { s.mob('rshell', 5); s.check(1); });
+  b.pit(3); b.mush(4, 9); b.pit(3);
+  b.tree(6, 11, s => { s.mob('para', 3); s.coins(1, 9, 4); });
+  b.pit(3);
   b.goal();
+}
+
+function level14(b) { // bridges over the sea, fish leaping from below
+  b.run(12, s => { s.mob('walk', 9); s.coins(3, 10, 4); });
+  const z0 = b.x;
+  b.pit(2); b.bridge(16, 10, s => { s.coins(3, 7, 8); s.mob('walk', 12); });
+  b.pit(3); b.island(4, 9, s => { s.t(1, 5, TILE.QP); }, TILE.HARD);
+  b.pit(3); b.bridge(18, 10, s => { s.mob('rpara', 9, 5); s.coins(2, 7, 5); s.check(1); });
+  b.pit(3); b.bridge(12, 11, s => { s.mob('shell', 6); });
+  b.pit(2); b.island(3, 9, null, TILE.HARD); b.pit(2);
+  b.bridge(20, 10, s => { s.mob('rpara', 6, 4).mob('rpara', 14, 5); s.arc(3, 8, 6); s.t(10, 6, TILE.QS); });
+  b.pit(3); b.bridge(14, 10, s => { s.mob('para', 8); s.check(1); });
+  b.pit(3); b.island(5, 10, s => { s.mob('walk', 2); }, TILE.HARD); b.pit(3);
+  b.bridge(18, 10, s => { s.coins(2, 7, 10); s.mob('rpara', 10, 5); });
+  b.pit(2);
+  b.fishZone(z0, b.x);
+  b.run(12, s => { s.mob('rshell', 8); s.row(3, 9, 'BUB'); });
+  b.goal();
+}
+
+function level15(b) { // dusk meadow: a cloud rider drops spiky eggs; vine up to a coin heaven
+  const heaven = b.room('sky', r => {
+    r.hole(29, 34);
+    r.at(0, s => { s.coins(4, 11, 22).coins(6, 8, 18).coins(10, 5, 12); s.row(12, 9, 'QQQ'); });
+  }, { fallExit: true, spawnTx: 3 });
+  b.run(14, s => { s.mob('walk', 10); s.coins(3, 10, 4); });
+  b.run(16, s => { s.row(2, 9, 'B').vine(3, 9, { room: heaven, ret: 'h' }).row(4, 9, 'BQB'); s.mob('walk', 12); });
+  b.pit(3);
+  b.run(20, s => { s.pipe(3, 3).plant(3, 3); s.mob('shell', 9).mob('walk', 13); s.check(0); });
+  b.run(16, s => { s.up(2, 4).down(6, 4); s.mob('rshell', 12); });
+  b.pit(3);
+  b.run(10, s => { s.mob('walk', 6); });
+  b.run(22, s => { s.row(2, 9, 'BQBUB'); s.pipe(12, 2).plant(12, 2); s.mob('shell', 17); s.tag(5, 'h'); });
+  b.pit(4);
+  b.run(12, s => { s.mob('walk', 8); s.hid(5, 9, 'U'); });
+  b.run(20, s => { s.pipe(3, 2).pipe(10, 4).plant(10, 4); s.mob('rshell', 7).mob('fast', 16); s.check(0); });
+  b.run(16, s => { s.row(3, 9, 'BMBQB'); s.mob('walk', 10).mob('shell', 13); });
+  b.pit(3);
+  b.run(14, s => { s.up(3, 3).down(6, 3); s.mob('walk', 11); });
+  b.goal();
+  b.lakituZone(12, b.x - 34);
+}
+
+function level16(b) { // autumn: pairs of hammer brothers on brick rows, armoured beetles, cannons
+  b.run(14, s => { s.mob('walk', 10); s.coins(3, 10, 4); });
+  b.run(22, s => { s.row(4, 9, 'BBBBBBBB'); s.row(6, 5, 'BBQBB'); s.mob('hammer', 6).mob('hammer', 10); });
+  b.run(16, s => { s.cannon(6, 2); s.mob('buzzy', 11); s.coins(2, 9, 3); });
+  b.pit(3);
+  b.run(10, s => { s.mob('buzzy', 6); });
+  b.run(24, s => { s.row(3, 9, 'BBBBBB'); s.row(13, 9, 'BBBBBB'); s.row(5, 5, 'BQBB'); s.mob('hammer', 5).mob('hammer', 15); s.check(0); });
+  b.run(16, s => { s.up(2, 4).down(6, 4); s.mob('rshell', 12); });
+  b.pit(4);
+  b.run(10, s => { s.mob('walk', 6); });
+  b.run(20, s => { s.cannon(4, 1); s.cannon(10, 3); s.mob('buzzy', 7).mob('buzzy', 15); });
+  b.run(26, s => { s.row(3, 9, 'BBBBBBBB'); s.row(15, 9, 'BBBBBB'); s.row(5, 5, 'BPB'); s.mob('hammer', 6).mob('hammer', 17).mob('para', 22); s.check(0); });
+  b.run(16, s => { s.pipe(4, 3).plant(4, 3); s.mob('buzzy', 10).mob('rshell', 13); });
+  b.goal();
+}
+
+function level17(b) { // squid sea: chasing squids, hanging coral, narrow passages
+  b.water = true;
+  b.run(14, s => { s.mob('fish', 9); s.coins(3, 10, 5); });
+  b.run(16, s => { s.up(3, 3).down(6, 3); s.mob('blooper', 11, 7); s.arc(9, 9, 5); });
+  b.run(16, s => { s.row(2, 6, 'BPB'); s.mob('fish', 6, 7).mob('blooper', 13, 6); s.coins(3, 9, 4); });
+  b.run(18, s => { s.pipe(4, 3).pipe(11, 2); s.mob('walk', 8).mob('fish', 15, 8); s.check(0); });
+  b.run(16, s => { s.up(2, 4).down(6, 4); s.coins(3, 6, 5); s.mob('blooper', 12, 6); });
+  b.run(14, s => { s.row(1, 9, 'BQBQB'); s.mob('fish', 8, 6).mob('blooper', 11, 8); });
+  b.run(20, s => { s.spikes(4, 3).spikes(12, 3); s.arc(3, 8, 6).arc(11, 8, 6); s.mob('blooper', 9, 6); s.mob('fish', 16, 7); s.check(0); });
+  b.run(18, s => { s.up(2, 4).down(6, 4); s.pipe(12, 2); s.mob('shell', 15); s.row(3, 5, 'BSB'); });
+  b.run(16, s => { s.mob('blooper', 5, 7).mob('blooper', 12, 6); s.coins(2, 10, 10); });
+  b.run(20, s => { s.spikes(5, 3).spikes(13, 3); s.arc(4, 8, 6).arc(12, 8, 6); s.mob('fish', 10, 8).mob('blooper', 17, 6); });
+  b.goal();
+  b.ceiling(0, b.x - 1, 1, TILE.HARD);
+  // hanging coral columns from the ceiling
+  for (const x of [40, 72, 120, 150]) for (let r = 1; r <= 3; r++) b.set(x, r, TILE.HARD);
+}
+
+function level18(b) { // final castle: maze corridors, fire bars, lava, the last bridge and axe
+  b.run(12, s => { s.mob('walk', 9); s.coins(3, 10, 4); });
+  b.run(20, s => { s.firebar(6, 9, 5, 0.035, 0); s.thwomp(13, 2); s.mob('shell', 17); });
+  b.lavaPit(3);
+  b.run(12, s => { s.row(1, 9, 'BPB'); s.mob('spiky', 8); });
+  // maze 1: the upper corridor is the way
+  const m1 = b.x;
+  b.run(32, s => { s.up(1, 3); for (let i = 4; i < 30; i++) s.t(i, 9, TILE.HARD); s.coins(6, 7, 20); s.mob('walk', 12, 12).mob('walk', 20, 12); s.check(0); });
+  b.mazeLoop(m1 + 26, m1, 'high');
+  b.run(10);
+  b.lavaPit(4);
+  b.run(22, s => { s.firebar(6, 9, 4, -0.03, 0); s.firebar(15, 9, 4, 0.03, 2); s.mob('hammer', 10); s.cannon(19, 1); });
+  // maze 2: stay low (the upper road is reached only by spring and loops)
+  const m2 = b.x;
+  b.run(32, s => { s.spring(2); for (let i = 5; i < 30; i++) s.t(i, 8, TILE.HARD); s.coins(6, 11, 20); s.mob('walk', 14).mob('rshell', 22); s.check(0); });
+  b.mazeLoop(m2 + 26, m2, 'low');
+  b.run(10);
+  b.lavaPit(3);
+  b.island(4, 11, null, TILE.HARD); b.lavaPit(3); b.island(4, 10, s => { s.coins(1, 8, 2); }, TILE.HARD); b.lavaPit(3); b.island(5, 11, s => { s.t(2, 7, TILE.QS); }, TILE.HARD);
+  b.lavaPit(3);
+  b.run(24, s => { s.thwomp(5, 2); s.firebar(12, 9, 5, 0.03, 1); s.mob('hammer', 18); s.check(0); });
+  b.run(8);
+  b.bossArena({ hp: 6, shots: 100, hammers: true, jump: 55, spd: 1.0, minion: 'shell', bridge: true, final: true });
 }
 
 const LEVELS = [
@@ -424,6 +578,12 @@ const LEVELS = [
   { id: 10, name: 'הרי הגעש', en: 'VOLCANO', theme: 'ash', time: 400, hint: 'זהירות מכדורי אש שקופצים מהלבה', fn: level10 },
   { id: 11, name: 'מבצר הרעמים', en: 'THUNDER FORT', theme: 'castle', time: 420, hint: 'אבנים מרסקות ומוטות אש. הבוס מחכה בסוף', fn: level11 },
   { id: 12, name: 'מבצר הצללים', en: 'SHADOW FORT', theme: 'void', time: 440, hint: 'הקרב האחרון. בהצלחה!', fn: level12 },
+  { id: 13, name: 'צמרות העצים', en: 'TREETOPS', theme: 'tree', time: 360, hint: 'צבים אדומים לא נופלים מהקצה. המעליות נופלות כשעומדים עליהן!', fn: level13 },
+  { id: 14, name: 'גשר הדגים', en: 'FISH BRIDGE', theme: 'coast', time: 360, hint: 'דגים מזנקים מהים מעל הגשרים', fn: level14 },
+  { id: 15, name: 'שדות השקיעה', en: 'SUNSET FIELDS', theme: 'dusk', time: 380, hint: 'הענן זורק ביצי קוצים. יש גבעול סודי לשמיים!', fn: level15 },
+  { id: 16, name: 'אחי הפטישים', en: 'HAMMER BROTHERS', theme: 'autumn', time: 380, hint: 'אחי הפטישים קופצים בין הלבנים. החיפושיות חסינות לכדור!', fn: level16 },
+  { id: 17, name: 'ממלכת הדיונונים', en: 'SQUID KINGDOM', theme: 'sea', time: 380, hint: 'במים אי אפשר לדרוך על אויבים. הדיונונים רודפים!', fn: level17 },
+  { id: 18, name: 'הטירה האחרונה', en: 'THE LAST CASTLE', theme: 'castle', time: 480, hint: 'מבוך: דרך לא נכונה מחזירה אחורה. בסוף, געו בגרזן!', fn: level18 },
 ];
 
 function buildLevel(i) {
@@ -432,7 +592,7 @@ function buildLevel(i) {
   // standing surface at a column: lowest solid tile, then up through the contiguous stack.
   // (scanning from the top would land on ceilings / floating blocks and put the hero off screen)
   b.groundRow = (tx) => {
-    const solid = r => { const t = (b.map[r] && b.map[r][tx]) || 0; return t > 0 && t < 20; };
+    const solid = r => isSolid((b.map[r] && b.map[r][tx]) || 0);
     let r = ROWS - 1; while (r >= 4 && !solid(r)) r--;
     if (r < 4) return 13;
     while (r - 1 >= 4 && solid(r - 1)) r--;
@@ -442,5 +602,5 @@ function buildLevel(i) {
 }
 
 window.SFB = window.SFB || {};
-Object.assign(window.SFB, { T, ROWS, TILE, LEVELS, buildLevel });
+Object.assign(window.SFB, { T, ROWS, TILE, LEVELS, buildLevel, isSolid });
 })();
