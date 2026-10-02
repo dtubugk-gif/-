@@ -16,9 +16,21 @@ function resize() {
 addEventListener('resize', resize); resize();
 
 // ---------- save ----------
-// v1 saves (18 levels): old levels 2-18 are now bonus levels 14-30, so their best scores move up by 12
-const save = { v: 2, unlocked: 1, best: LEVELS.map(() => 0) };
-try { const s = JSON.parse(localStorage.getItem('sfb-save') || 'null'); if (s) { save.unlocked = Math.max(1, Math.min(LEVELS.length, s.unlocked | 0)); (s.best || []).forEach((v, i) => { const j = s.v >= 2 ? i : i + 12; if (i > 0 || s.v >= 2) if (j < save.best.length) save.best[j] = v | 0; }); save.hardUnlocked = !!s.hardUnlocked; save.hardOn = !!(s.hardOn && s.hardUnlocked); } } catch (e) {}
+// save versions: v1 = 18 levels (old levels 2-18 became bonus levels), v2 = 13 classic + 17 bonus, v3 = 32 classic + 17 bonus
+const CLASSIC = LEVELS.filter(l => !l.bonus).length;
+const save = { v: 3, unlocked: 1, best: LEVELS.map(() => 0), medals: LEVELS.map(() => 0), stats: { coins: 0, stomps: 0, deaths: 0, wins: 0, endless: 0 } };
+try {
+  const s = JSON.parse(localStorage.getItem('sfb-save') || 'null');
+  if (s) {
+    const v = s.v | 0 || 1, un = s.unlocked | 0;
+    const dst = i => v >= 3 ? i : v === 2 ? (i < 13 ? i : i + CLASSIC - 13) : (i === 0 ? -1 : i + 12 + CLASSIC - 13);
+    (s.best || []).forEach((x, i) => { const j = dst(i); if (j >= 0 && j < save.best.length) save.best[j] = x | 0; });
+    (s.medals || []).forEach((x, i) => { if (i < save.medals.length) save.medals[i] = x | 0; });
+    save.unlocked = Math.max(1, Math.min(LEVELS.length, v >= 3 ? un : un <= 13 ? un : 14));
+    Object.assign(save.stats, s.stats || {});
+    save.hardUnlocked = !!s.hardUnlocked; save.hardOn = !!(s.hardOn && s.hardUnlocked);
+  }
+} catch (e) {}
 function persist() { try { localStorage.setItem('sfb-save', JSON.stringify(save)); } catch (e) {} }
 
 // ---------- state ----------
@@ -37,11 +49,14 @@ const DEFS = { walk: [16, 22, 0.45], fast: [16, 22, 0.95], spiky: [16, 22, 0.55]
 let state = 'title', frame = 0, score = 0, coinCount = 0, lives = 3, time = 300, timeTick = 0;
 let lvl = 0, L = null, map = null, cols = 0, theme = 'grass';
 let enemies = [], items = [], parts = [], pops = [], bumps = [], coins = [], balls = [], plats = [], weather = [], springs = [], fbars = [], cannons = [], bubs = [];
+let bulCD = 60;
 let vines = [], fws = [], lakCD = 0, fishCD = 60, axeT = 0, rescueT = 0, fwN = 0;
 let hidMap = {}, mcoin = {}, water = false, inRoom = false, roomIdx = -1, mainSnap = null, curWarp = null, warpSt = null, fade = 0, areaWarps = [];
 let cam = 0, P = null, jumpBuf = 0, coyote = 0, dieT = 0, growT = 0, deathMsg = '', introT = 0, levelScore0 = 0;
 let flagY = 0, flagState = null, flagT = 0, castleFlag = 0, bubbleCD = 120, checkTx = -1, shake = 0;
 let boss = null, bossActive = false, bossDead = false, bannerT = 0, bannerText = '', menuSel = 0, prevState = 'play';
+let lastMedals = 0, newMedals = 0;
+let run = { got: new Set(), total: 0, deaths: 0, tl: 0, t0: 0 };   // medal tracking for the current attempt
 const keys = { left: false, right: false, jump: false, run: false, down: false };
 const dbg = { god: false };
 const UI = { buttons: [] };
@@ -69,12 +84,15 @@ function makeEnemies(list, startTx) {
 function loadArea(a, startTx, th) {
   map = a.map; cols = a.cols; theme = th;
   enemies = makeEnemies(a.en, startTx);
-  coins = a.coins.filter(([x]) => x > startTx).map(([x, r]) => ({ x: x * T + 3, y: r * T + 1, w: 10, h: 14, taken: false }));
+  const aid = a === L ? 'm' : 'r' + (L ? L.rooms.indexOf(a) : 0);
+  coins = a.coins.filter(([x]) => x > startTx).map(([x, r]) => ({ x: x * T + 3, y: r * T + 1, w: 10, h: 14, taken: false, k: aid + ':' + x + ',' + r }));
   plats = a.plats.map(p => ({ bx: p.x, by: p.y, x: p.x, y: p.y, w: p.w, axis: p.axis, range: p.range || 0, speed: p.speed || 0, off: Math.min(p.range || 0, (p.phase || 0) * T), dir: 1, dx: 0, dy: 0, type: p.type || 'move', pair: p.pair, vy: 0, t: 0, trig: false, broken: false }));
   vines = [];
   springs = a.springs.map(s => ({ x: s.tx * T, y: s.row * T, t: 0 }));
   fbars = a.fbars.map(f => ({ tx: f.tx, row: f.row, len: f.len, speed: f.speed, a: f.ang }));
   hidMap = Object.assign({}, a.hidden); mcoin = {}; water = !!a.water; areaWarps = a.warps;
+  // the bonus 1UP needs the earlier level's every-coin medal
+  for (const k in a.hidReq) if (!(save.medals[a.hidReq[k]] & 1)) hidMap[k] = 'Q';
   cannons = []; for (let ty = 0; ty < ROWS; ty++) for (let tx = 0; tx < cols; tx++) if (map[ty][tx] === TILE.CANNON) cannons.push({ tx, ty, cd: 70 + (tx * 17) % 90 });
   items = []; parts = []; pops = []; bumps = []; balls = []; bubs = [];
 }
@@ -110,13 +128,21 @@ function startLevel(i, keepCheck) {
   P.y = L.groundRow(startTx) * T - P.h;
   cam = Math.max(0, P.x - 80);
   time = L.def.time - (save.hardOn ? 60 : 0); timeTick = 0; lakCD = 0; fishCD = 60; fws = []; fwN = 0; jumpBuf = 0; coyote = 0;
+  if (!keepCheck) {                                    // a fresh attempt: reset the medal tracker (a respawn keeps it)
+    const ks = new Set(); for (const [x, r] of L.coins) ks.add('m:' + x + ',' + r);
+    L.rooms.forEach((R, ri) => R.coins.forEach(([x, r]) => ks.add('r' + ri + ':' + x + ',' + r)));
+    run = { got: new Set(), total: ks.size, deaths: 0, tl: 0, t0: time };
+  }
   flagY = 3 * T + 8; flagState = null; castleFlag = 0; bubbleCD = 120; shake = 0;
   seedWeather(theme);
   state = 'intro'; introT = L.def.hint ? 170 : 110;
   Audio.music.track = theme; Audio.music.tempoMul = 1;
 }
 function newRun(i) { score = 0; coinCount = 0; lives = 3; levelScore0 = 0; checkTx = -1; startLevel(i); SFX.go(); }
-function retryLevel() { score = levelScore0; lives = 3; coinCount = 0; checkTx = -1; startLevel(lvl); SFX.go(); }
+function retryLevel() {
+  if (lvl >= LEVELS.length && state === 'gameover') { startEndless(); return; }   // endless: game over = a fresh run
+  score = levelScore0; lives = 3; coinCount = 0; checkTx = -1; startLevel(lvl); SFX.go();
+}
 function nextLevel() { levelScore0 = score; startLevel(lvl + 1); SFX.go(); }
 
 // ---------- warp pipes ----------
@@ -186,7 +212,7 @@ function updateWarp() {
 
 function addScore(n, x, y) { score += n; pops.push({ x, y, text: String(n), t: 45 }); }
 function addCoin() {
-  coinCount++; score += 200; SFX.coin();
+  save.stats.coins++; coinCount++; score += 200; SFX.coin();
   if (coinCount >= 100) { coinCount -= 100; lives++; SFX.oneup(); pops.push({ x: P.x, y: P.y - 8, text: '1UP', t: 60 }); }
 }
 function buzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
@@ -225,6 +251,7 @@ function hurt(spike) {
 }
 function die(fell) {
   if (state === 'dying') return;
+  run.deaths++; save.stats.deaths++;
   state = 'dying'; P.dead = true; P.vx = 0; P.vy = fell ? 0 : -6.5; P.fell = fell; dieT = 170;
   deathMsg = time <= 0 ? 'נגמר הזמן!' : fell ? 'נפלת!' : 'אופס!';
   Audio.music.on = false; SFX.die(); buzz(120);
@@ -235,6 +262,7 @@ function grabFlag() {
   if (P.y + P.h > 192) P.y = 192 - P.h;
   const dy = 192 - (P.y + P.h);
   addScore(dy >= 128 ? 5000 : dy >= 96 ? 2000 : dy >= 64 ? 800 : dy >= 32 ? 400 : 100, P.x + 16, P.y);
+  run.tl = time;
   fwN = { 1: 1, 3: 3, 6: 6 }[time % 10] || 0;          // fireworks when the clock's last digit is 1, 3 or 6
   uncrouch();
   SFX.flag();
@@ -478,6 +506,7 @@ function updatePod(e) {
   if (e.y > VH + 20) { e.y = VH + 20; e.vy = 0; e.wait = 70 + ((frame * 7) % 70); }
 }
 function comboHit(e) {
+  save.stats.stomps++;
   if (P.combo >= COMBO.length) { lives++; SFX.oneup(); pops.push({ x: e.x, y: e.y - 8, text: '1UP', t: 60 }); }
   else addScore(COMBO[P.combo], e.x, e.y - 4);
   P.combo++;
@@ -527,6 +556,11 @@ function spawners() {
   if (L.lakZones.length) {
     if (lakCD > 0) lakCD--;
     if (lakCD <= 0 && L.lakZones.some(z => tx >= z[0] && tx <= z[1]) && !enemies.some(e => e.k === 'lakitu' && !e.dead)) { const l = mkEnemy('lakitu', cam + VW + 10, 30); l.active = true; enemies.push(l); lakCD = 60; }
+  }
+  if (L.bulZones.length && L.bulZones.some(z => tx >= z[0] && tx <= z[1]) && --bulCD <= 0) {
+    bulCD = 95 + (frame * 11) % 70;
+    const row = Math.max(5, Math.min(12, Math.floor((P.y + P.h / 2) / T) + ((frame >> 3) % 3) - 1)), b = mkEnemy('bullet', cam + VW + 10, row * T + 2);
+    b.vx = -1.7; b.active = true; enemies.push(b); SFX.bullet();
   }
   if (L.swimZones.some(z => tx >= z[0] && tx <= z[1]) && --fishCD <= 0) {
     fishCD = 80 + (frame * 17) % 60;
@@ -675,7 +709,7 @@ function updateItems() {
     }
   }
   items = items.filter(i => !i.dead);
-  for (const c of coins) if (!c.taken && overlap(P, c)) { c.taken = true; addCoin(); }
+  for (const c of coins) if (!c.taken && overlap(P, c)) { c.taken = true; run.got.add(c.k); addCoin(); }
 }
 
 function updateFx() {
@@ -743,7 +777,7 @@ function updateAxe() {
   }
   updateFx();
   const left = map[13].slice(a, b + 1).some(t => t === TILE.BRIDGE);
-  if (!left && (bossDead || !boss) && axeT > 40) { state = 'rescue'; rescueT = 0; score += time * 50; time = 0; SFX.win(); }
+  if (!left && (bossDead || !boss) && axeT > 40) { state = 'rescue'; rescueT = 0; run.tl = time; score += time * 50; time = 0; SFX.win(); }
 }
 function launchFirework() {
   const cols = ['#ffe14a', '#ff5a8a', '#5af0ff', '#9aff6a', '#ffffff'];
@@ -752,9 +786,15 @@ function launchFirework() {
 }
 function finishLevel() {
   if (L.arena && L.arena.final) save.hardUnlocked = true;
+  save.stats.wins++;
+  if (lvl >= LEVELS.length) {                           // endless mode: every stage cleared is one more point
+    save.stats.endless = Math.max(save.stats.endless, lvl - LEVELS.length + 1); persist(); state = 'win'; menuSel = 0; return;
+  }
   save.best[lvl] = Math.max(save.best[lvl], lvlScore());
+  let m = 0; if (run.got.size >= run.total) m |= 1; if (run.deaths === 0) m |= 2; if (run.tl >= run.t0 * 0.5) m |= 4;
+  lastMedals = m; newMedals = m & ~save.medals[lvl]; save.medals[lvl] |= m;
   if (lvl + 1 < LEVELS.length) save.unlocked = Math.max(save.unlocked, lvl + 2);
-  persist(); state = lvl + 1 >= LEVELS.length ? 'complete' : 'win'; menuSel = 0;
+  persist(); state = L.def.finale || lvl + 1 >= LEVELS.length ? 'complete' : 'win'; menuSel = 0;
 }
 
 function update() {
@@ -899,13 +939,29 @@ function drawTitle() {
   Art.head(Art.IMG.hero, cxm - 156, 48 + bob, 52, -0.15); Art.head(Art.IMG.enemy, cxm + 156, 48 - bob, 50, 0.15);
   txt('קפצו על האויבים, אספו מטבעות, והגיעו לדגל!', cxm, 100, 10, '#fff', 'center', HEB);
   const touch = document.body.classList.contains('touch');
-  txt(touch ? 'חצים: תנועה  ·  A: קפיצה  ·  B: ריצה ובעיטה' : 'חיצים: תנועה  ·  רווח: קפיצה  ·  Shift: ריצה  ·  C: בעיטה  ·  P: השהיה', cxm, 170, 8, '#fff', 'center', HEB);
-  button(cxm - 64, 128, 128, 30, 'שחקו', () => { SFX.select(); state = 'select'; menuSel = Math.min(save.unlocked, LEVELS.length) - 1; }, true);
+  txt(touch ? 'חצים: תנועה  ·  A: קפיצה  ·  B: ריצה ובעיטה' : 'חיצים: תנועה  ·  רווח: קפיצה  ·  Shift: ריצה  ·  C: בעיטה  ·  P: השהיה', cxm, 214, 8, '#fff', 'center', HEB);
+  const tm = menuSel % 3;
+  button(cxm - 64, 118, 128, 30, 'שחקו', () => { SFX.select(); state = 'select'; menuSel = Math.min(save.unlocked, LEVELS.length) - 1; }, tm === 0);
+  button(cxm - 64, 154, 128, 24, 'מצב אינסופי', () => { SFX.select(); startEndless(); }, tm === 1, '#9aff6a');
+  button(cxm - 64, 184, 128, 24, 'מדליות וסטטיסטיקה', () => { SFX.select(); state = 'stats'; }, tm === 2, '#cfd8ee');
 }
 
 function fitTxt(s, x, y, maxW, size, col, align, font) {
   ctx.font = '800 ' + size + 'px ' + HEB; let sz = size; const w = ctx.measureText(s).width; if (w > maxW) sz = Math.max(5, size * maxW / w);
   txt(s, x, y, sz, col, align, font);
+}
+// medal icons: 1 = every coin, 2 = no deaths, 4 = fast clear
+const MEDALS = [[1, 'כל המטבעות', '#ffd23a'], [2, 'בלי למות', '#ff6a7a'], [4, 'מהיר', '#6ad0ff']];
+function medalIcon(bit, x, y, r, lit) {
+  ctx.save(); ctx.translate(x, y); ctx.globalAlpha = lit ? 1 : 0.28;
+  const col = lit ? MEDALS.find(m => m[0] === bit)[2] : '#8a8a96';
+  ctx.fillStyle = '#1a0f0c'; ctx.beginPath(); ctx.arc(0, 0, r + 1, 0, 7); ctx.fill();
+  ctx.fillStyle = col; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#1a0f0c'; ctx.fillStyle = '#1a0f0c'; ctx.lineWidth = Math.max(1, r / 4);
+  if (bit === 1) { ctx.beginPath(); ctx.ellipse(0, 0, r * 0.35, r * 0.6, 0, 0, 7); ctx.stroke(); }
+  else if (bit === 2) { ctx.beginPath(); ctx.moveTo(0, r * 0.55); ctx.lineTo(-r * 0.6, -r * 0.05); ctx.arc(-r * 0.3, -r * 0.3, r * 0.32, Math.PI * 0.85, 0); ctx.arc(r * 0.3, -r * 0.3, r * 0.32, Math.PI, Math.PI * 0.15); ctx.closePath(); ctx.fill(); }
+  else { ctx.beginPath(); ctx.moveTo(0, -r * 0.6); ctx.lineTo(0, 0); ctx.lineTo(r * 0.45, r * 0.25); ctx.stroke(); }
+  ctx.restore();
 }
 const SEL_COLS = 4;
 const PAGE = 12;
@@ -927,21 +983,36 @@ function drawSelect() {
     txt(lv.tag || String(lv.id), x + 6, y + 5, lv.tag ? 9 : 11, lv.tag ? '#ffe14a' : '#fff');
     fitTxt(lv.name, x + cw / 2, y + ch - 15, cw - 8, 8, open ? '#fff' : '#bbb', 'center', HEB);
     if (open && save.best[i] > 0) txt(String(save.best[i]), x + cw - 6, y + 7, 5, '#ffe14a', 'right');
-    if (open && i + 1 < save.unlocked) { Art.star5(x + cw - 12, y + 23, 6, '#1a0f0c'); Art.star5(x + cw - 12, y + 23, 4.8, '#ffe14a'); }
+    if (open && save.best[i] > 0) for (let k = 0; k < 3; k++) medalIcon(1 << k, x + 9 + k * 11, y + 24, 4, !!(save.medals[i] & (1 << k)));
   }
   if (pages > 1) {
     if (pg > 0) button(4, VH / 2 - 14, 22, 28, '◀', () => { SFX.select(); menuSel = Math.max(0, (pg - 1) * PAGE); }, false, '#cfd8ee');
     if (pg < pages - 1) button(VW - 26, VH / 2 - 14, 22, 28, '▶', () => { SFX.select(); menuSel = (pg + 1) * PAGE; }, false, '#cfd8ee');
   }
-  button(10, VH - 26, 64, 20, 'חזרה', () => { SFX.select(); state = 'title'; }, false, '#cfd8ee');
+  button(10, VH - 26, 64, 20, 'חזרה', () => { SFX.select(); state = 'title'; menuSel = 0; }, false, '#cfd8ee');
   if (save.hardUnlocked) button(VW - 120, VH - 26, 110, 20, save.hardOn ? 'מצב קשה: פעיל' : 'מצב קשה: כבוי', () => { save.hardOn = !save.hardOn; persist(); SFX.select(); }, false, save.hardOn ? '#ff8a6a' : '#cfd8ee');
   else txt('SUPER FACE BROS.', VW - 8, VH - 18, 7, '#fff', 'right');
 }
 
+function drawStats() {
+  Art.drawSky('grass', cam, frame); rrect(0, 0, VW, VH, 0, '#0a0614c8');
+  txt('מדליות וסטטיסטיקה', VW / 2, 8, 16, '#ffe14a', 'center', HEB);
+  const st = save.stats, cl = save.best.filter(b => b > 0).length;
+  const got = [0, 0, 0]; save.medals.forEach(m => { for (let k = 0; k < 3; k++) if (m & (1 << k)) got[k]++; });
+  const rows = [['שלבים שהושלמו', cl + ' / ' + LEVELS.length], ['מטבעות שנאספו', st.coins], ['אויבים שנדרכו', st.stomps], ['פעמים שמתתם', st.deaths], ['שלבים שהושלמו (כל הפעמים)', st.wins], ['שיא במצב אינסופי', st.endless + ' שלבים']];
+  const px = VW / 2 - 130; panel(px, 34, 260, 120);
+  rows.forEach((r, i) => { txt(r[0], px + 248, 42 + i * 17, 9, '#fff', 'right', HEB); txt(String(r[1]), px + 12, 43 + i * 17, 8, '#ffe14a'); });
+  MEDALS.forEach((m, k) => { const cx = VW / 2 + (1 - k) * 80; medalIcon(m[0], cx, 176, 10, true); fitTxt(m[1], cx, 190, 74, 8, '#fff', 'center', HEB); txt(got[k] + ' / ' + LEVELS.length, cx, 204, 8, '#ffe14a', 'center'); });
+  button(10, VH - 26, 64, 20, 'חזרה', () => { SFX.select(); state = 'title'; menuSel = 0; }, true, '#cfd8ee');
+}
+
+let endlessSeed = 1;
+function startEndless() { endlessSeed = (Math.random() * 1e9) | 0; S.endlessSeed = endlessSeed; newRun(LEVELS.length); }
+
 function drawIntro() {
   rrect(0, 0, VW, VH, 0, '#0a0614');
   const th = Art.THEMES[theme], g = ctx.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, th.sky[0]); g.addColorStop(1, th.sky[1]); ctx.globalAlpha = 0.35; ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH); ctx.globalAlpha = 1;
-  txt(L.def.tag ? 'עולם ' + L.def.tag : 'שלב בונוס ' + (lvl - 12), VW / 2, 52, 24, '#ffe14a', 'center', HEB);
+  txt(lvl >= LEVELS.length ? 'מצב אינסופי' : L.def.tag ? 'עולם ' + L.def.tag : 'שלב בונוס ' + (lvl - CLASSIC + 1), VW / 2, 52, 24, '#ffe14a', 'center', HEB);
   txt(L.def.name, VW / 2, 88, 20, '#fff', 'center', HEB);
   txt(L.def.en, VW / 2, 118, 8, '#c9bcc4', 'center');
   if (L.def.hint) fitTxt(L.def.hint, VW / 2, 138, VW - 30, 10, '#ffe9a8', 'center', HEB);
@@ -965,21 +1036,26 @@ function drawOverlay() {
     button(W / 2 - 64, 108, 128, 28, 'נסו שוב', retryLevel, menuSel === 0);
     button(W / 2 - 64, 142, 128, 28, 'תפריט שלבים', () => { state = 'select'; }, menuSel === 1, '#cfd8ee');
   } else if (state === 'win' || state === 'complete') {
-    rrect(0, 0, W, VH, 0, '#00000088'); panel(W / 2 - 112, 30, 224, 170);
-    txt(state === 'complete' ? 'סיימתם את המשחק!' : 'השלב הושלם!', W / 2, 40, 18, '#ffe14a', 'center', HEB);
-    txt(L.def.name, W / 2, 66, 11, '#fff', 'center', HEB);
-    txt('SCORE ' + String(lvlScore()).padStart(6, '0'), W / 2, 90, 9, '#fff', 'center');
-    txt('BEST  ' + String(save.best[lvl]).padStart(6, '0'), W / 2, 106, 8, '#c9bcc4', 'center');
-    if (state === 'win') { button(W / 2 - 70, 126, 140, 28, 'השלב הבא', nextLevel, menuSel === 0); button(W / 2 - 70, 160, 140, 28, 'תפריט שלבים', () => { state = 'select'; }, menuSel === 1, '#cfd8ee'); }
-    else { button(W / 2 - 70, 134, 140, 28, 'תפריט שלבים', () => { state = 'select'; }, true); }
+    const endl = lvl >= LEVELS.length, more = lvl + 1 < LEVELS.length || endl, fin = state === 'complete' && L.def.finale;
+    rrect(0, 0, W, VH, 0, '#00000088'); panel(W / 2 - 112, 16, 224, 210);
+    txt(fin ? 'סיימתם את המשחק!' : state === 'complete' ? 'כל השלבים הושלמו!' : 'השלב הושלם!', W / 2, 24, 18, '#ffe14a', 'center', HEB);
+    txt(endl ? 'שלב אינסופי ' + (lvl - LEVELS.length + 1) : L.def.name, W / 2, 50, 11, '#fff', 'center', HEB);
+    txt('SCORE ' + String(lvlScore()).padStart(6, '0'), W / 2, 72, 9, '#fff', 'center');
+    if (!endl) {
+      txt('BEST  ' + String(save.best[lvl]).padStart(6, '0'), W / 2, 87, 8, '#c9bcc4', 'center');
+      MEDALS.forEach((m, k) => { const cx = W / 2 + (1 - k) * 66, got = !!(lastMedals & m[0]); medalIcon(m[0], cx, 112, 9, got); fitTxt(m[1] + (newMedals & m[0] ? ' ✦' : ''), cx, 125, 60, 7, got ? '#fff' : '#8a8a96', 'center', HEB); });
+    } else txt('מצב אינסופי: השיא שלכם ' + save.stats.endless, W / 2, 96, 8, '#c9bcc4', 'center', HEB);
+    if (fin) txt('נפתחו שלבי הבונוס ומצב קשה', W / 2, 140, 8, '#9aff6a', 'center', HEB);
+    if (more) { button(W / 2 - 70, 152, 140, 28, fin ? 'לשלבי הבונוס' : 'השלב הבא', nextLevel, menuSel === 0); button(W / 2 - 70, 186, 140, 28, 'תפריט שלבים', () => { state = 'select'; }, menuSel === 1, '#cfd8ee'); }
+    else button(W / 2 - 70, 170, 140, 28, 'תפריט שלבים', () => { state = 'select'; }, true);
   }
   if (state === 'rescue') {
-    const fin = L.arena && L.arena.final, a = Math.min(1, rescueT / 30);
+    const fin = L.arena && L.arena.final, last = fin && L.def.finale, a = Math.min(1, rescueT / 30);
     ctx.globalAlpha = a; rrect(0, 0, W, VH, 0, '#000000aa'); panel(W / 2 - 130, 40, 260, 150);
     Art.drawFriend(W / 2, 112, frame);
     if (fin) Art.head(Art.IMG.hero, W / 2 - 40, 96, 26, 0), Art.head(Art.IMG.enemy, W / 2 + 40, 96, 24, 0);
-    txt(fin ? 'כל הכבוד! הצלת את כולם!' : 'תודה רבה שהצלת אותי!', W / 2, 128, 15, '#ffe14a', 'center', HEB);
-    txt(fin ? 'אתה הגיבור הכי גדול!' : 'אבל החבר שלנו נמצא בטירה אחרת...', W / 2, 152, 11, '#fff', 'center', HEB);
+    txt(last ? 'כל הכבוד! הצלת את כולם!' : fin ? 'הטירה האחרונה נוצחה!' : 'תודה רבה שהצלת אותי!', W / 2, 128, 15, '#ffe14a', 'center', HEB);
+    txt(last ? 'אתה הגיבור הכי גדול!' : fin ? 'אין עוד בוסים. או שיש...?' : 'אבל החבר שלנו נמצא בטירה אחרת...', W / 2, 152, 11, '#fff', 'center', HEB);
     if (rescueT > 60 && (frame >> 5) % 2 === 0) txt('הקישו להמשך', W / 2, 172, 8, '#c9bcc4', 'center', HEB);
     ctx.globalAlpha = 1;
   }
@@ -991,6 +1067,7 @@ function draw() {
   UI.buttons = [];
   if (state === 'title') drawTitle();
   else if (state === 'select') drawSelect();
+  else if (state === 'stats') drawStats();
   else if (state === 'intro') drawIntro();
   else { drawWorld(); drawHUD(); drawOverlay(); }
   if (fade > 0) { ctx.fillStyle = 'rgba(0,0,0,' + fade + ')'; ctx.fillRect(0, 0, VW, VH); }
@@ -999,16 +1076,18 @@ function draw() {
 // ---------- input ----------
 const KEYMAP = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', ArrowUp: 'jump', KeyW: 'jump', Space: 'jump', KeyZ: 'jump', KeyK: 'jump', ShiftLeft: 'run', ShiftRight: 'run', KeyX: 'run', KeyJ: 'run', ArrowDown: 'down', KeyS: 'down' };
 const btnPauseEl = document.getElementById('btnPause'), btnMuteEl = document.getElementById('btnMute');
-function menuCount() { return { paused: 3, gameover: 2, win: 2, complete: 1 }[state] || 0; }
+function menuCount() { return state === 'complete' ? (lvl + 1 < LEVELS.length ? 2 : 1) : { paused: 3, gameover: 2, win: 2 }[state] || 0; }
 function menuActivate() {
   if (state === 'rescue') { if (rescueT > 60) finishLevel(); return true; }
-  if (state === 'title') { UI.buttons[0] && UI.buttons[0].fn(); return true; }
+  if (state === 'title') { const b = UI.buttons[menuSel % 3]; b && b.fn(); return true; }
+  if (state === 'stats') { state = 'title'; menuSel = 0; return true; }
   if (state === 'select') { const lv = menuSel; if (lv < save.unlocked) { SFX.select(); newRun(lv); } return true; }
   const n = menuCount(); if (!n) return false;
   const b = UI.buttons[menuSel]; if (b) b.fn(); return true;
 }
 function menuMove(dx, dy) {
   if (state === 'select') { let m = menuSel + dx + dy * SEL_COLS; if (m >= 0 && m < LEVELS.length) { menuSel = m; SFX.select(); } return true; }
+  if (state === 'title') { menuSel = (menuSel % 3 + dy + dx + 3) % 3; SFX.select(); return true; }
   const n = menuCount(); if (!n) return false; menuSel = (menuSel + dx + dy + n) % n; SFX.select(); return true;
 }
 function togglePause() {
@@ -1079,7 +1158,8 @@ addEventListener('contextmenu', e => e.preventDefault());
 window.__back = function () {
   if (state === 'play') { togglePause(); return true; }
   if (state === 'paused') { togglePause(); return true; }
-  if (state === 'select') { state = 'title'; return true; }
+  if (state === 'select') { state = 'title'; menuSel = 0; return true; }
+  if (state === 'stats') { state = 'title'; menuSel = 0; return true; }
   if (state === 'gameover' || state === 'win' || state === 'complete') { state = 'select'; return true; }
   if (state === 'intro' || state === 'dying' || state === 'flag' || state === 'warp' || state === 'axe') { fade = 0; state = 'select'; return true; }
   if (state === 'rescue') { finishLevel(); return true; }
