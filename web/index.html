@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0B0E1F">
+<title>Clash Party</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- HOME -->
+<section id="home" class="screen active">
+  <div class="bg-blobs"><i></i><i></i><i></i><i></i></div>
+  <header class="logo">
+    <div class="logo-nums"><b class="c0">1</b><b class="c1">2</b><b class="c2">3</b><b class="c3">4</b></div>
+    <h1>CLASH<span>PARTY</span></h1>
+    <p>One phone · Up to 4 players · Pure chaos</p>
+  </header>
+
+  <div class="panel">
+    <div class="panel-title">PLAYERS <small>tap to change</small></div>
+    <div id="slots" class="slots"></div>
+  </div>
+
+  <div class="modes">
+    <button id="btn-tour" class="mode big">
+      <span class="mode-ico"><svg viewBox="0 0 64 64"><path d="M18 10h28v10a14 14 0 0 1-28 0z" fill="#fff"/><path d="M18 14H9a9 9 0 0 0 10 12M46 14h9a9 9 0 0 1-10 12" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/><rect x="28" y="33" width="8" height="10" fill="#fff"/><rect x="20" y="43" width="24" height="8" rx="3" fill="#fff"/></svg></span>
+      <span class="mode-txt"><b>TOURNAMENT</b><small>Random games · first to <em id="target-lbl">5</em> cups</small></span>
+    </button>
+    <button id="btn-free" class="mode">
+      <span class="mode-ico"><svg viewBox="0 0 64 64"><rect x="8" y="8" width="20" height="20" rx="6" fill="#fff"/><rect x="36" y="8" width="20" height="20" rx="6" fill="#fff" opacity=".7"/><rect x="8" y="36" width="20" height="20" rx="6" fill="#fff" opacity=".7"/><rect x="36" y="36" width="20" height="20" rx="6" fill="#fff"/></svg></span>
+      <span class="mode-txt"><b>MINI GAMES</b><small>Pick any game</small></span>
+    </button>
+  </div>
+
+  <footer class="home-foot">
+    <button id="btn-settings" class="icon-btn" aria-label="Settings"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.3 7.3 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.3 7.3 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.3 7.3 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.3 7.3 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></button>
+  </footer>
+</section>
+
+<!-- GAME PICKER -->
+<section id="picker" class="screen">
+  <div class="bg-blobs"><i></i><i></i><i></i><i></i></div>
+  <div class="topbar">
+    <button class="icon-btn back" data-back aria-label="Back"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M15 5l-7 7 7 7"/></svg></button>
+    <h2>Mini Games</h2>
+    <span class="spacer"></span>
+  </div>
+  <div id="grid" class="grid"></div>
+</section>
+
+<!-- OVERLAYS -->
+<div id="pause" class="overlay">
+  <div class="sheet">
+    <h2>Paused</h2>
+    <button class="btn primary" id="btn-resume">Resume</button>
+    <button class="btn" id="btn-restart">Restart game</button>
+    <button class="btn ghost" id="btn-quit">Quit to menu</button>
+  </div>
+</div>
+
+<div id="result" class="overlay">
+  <div class="sheet result-sheet">
+    <div id="res-crown" class="crown"></div>
+    <h2 id="res-title">RED WINS!</h2>
+    <p id="res-sub" class="sub"></p>
+    <div id="res-board" class="board"></div>
+    <div class="row">
+      <button class="btn ghost" id="res-menu">Menu</button>
+      <button class="btn primary" id="res-next">Next</button>
+    </div>
+  </div>
+</div>
+
+<div id="settings" class="overlay">
+  <div class="sheet">
+    <h2>Settings</h2>
+    <label class="toggle"><span>Sound</span><input type="checkbox" id="set-sound"><i></i></label>
+    <label class="toggle"><span>Vibration</span><input type="checkbox" id="set-vibe"><i></i></label>
+    <div class="seg-wrap"><span>Cups to win</span>
+      <div class="seg" id="set-target"><button data-v="3">3</button><button data-v="5">5</button><button data-v="7">7</button></div>
+    </div>
+    <button class="btn primary" id="set-close">Done</button>
+  </div>
+</div>
+
+<button id="pause-btn" aria-label="Pause"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.5" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.5" fill="currentColor"/></svg></button>
+
+<script src="js/core.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/games/rocket.js"></script>
+<script src="js/games/reflex.js"></script>
+<script src="js/games/sumo.js"></script>
+<script src="js/games/tanks.js"></script>
+<script src="js/games/trails.js"></script>
+<script src="js/games/bomb.js"></script>
+<script src="js/games/math.js"></script>
+<script src="js/games/jump.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
