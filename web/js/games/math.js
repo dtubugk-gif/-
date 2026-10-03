@@ -2,13 +2,13 @@
 /* Brain Blitz — tap only when the equation is TRUE. */
 Games.push({
   id: 'math', name: 'Brain Blitz', control: 'TAP IF TRUE',
-  desc: 'Is the equation correct? Tap only if it is TRUE. Wrong taps cost a point. First to 5!',
+  desc: 'Is the equation correct? Tap only if it is TRUE. Wrong taps cost a point. Most points wins!',
   color: '#FFBE0B', grad: ['#FCD34D', '#F59E0B'], gradDark: '#B45309',
   icon: `<svg viewBox="0 0 64 64"><rect x="8" y="10" width="48" height="44" rx="10" fill="#fff"/><path d="M18 24h10M23 19v10M36 24h10M18 40h10M36 37h10M36 43h10" stroke="#F59E0B" stroke-width="4" stroke-linecap="round"/></svg>`,
 
   create(ctx) {
     const { players, arena: A, cx, cy } = ctx;
-    const GOAL = 5;
+    const GOAL = players.length > 2 ? 4 : 5;
     const score = new Map(players.map((p) => [p, 0]));
     const locked = new Set();
     let q, state, t, limit, winner, plan, pop = 0;
@@ -19,7 +19,7 @@ Games.push({
       if (op === '+') { a = randi(2, 25); b = randi(2, 25); c = a + b; }
       else if (op === '-') { a = randi(8, 30); b = randi(1, a - 1); c = a - b; }
       else { a = randi(2, 9); b = randi(2, 9); c = a * b; }
-      const truth = Math.random() < 0.5;
+      const truth = Math.random() < 0.6;
       let shown = c;
       if (!truth) {
         const offs = op === '×' ? [-a, a, -b, b, -1, 1, 2] : [-10, -2, -1, 1, 2, 10];
@@ -29,10 +29,10 @@ Games.push({
     }
     function next() {
       q = make(); state = 'ask'; t = 0; winner = null; pop = 0;
-      limit = q.truth ? 3.2 : 2.4;
+      limit = q.truth ? 3.0 : 1.9;
       locked.clear();
       plan = new Map(players.map((p) => {
-        const r = q.truth ? (Math.random() < 0.78 ? rand(0.9, 2.3) : -1) : (Math.random() < 0.07 ? rand(0.8, 2) : -1);
+        const r = q.truth ? (Math.random() < 0.8 ? rand(0.8, 2.1) : -1) : (Math.random() < 0.07 ? rand(0.8, 2) : -1);
         return [p, r];
       }));
     }
@@ -61,7 +61,7 @@ Games.push({
             }
           }
           if (state === 'ask' && t >= limit) { state = 'reveal'; t = 0; }
-        } else if (state === 'reveal' && t > 1.0 && !ctx.over) next();
+        } else if (state === 'reveal' && t > 0.8 && !ctx.over) next();
       },
 
       draw(g) {

@@ -57,6 +57,7 @@ Games.push({
     }
 
     return {
+      where(p) { const s = N.find((x) => x.p === p); return { x: s.x, y: s.y, r: c * 1.5 }; },
       update(dt) {
         now += dt;
         const v = V0 * (1 + now * 0.015);

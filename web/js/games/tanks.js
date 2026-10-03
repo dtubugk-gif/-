@@ -73,6 +73,7 @@ Games.push({
     }
 
     return {
+      where(p) { const t = T.find((x) => x.p === p); return { x: t.x, y: t.y, r: TR }; },
       update(dt) {
         for (const t of T) {
           const p = t.p;
@@ -117,10 +118,10 @@ Games.push({
           if (bounced) { b.bounces++; Sfx.bounce(); }
           if (b.bounces > 2 || b.age > 3) { FX.burst(b.x, b.y, '#fff', 4, 80, 2, 0.25); bullets.splice(i, 1); continue; }
           for (const t of T) {
-            if (t.p.out || (t === b.o && b.age < 0.3)) continue;
+            if (t.p.out || t.hitT > 0 || (t === b.o && b.age < 0.3)) continue;
             if (dist(b.x, b.y, t.x, t.y) < TR + BR) {
               bullets.splice(i, 1);
-              t.hp--; t.hitT = 0.3;
+              t.hp--; t.hitT = 0.6;
               Sfx.hit(); ctx.buzz(40); FX.addShake(5);
               FX.burst(b.x, b.y, COLORS[b.o.p.slot].main, 14, 260, 4, 0.5);
               if (t.hp <= 0) {

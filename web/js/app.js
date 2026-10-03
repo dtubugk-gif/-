@@ -157,18 +157,24 @@ const App = {
 
   onResult(res) {
     const ranking = res.ranking;
-    const w = !res.draw && ranking[0] ? ranking[0] : null;
+    const winners = res.winners || [];
+    const w = winners[0] || null;
+    const isWin = (p) => winners.some((x) => x.slot === p.slot);
     const prevCups = this.cups.slice();
-    if (w) { this.wins[w.slot]++; if (this.mode === 'tour') this.cups[w.slot]++; }
+    for (const x of winners) { this.wins[x.slot]++; if (this.mode === 'tour') this.cups[x.slot]++; }
     this.champion = null;
-    if (this.mode === 'tour' && w && this.cups[w.slot] >= this.settings.target) this.champion = w.slot;
+    const champs = this.mode === 'tour' ? winners.filter((x) => this.cups[x.slot] >= this.settings.target) : [];
+    if (champs.length) this.champion = champs[0].slot;
+    const names = (list) => list.map((x) => COLORS[x.slot].name.toUpperCase()).join(' & ');
 
     const col = w ? COLORS[w.slot] : null;
     $('#res-crown').innerHTML = w ? CROWN_SVG(this.champion != null ? '#FFBE0B' : col.main)
       : `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="24" fill="#8E95C2"/><path d="M20 30h24M20 38h24" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>`;
     const title = $('#res-title');
-    if (this.champion != null) { title.textContent = `${col.name.toUpperCase()} IS CHAMPION!`; Sfx.champion(); this.confetti(); }
-    else title.textContent = w ? `${col.name.toUpperCase()} WINS!` : 'DRAW!';
+    if (this.champion != null) {
+      title.textContent = champs.length > 1 ? `${names(champs)} ARE CHAMPIONS!` : `${names(champs)} IS CHAMPION!`;
+      Sfx.champion(); this.confetti();
+    } else title.textContent = !w ? 'DRAW!' : winners.length > 1 ? `${names(winners)} WIN!` : `${names(winners)} WINS!`;
     title.style.color = col ? col.main : '#fff';
     $('#res-sub').textContent = this.mode === 'tour'
       ? (this.champion != null ? 'Tournament complete' : `${this.lastDef.name} · first to ${this.settings.target} cups`)
@@ -182,7 +188,7 @@ const App = {
     for (const p of rows) {
       const c = COLORS[p.slot];
       const row = document.createElement('div');
-      row.className = 'brow' + (w && p.slot === w.slot ? ' win' : '');
+      row.className = 'brow' + (isWin(p) ? ' win' : '');
       row.style.setProperty('--col', c.main);
       let right;
       if (this.mode === 'tour') {

@@ -189,6 +189,17 @@ const Engine = {
       get over() { return E.phase === 'over'; },
       buzz: (ms) => Haptics.buzz(ms),
       end: (r, d) => E.end(r, d),
+      endTeam: (winners, rest) => E.end([...winners, ...rest], false, winners),
+      hudPips: (p, value, total, y = -14) => E.atPlayer(p, (g) => {
+        const s = total > 6 ? 6 : 8, gap = total > 6 ? 5 : 7, tw = total * s * 2 + (total - 1) * gap;
+        for (let i = 0; i < total; i++) {
+          const x = -tw / 2 + s + i * (s * 2 + gap);
+          g.fillStyle = i < value ? COLORS[p.slot].main : 'rgba(255,255,255,.1)';
+          g.beginPath(); g.arc(x, y, s, 0, TAU); g.fill();
+          if (i < value) { g.fillStyle = 'rgba(255,255,255,.4)'; g.beginPath(); g.arc(x - s * 0.3, y - s * 0.3, s * 0.35, 0, TAU); g.fill(); }
+        }
+      }),
+      hudText: (p, str, color, y = -16, size = 17) => E.atPlayer(p, (g) => text(g, str, 0, y, size, color || COLORS[p.slot].light)),
       eliminate: (ps) => E.eliminate(ps),
       alive: () => E.players.filter((p) => !p.out),
       botTap: (p) => E.botTap(p),
@@ -198,16 +209,18 @@ const Engine = {
     };
   },
 
-  end(ranking, draw = false) {
+  end(ranking, draw = false, winners = null) {
     if (this.phase !== 'play') return;
     this.phase = 'over'; this.phaseT = 0;
-    this.result = { ranking, draw };
+    winners = draw ? [] : (winners || (ranking[0] ? [ranking[0]] : []));
+    this.result = { ranking, draw, winners };
     this.releaseAll();
-    if (!draw && ranking[0]) {
-      const w = ranking[0];
+    if (winners.length) {
       Sfx.win(); Haptics.buzz([30, 60, 30]);
-      for (let i = 0; i < 3; i++) FX.burst(w.lay.home.x, w.lay.home.y, i === 1 ? '#fff' : COLORS[w.slot].main, 26, 380, 6, 1.1, 300);
-      FX.ring(w.lay.home.x, w.lay.home.y, COLORS[w.slot].main, 140, 0.8, 10);
+      for (const w of winners) {
+        for (let i = 0; i < 3; i++) FX.burst(w.lay.home.x, w.lay.home.y, i === 1 ? '#fff' : COLORS[w.slot].main, 26, 380, 6, 1.1, 300);
+        FX.ring(w.lay.home.x, w.lay.home.y, COLORS[w.slot].main, 140, 0.8, 10);
+      }
     } else { Sfx.out(); }
   },
 
@@ -256,6 +269,7 @@ const Engine = {
     } else if (this.phase === 'play') {
       this.playT += dt;
       this.inst.update(dt);
+      if (this.playT > 150 && this.phase === 'play') this.end([...this.players], true); // safety net
     } else if (this.phase === 'over') {
       this.inst.update(dt * 0.35);
       if (this.phaseT > 2.0 && this.onEnd) {
@@ -307,6 +321,7 @@ const Engine = {
 
     for (const p of this.players) this.drawButton(g, p);
     FX.draw(g);
+    if (this.inst.where && (this.phase === 'count' || (this.phase === 'play' && this.playT < 1.2))) this.drawMarkers(g);
 
     if (this.phase === 'intro') this.drawIntro(g);
     else if (this.phase === 'count') this.drawCount(g);
@@ -357,6 +372,28 @@ const Engine = {
     }
     g.globalAlpha = 1;
     g.restore();
+  },
+
+  /* "This is you" arrow over each player's character at the start of a game */
+  drawMarkers(g) {
+    const fade = this.phase === 'play' ? 1 - this.playT / 1.2 : 1;
+    const bob = Math.sin(performance.now() / 120) * 4;
+    for (const p of this.players) {
+      const w = this.inst.where(p);
+      if (!w) continue;
+      const col = COLORS[p.slot];
+      g.save();
+      g.globalAlpha = fade;
+      g.translate(w.x, w.y); g.rotate(p.lay.rot);
+      const r = (w.r || 22) + 10;
+      g.strokeStyle = col.light; g.lineWidth = 3; g.setLineDash([6, 6]);
+      g.beginPath(); g.arc(0, 0, r, 0, TAU); g.stroke(); g.setLineDash([]);
+      g.translate(0, r + 14 + bob);
+      g.fillStyle = col.main;
+      g.beginPath(); g.moveTo(0, -10); g.lineTo(-10, 4); g.lineTo(10, 4); g.closePath(); g.fill();
+      text(g, 'YOU', 0, 18, 14, '#fff');
+      g.restore();
+    }
   },
 
   mirror(fn) {
@@ -416,15 +453,17 @@ const Engine = {
     const r = this.result; if (!r) return;
     const a = this.arena;
     const k = easeOutBack(Math.min(1, this.phaseT / 0.5));
-    const w = r.ranking[0];
-    const str = r.draw || !w ? 'DRAW!' : `${COLORS[w.slot].name.toUpperCase()} WINS!`;
-    const col = r.draw || !w ? '#fff' : COLORS[w.slot].main;
+    const ws = r.winners;
+    const str = !ws.length ? 'DRAW!' : ws.length > 1 ? ws.map((w) => COLORS[w.slot].name.toUpperCase()).join(' & ') + ' WIN!' : `${COLORS[ws[0].slot].name.toUpperCase()} WINS!`;
+    const col = !ws.length ? '#fff' : COLORS[ws[0].slot].main;
     this.mirror((g) => {
       g.save(); g.translate(0, a.h * 0.22); g.scale(k, k);
       const bw = Math.min(a.w - 40, 320), bh = Math.min(70, a.h * 0.12);
       g.fillStyle = 'rgba(0,0,0,.35)'; rrect(g, -bw / 2, -bh / 2 + 6, bw, bh, bh / 2); g.fill();
       g.fillStyle = '#fff'; rrect(g, -bw / 2, -bh / 2, bw, bh, bh / 2); g.fill();
-      text(g, str, 0, 2, bh * 0.5, col === '#fff' ? '#1E2448' : col, { shadow: false });
+      g.font = font(bh * 0.5);
+      const fit = Math.min(1, (bw - 30) / g.measureText(str).width);
+      text(g, str, 0, 2, bh * 0.5 * fit, col === '#fff' ? '#1E2448' : col, { shadow: false });
       g.restore();
     });
   },

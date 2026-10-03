@@ -32,6 +32,7 @@ Games.push({
     C.forEach(botPlan);
 
     return {
+      where(p) { const c = C.find((x) => x.p === p); return { x: cx + Math.cos(c.ang) * RC, y: cy + Math.sin(c.ang) * RC, r: PR }; },
       update(dt) {
         const t = ctx.t;
         speed = Math.min(5.2, 1.6 + t * 0.075);

@@ -28,6 +28,7 @@ Games.push({
     };
 
     return {
+      where(p) { const r = R.find((x) => x.p === p); const q = pos(r); return { x: q.x, y: q.y, r: 26 }; },
       update(dt) {
         for (const r of R) {
           const p = r.p;

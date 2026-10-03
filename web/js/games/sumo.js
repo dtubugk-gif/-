@@ -39,6 +39,7 @@ Games.push({
     }
 
     return {
+      where(p) { const b = B.find((x) => x.p === p); return { x: b.x, y: b.y, r: br }; },
       update(dt) {
         const t = ctx.t;
         const prev = platR;
@@ -55,6 +56,7 @@ Games.push({
             continue;
           }
           if (!p.human && !ctx.over) { ai(b, dt); ctx.botHold(p, b.wantHold); }
+          if (p.pressed) { b.vx += Math.cos(b.ang) * R0 * 0.35; b.vy += Math.sin(b.ang) * R0 * 0.35; Sfx.tone(260, 0.08, { type: 'triangle', vol: 0.08, slide: 1.6 }); }
           if (p.down) {
             b.vx += Math.cos(b.ang) * ACC * dt; b.vy += Math.sin(b.ang) * ACC * dt;
             if (Math.random() < 0.5) FX.trail(b.x - Math.cos(b.ang) * br, b.y - Math.sin(b.ang) * br, COLORS[p.slot].light, rand(2, 4), 0.35);

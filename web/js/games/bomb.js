@@ -31,6 +31,7 @@ Games.push({
     }
 
     return {
+      where(p) { const s = seat(p); return { x: s.x, y: s.y, r: PR }; },
       label(p) { return p === holder && !flight && pause <= 0 ? 'PASS!' : 'WAIT'; },
       update(dt) {
         spin += dt;

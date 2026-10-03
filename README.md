@@ -7,17 +7,25 @@ and any empty seat can be filled by a CPU bot.
 **Download:** [`ClashParty.apk`](ClashParty.apk). Install it on Android 8.0 or newer
 (you will need to allow installing apps from unknown sources).
 
-## Games
+## Games (16)
 
 | Game | Control | Goal |
 |---|---|---|
 | Rocket Race | Tap fast | Mash your button to fly your rocket to the finish first |
-| Quick Draw | Tap | Tap first when the orb flashes. Tapping early benches you |
+| Quick Draw | Tap | Tap first when the orb turns white (+1). Tap early or on purple: -1 |
+| Soccer Clash | Hold + release | Bottom team vs top team (2v2 with 4 players). Hold to run, release to kick. First to 3 |
+| Turbo Racers | Hold = gas | Slot-car racing: brake before corners or you crash. 4 laps |
 | Sumo Bump | Hold | You spin; hold to dash. Knock everyone off the shrinking ring |
 | Tank Battle | Hold + release | Hold to drive, release to fire bouncing shots. 3 hits and you're out |
+| Penalty Kicks | Tap to shoot | Time your shot past the goalkeeper; bank shots off walls count |
+| Hurdle Dash | Tap to jump | Auto-run down your lane and jump the hurdles (watch the doubles) |
 | Neon Snake | Hold to turn | Don't crash into the glowing trails. Last snake alive wins |
+| Snake Arena | Hold to turn | Eat stars to grow; heads that hit a body are out |
 | Hot Bomb | Tap to pass | Throw the bomb away before it explodes in your hands |
-| Brain Blitz | Tap if true | Tap only when the equation is correct. First to 5 |
+| Paint Fight | Hold to move | Paint the most floor in 30 seconds; paint bombs splash big |
+| Ping Pong | Tap to turn | Your paddle slides by itself; tap to reverse. Defend your edge |
+| Tower Stack | Tap to drop | Stack blocks; overhang gets sliced off. First to 14 |
+| Brain Blitz | Tap if true | Tap only when the equation is correct |
 | Laser Jump | Tap to jump | Jump over the spinning laser. It speeds up and reverses |
 
 **Modes:** *Tournament* (random games, first to 3/5/7 cups) or *Mini Games* (pick any game).
