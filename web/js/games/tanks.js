@@ -21,7 +21,7 @@ Games.push({
       walls.push({ x: cx + x, y: cy + y, w, h });
       if (x !== -w / 2 || y !== -h / 2) walls.push({ x: cx - x - w, y: cy - y - h, w, h });
     }
-    const TR = S * 0.055, BR = S * 0.013, SPEED = S * 0.32, SPIN = 2.8, BSPD = S * 0.85;
+    const TR = S * 0.055, BR = S * 0.013, SPEED = S * 0.32, BSPD = S * 0.85;
     const T = players.map((p) => ({
       p, x: p.lay.home.x, y: p.lay.home.y, ang: p.lay.dir + Math.PI, hp: 3, cd: 0, hitT: 0, recoil: 0,
       think: 0, mode: 'aim', modeT: 0, aimTol: rand(0.08, 0.16), tread: 0,
@@ -86,7 +86,8 @@ Games.push({
             if (free(nx, t.y, TR)) t.x = nx;
             if (free(t.x, ny, TR)) t.y = ny;
             t.tread += dt * 20;
-          } else t.ang += SPIN * dt;
+          }
+          Move.aim(t, p, dt, 2.5);
         }
         // tank vs tank
         for (let i = 0; i < T.length; i++) for (let j = i + 1; j < T.length; j++) {
@@ -177,6 +178,7 @@ Games.push({
           g.fillStyle = c.dark; rrect(g, TR * 0.1 - rc, -TR * 0.17, TR * 1.35, TR * 0.34, 3); g.fill();
           g.fillStyle = fl ? '#fff' : c.light; g.beginPath(); g.arc(-rc * 0.3, 0, TR * 0.45, 0, TAU); g.fill();
           g.restore();
+          drawAim(g, t.x, t.y, TR * 1.05, t.ang, t.spinDir, COLORS[t.p.slot].light, t.p.down);
           // hp pips
           for (let k = 0; k < 3; k++) {
             g.fillStyle = k < t.hp ? '#fff' : 'rgba(255,255,255,.18)';

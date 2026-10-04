@@ -124,6 +124,45 @@ function drawStar(g, x, y, r, fill) {
   g.closePath(); g.fill();
 }
 
+/* Shared one-button movement (Sumo, Tanks, Soccer, Paint Fight).
+   Idle: the aim arrow turns. Hold: go where it points. Every release flips the turning
+   direction, so a small overshoot is corrected right away instead of waiting a full turn. */
+const Move = {
+  SPIN: 2.5,
+  aim(o, p, dt, spin = Move.SPIN) {
+    if (o.spinDir == null) o.spinDir = 1;
+    if (p.released) o.spinDir = -o.spinDir;
+    if (!p.down) o.ang += o.spinDir * spin * dt;
+  },
+  /* responsive drive: velocity eases to full speed while held, brakes when released */
+  drive(o, p, dt, maxV, grip, brake) {
+    if (p.down) {
+      const k = Math.min(1, grip * dt);
+      o.vx += (Math.cos(o.ang) * maxV - o.vx) * k; o.vy += (Math.sin(o.ang) * maxV - o.vy) * k;
+    } else { const f = Math.exp(-brake * dt); o.vx *= f; o.vy *= f; }
+  },
+};
+
+/* Aim arrow + a short arc showing which way it is turning */
+function drawAim(g, x, y, r, ang, spinDir, color, active) {
+  g.save(); g.translate(x, y);
+  if (!active) {
+    const a0 = ang + (spinDir || 1) * 0.3, a1 = ang + (spinDir || 1) * 1.05;
+    g.strokeStyle = color; g.globalAlpha = 0.5; g.lineWidth = 3; g.lineCap = 'round';
+    g.beginPath(); g.arc(0, 0, r * 1.45, Math.min(a0, a1), Math.max(a0, a1)); g.stroke();
+    g.globalAlpha = 1;
+  } else {
+    g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 2; g.setLineDash([3, 6]);
+    g.beginPath(); g.moveTo(Math.cos(ang) * r * 2.1, Math.sin(ang) * r * 2.1); g.lineTo(Math.cos(ang) * r * 3.4, Math.sin(ang) * r * 3.4); g.stroke();
+    g.setLineDash([]);
+  }
+  g.rotate(ang);
+  const d = r * 1.6;
+  g.fillStyle = active ? '#fff' : color;
+  g.beginPath(); g.moveTo(d + r * 0.45, 0); g.lineTo(d - r * 0.2, -r * 0.4); g.lineTo(d - r * 0.2, r * 0.4); g.closePath(); g.fill();
+  g.restore();
+}
+
 function font(size, weight = 700) { return `${weight} ${Math.round(size)}px ${FONT}`; }
 
 function text(g, str, x, y, size, color = '#fff', o = {}) {

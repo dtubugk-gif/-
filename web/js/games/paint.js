@@ -68,9 +68,8 @@ Games.push({
         for (const q of P) {
           const p = q.p;
           if (!p.human && !ctx.over) { ai(q, dt); ctx.botHold(p, q.want); }
-          if (p.down) { q.vx += Math.cos(q.ang) * S * 2.6 * dt; q.vy += Math.sin(q.ang) * S * 2.6 * dt; }
-          else q.ang += 3.6 * dt;
-          const f = Math.exp(-3 * dt); q.vx *= f; q.vy *= f;
+          Move.aim(q, p, dt, 2.7);
+          Move.drive(q, p, dt, S * 0.55, 9, 7);
           const sp = Math.hypot(q.vx, q.vy), mx = S * 0.55;
           if (sp > mx) { q.vx *= mx / sp; q.vy *= mx / sp; }
           q.x = clamp(q.x + q.vx * dt, gx + PR, gx + cols * c - PR);
@@ -128,11 +127,7 @@ Games.push({
         }
         for (const q of P) {
           const col = COLORS[q.p.slot];
-          const ax = q.x + Math.cos(q.ang) * PR * 1.6, ay = q.y + Math.sin(q.ang) * PR * 1.6;
-          g.fillStyle = q.p.down ? '#fff' : col.light;
-          g.save(); g.translate(ax, ay); g.rotate(q.ang);
-          g.beginPath(); g.moveTo(PR * 0.45, 0); g.lineTo(-PR * 0.2, -PR * 0.38); g.lineTo(-PR * 0.2, PR * 0.38); g.closePath(); g.fill();
-          g.restore();
+          drawAim(g, q.x, q.y, PR, q.ang, q.spinDir, col.light, q.p.down);
           g.strokeStyle = '#fff'; g.lineWidth = 3;
           g.beginPath(); g.arc(q.x, q.y, PR + 2, 0, TAU); g.stroke();
           drawBlob(g, q.x, q.y, PR, col, { ang: q.ang });

@@ -16,7 +16,7 @@ Games.push({
       vx: 0, vy: 0, ang: p.lay.dir + Math.PI + rand(-0.4, 0.4), fall: 0, squash: 0,
       aim: rand(0.22, 0.4), think: 0, wantHold: false,
     }));
-    const ACC = R0 * 2.5, MAXV = R0 * 1.35, SPIN = 3.4;
+    const MAXV = R0 * 1.5;
     let warn = 0;
 
     function ai(b, dt) {
@@ -57,11 +57,9 @@ Games.push({
           }
           if (!p.human && !ctx.over) { ai(b, dt); ctx.botHold(p, b.wantHold); }
           if (p.pressed) { b.vx += Math.cos(b.ang) * R0 * 0.35; b.vy += Math.sin(b.ang) * R0 * 0.35; Sfx.tone(260, 0.08, { type: 'triangle', vol: 0.08, slide: 1.6 }); }
-          if (p.down) {
-            b.vx += Math.cos(b.ang) * ACC * dt; b.vy += Math.sin(b.ang) * ACC * dt;
-            if (Math.random() < 0.5) FX.trail(b.x - Math.cos(b.ang) * br, b.y - Math.sin(b.ang) * br, COLORS[p.slot].light, rand(2, 4), 0.35);
-          } else b.ang += SPIN * dt;
-          const f = Math.exp(-1.1 * dt); b.vx *= f; b.vy *= f;
+          Move.aim(b, p, dt, 2.6);
+          Move.drive(b, p, dt, R0 * 1.15, 3.5, 1.8);
+          if (p.down && Math.random() < 0.5) FX.trail(b.x - Math.cos(b.ang) * br, b.y - Math.sin(b.ang) * br, COLORS[p.slot].light, rand(2, 4), 0.35);
           const sp = Math.hypot(b.vx, b.vy);
           if (sp > MAXV) { b.vx *= MAXV / sp; b.vy *= MAXV / sp; }
           b.x += b.vx * dt; b.y += b.vy * dt;
@@ -121,13 +119,7 @@ Games.push({
           g.globalAlpha = s;
           g.translate(b.x, b.y); g.scale(s, s); g.translate(-b.x, -b.y);
           // aim arrow
-          if (!b.fall) {
-            const ax = b.x + Math.cos(b.ang) * br * 1.6, ay = b.y + Math.sin(b.ang) * br * 1.6;
-            g.fillStyle = p.down ? '#fff' : col.light;
-            g.save(); g.translate(ax, ay); g.rotate(b.ang);
-            g.beginPath(); g.moveTo(br * 0.45, 0); g.lineTo(-br * 0.2, -br * 0.38); g.lineTo(-br * 0.2, br * 0.38); g.closePath(); g.fill();
-            g.restore();
-          }
+          if (!b.fall) drawAim(g, b.x, b.y, br, b.ang, b.spinDir, col.light, p.down);
           drawBlob(g, b.x, b.y, br, col, { ang: b.ang, squash: b.squash, dead: b.fall > 0 });
           g.restore();
         }

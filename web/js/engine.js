@@ -383,7 +383,7 @@ const Engine = {
     // round stars won in this match
     if (p.cupsTarget) {
       const val = this.phase === 'score' && this.score ? this.score.wins[p.slot] : p.cups;
-      const n = p.cupsTarget, s = 7, gap = 5, tw = n * s * 2 + (n - 1) * gap;
+      const n = p.cupsTarget, s = Math.min(7, (w - 40) / (n * 2.7)), gap = s * 0.7, tw = n * s * 2 + (n - 1) * gap;
       for (let i = 0; i < n; i++) drawStar(g, -tw / 2 + s + i * (s * 2 + gap), top + (h - depth) - 12, s, i < val ? '#FFE27A' : 'rgba(0,0,0,.2)');
     }
     g.globalAlpha = 1;
@@ -475,20 +475,21 @@ const Engine = {
     const total = sc.final ? 2.6 : 3.4;
     this.mirror((g) => {
       const n = this.players.length;
-      const cw = Math.min(a.w - 32, 340), rowH = Math.min(34, (a.h / 2 - 110) / n), ch = 78 + n * rowH + 22;
+      const extra = sc.next ? 26 : 0;
+      const cw = Math.min(a.w - 32, 340), rowH = Math.min(34, (a.h / 2 - 110 - extra) / n), ch = 78 + n * rowH + 22 + extra;
       g.save(); g.translate(0, 12 + ch / 2); g.scale(k, k); g.translate(0, -ch / 2);
       g.fillStyle = 'rgba(0,0,0,.3)'; rrect(g, -cw / 2, 6, cw, ch, 24); g.fill();
       g.fillStyle = '#1E2448'; rrect(g, -cw / 2, 0, cw, ch, 24); g.fill();
       g.fillStyle = wcol; rrect(g, -cw / 2, 0, cw, 6, 3); g.fill();
-      text(g, sc.final ? 'MATCH OVER!' : `ROUND ${sc.round}`, 0, 28, 24, '#fff');
-      text(g, sc.draw ? 'DRAW - NO STAR' : `${names} ${sc.winners.length > 1 ? 'GET' : 'GETS'} A STAR`, 0, 56, 15, wcol, { shadow: false });
+      text(g, sc.final ? 'CUP OVER!' : `ROUND ${sc.round}`, 0, 28, 24, '#fff');
+      text(g, sc.draw ? 'DRAW - NO POINT' : `${names} ${sc.winners.length > 1 ? 'GET' : 'GETS'} A POINT`, 0, 56, 15, wcol, { shadow: false });
       this.players.forEach((p, i) => {
         const y = 78 + i * rowH + rowH / 2, col = COLORS[p.slot];
         const won = sc.winners.some((w) => w.slot === p.slot);
         if (won) { g.fillStyle = 'rgba(255,255,255,.06)'; rrect(g, -cw / 2 + 10, y - rowH / 2 + 2, cw - 20, rowH - 4, 10); g.fill(); }
         g.fillStyle = col.main; g.beginPath(); g.arc(-cw / 2 + 28, y, rowH * 0.3, 0, TAU); g.fill();
         text(g, col.name + (p.human ? '' : ' CPU'), -cw / 2 + 46, y + 1, 15, '#fff', { align: 'left', shadow: false, weight: 600 });
-        const t = sc.target, r = Math.min(10, rowH * 0.34), gap = 6, tw = t * r * 2 + (t - 1) * gap;
+        const t = sc.target, r = Math.min(10, rowH * 0.34, (cw - 160) / (t * 2.6)), gap = r * 0.6, tw = t * r * 2 + (t - 1) * gap;
         for (let j = 0; j < t; j++) {
           const on = j < sc.wins[p.slot], fresh = on && j >= sc.prev[p.slot];
           let s = 1;
@@ -498,6 +499,7 @@ const Engine = {
           if (on && s > 0) drawStar(g, x, y, r * s, '#FFE27A');
         }
       });
+      if (sc.next) text(g, `NEXT: ${sc.next.toUpperCase()}`, 0, ch - 32, 14, '#FFE27A', { shadow: false });
       g.fillStyle = 'rgba(255,255,255,.1)'; rrect(g, -cw / 2 + 24, ch - 14, cw - 48, 4, 2); g.fill();
       g.fillStyle = wcol; rrect(g, -cw / 2 + 24, ch - 14, (cw - 48) * Math.min(1, this.phaseT / total), 4, 2); g.fill();
       g.restore();

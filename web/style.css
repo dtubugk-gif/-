@@ -173,6 +173,28 @@ body.playing .screen { display: none; }
   background: rgba(255,255,255,.12); top: -50px; left: -40px;
 }
 
+/* ---------- party cup setup ---------- */
+.hint { color: var(--muted); font-size: 14px; text-align: center; margin: -6px 8px 12px; line-height: 1.35; }
+.selrow { display: flex; align-items: center; justify-content: space-between; margin: 0 4px 10px; font-weight: 600; font-size: 14px; color: var(--muted); }
+.sel-btns { display: flex; gap: 8px; }
+.chip { padding: 7px 14px; border-radius: 999px; background: var(--card2); font-size: 13px; font-weight: 600; color: var(--text); }
+.chip:active { transform: scale(.95); }
+.grid.compact { grid-template-columns: repeat(3, 1fr); gap: 10px; flex: 1; }
+.grid.compact .card { min-height: 112px; padding: 10px; }
+.grid.compact .card .art svg { width: 46px; height: 46px; }
+.grid.compact .card b { font-size: 13px; line-height: 1.1; }
+.grid.compact .card .ctl { display: none; }
+.card .check {
+  position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%;
+  background: #fff; color: #16A34A; display: grid; place-items: center; box-shadow: 0 2px 0 rgba(0,0,0,.2);
+  transition: transform .15s, background .15s;
+}
+.card .check svg { width: 16px; height: 16px; }
+.card.pickable.off { filter: grayscale(1) brightness(.55); }
+.card.pickable.off .check { background: rgba(255,255,255,.25); color: transparent; transform: scale(.85); }
+.btn.start { margin-top: 12px; flex: none; }
+.btn:disabled { opacity: .5; pointer-events: none; }
+
 /* ---------- overlays ---------- */
 .overlay {
   position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 20px;

@@ -1,18 +1,22 @@
 'use strict';
-/* ===== App: menus, player setup, tournament flow, results ===== */
+/* ===== App: menus, player setup, Party Cup flow, results ===== */
 
 const $ = (s) => document.querySelector(s);
 
 const App = {
-  slots: null, settings: null,
+  slots: null, settings: null, picks: null,
   mode: 'free', cups: [0, 0, 0, 0], wins: [0, 0, 0, 0],
-  bag: [], lastDef: null, screen: 'home', overlay: null,
+  bag: [], pool: [], upcoming: null, round: 0, lastDef: null, screen: 'home', overlay: null, champion: null,
 
   init() {
     const s = Store.get('slots', null);
     this.slots = Array.isArray(s) && s.length === 4 ? s : ['human', 'human', 'cpu', 'off'];
     if (this.slots.filter((x) => x !== 'off').length < 2) this.slots = ['human', 'human', 'off', 'off'];
-    this.settings = Object.assign({ sound: true, vibe: true, target: 5, rounds: 3 }, Store.get('settings', {}));
+    this.settings = Object.assign({ sound: true, vibe: true, target: 5 }, Store.get('settings', {}));
+    if (![3, 5, 7, 10].includes(this.settings.target)) this.settings.target = 5;
+    const picks = Store.get('picks', null);
+    this.picks = new Set(Array.isArray(picks) ? picks.filter((id) => Games.some((g) => g.id === id)) : Games.map((g) => g.id));
+    if (this.picks.size < 2) this.picks = new Set(Games.map((g) => g.id));
     this.applySettings();
     Engine.init();
     this.renderSlots();
@@ -27,7 +31,6 @@ const App = {
     Sfx.enabled = this.settings.sound;
     Haptics.enabled = this.settings.vibe;
     $('#target-lbl').textContent = this.settings.target;
-    $('#rounds-lbl').textContent = this.settings.rounds;
     Store.set('settings', this.settings);
   },
 
@@ -36,37 +39,39 @@ const App = {
     this.screen = id;
     document.querySelectorAll('.screen').forEach((el) => el.classList.toggle('active', el.id === id));
     if (id === 'picker') this.renderGrid();
+    if (id === 'cupsetup') this.renderCupGrid();
   },
   openOverlay(id) { this.closeOverlay(); this.overlay = id; $('#' + id).classList.add('active'); },
   closeOverlay() { if (this.overlay) $('#' + this.overlay).classList.remove('active'); this.overlay = null; },
 
   bind() {
     const tap = (sel, fn) => $(sel).addEventListener('click', (e) => { Sfx.click(); fn(e); });
-    tap('#btn-tour', () => this.startTournament());
+    tap('#btn-tour', () => this.show('cupsetup'));
     tap('#btn-free', () => { this.mode = 'free'; this.show('picker'); });
     tap('#btn-settings', () => this.openSettings());
     document.querySelectorAll('[data-back]').forEach((b) => b.addEventListener('click', () => { Sfx.click(); this.back(); }));
     tap('#pause-btn', () => this.pause());
     tap('#btn-resume', () => this.resume());
-    tap('#btn-restart', () => { this.closeOverlay(); this.play(this.lastDef); });
+    tap('#btn-restart', () => { this.closeOverlay(); this.playRound(this.lastDef); });
     tap('#btn-quit', () => this.quit());
     tap('#res-menu', () => this.quit());
     tap('#res-next', () => this.next());
     tap('#set-close', () => this.closeOverlay());
+    tap('#cup-all', () => { this.picks = new Set(Games.map((g) => g.id)); this.savePicks(); });
+    tap('#cup-none', () => { this.picks = new Set(); this.savePicks(); });
+    tap('#btn-startcup', () => this.startCup());
     $('#set-sound').addEventListener('change', (e) => { this.settings.sound = e.target.checked; this.applySettings(); Sfx.click(); });
     $('#set-vibe').addEventListener('change', (e) => { this.settings.vibe = e.target.checked; this.applySettings(); Haptics.buzz(30); });
-    for (const key of ['target', 'rounds']) {
-      document.querySelectorAll(`#set-${key} button`).forEach((b) => b.addEventListener('click', () => {
-        Sfx.click(); this.settings[key] = +b.dataset.v; this.applySettings(); this.syncSettings();
-      }));
-    }
+    document.querySelectorAll('#set-target button').forEach((b) => b.addEventListener('click', () => {
+      Sfx.click(); this.settings.target = +b.dataset.v; this.applySettings(); this.syncSettings();
+    }));
   },
 
   openSettings() { this.syncSettings(); this.openOverlay('settings'); },
   syncSettings() {
     $('#set-sound').checked = this.settings.sound;
     $('#set-vibe').checked = this.settings.vibe;
-    for (const key of ['target', 'rounds']) document.querySelectorAll(`#set-${key} button`).forEach((b) => b.classList.toggle('on', +b.dataset.v === this.settings[key]));
+    document.querySelectorAll('#set-target button').forEach((b) => b.classList.toggle('on', +b.dataset.v === this.settings.target));
   },
 
   /* ---------- players ---------- */
@@ -96,65 +101,103 @@ const App = {
     $('#slots').children[i].classList.add('pop');
   },
   roster() {
+    const tour = this.mode === 'tour';
     return this.slots
       .map((st, i) => ({ slot: i, human: st === 'human', state: st }))
       .filter((p) => p.state !== 'off')
-      .map((p) => ({ slot: p.slot, human: p.human, cups: this.match ? this.match.wins[p.slot] : 0, cupsTarget: this.match ? this.match.target : 0 }));
+      .map((p) => ({ slot: p.slot, human: p.human, cups: tour ? this.cups[p.slot] : 0, cupsTarget: tour ? this.settings.target : 0 }));
   },
 
-  /* ---------- game picker ---------- */
+  /* ---------- game cards ---------- */
+  card(def, i) {
+    const el = document.createElement('button');
+    el.className = 'card';
+    el.style.setProperty('--g', `linear-gradient(140deg, ${def.grad[0]}, ${def.grad[1]})`);
+    el.style.setProperty('--gd', def.gradDark);
+    el.style.animationDelay = `${i * 0.03}s`;
+    el.innerHTML = `<span class="ctl">${def.control}</span><div class="art">${def.icon}</div><b>${def.name}</b>`;
+    return el;
+  },
   renderGrid() {
     const grid = $('#grid');
     grid.innerHTML = '';
     Games.forEach((def, i) => {
-      const el = document.createElement('button');
-      el.className = 'card';
-      el.style.setProperty('--g', `linear-gradient(140deg, ${def.grad[0]}, ${def.grad[1]})`);
-      el.style.setProperty('--gd', def.gradDark);
-      el.style.animationDelay = `${i * 0.04}s`;
-      el.innerHTML = `<span class="ctl">${def.control}</span><div class="art">${def.icon}</div><b>${def.name}</b>`;
-      el.addEventListener('click', () => { Sfx.click(); this.mode = 'free'; this.play(def); });
+      const el = this.card(def, i);
+      el.addEventListener('click', () => { Sfx.click(); this.mode = 'free'; this.playRound(def); });
       grid.appendChild(el);
     });
   },
+  renderCupGrid() {
+    const grid = $('#cupgrid');
+    grid.innerHTML = '';
+    Games.forEach((def, i) => {
+      const el = this.card(def, i);
+      el.classList.add('pickable');
+      el.dataset.id = def.id;
+      el.insertAdjacentHTML('beforeend', '<span class="check"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>');
+      el.addEventListener('click', () => {
+        Sfx.click();
+        if (this.picks.has(def.id)) this.picks.delete(def.id); else this.picks.add(def.id);
+        this.savePicks();
+      });
+      grid.appendChild(el);
+    });
+    this.syncPicks();
+  },
+  savePicks() { Store.set('picks', [...this.picks]); this.syncPicks(); },
+  syncPicks() {
+    document.querySelectorAll('#cupgrid .card').forEach((el) => el.classList.toggle('off', !this.picks.has(el.dataset.id)));
+    const n = this.picks.size, btn = $('#btn-startcup');
+    $('#cup-count').textContent = `${n} of ${Games.length} games`;
+    btn.disabled = n < 2;
+    btn.textContent = n < 2 ? 'Pick at least 2 games' : `Start Cup · first to ${this.settings.target}`;
+  },
 
-  /* ---------- flow ---------- */
-  startTournament() {
+  /* ---------- Party Cup: a different game every round ---------- */
+  startCup() {
+    if (this.picks.size < 2) return;
     this.mode = 'tour';
     this.cups = [0, 0, 0, 0];
+    this.round = 0;
+    this.pool = Games.filter((g) => this.picks.has(g.id));
     this.bag = [];
-    this.nextTourGame();
+    this.lastDef = null;
+    this.upcoming = this.drawGame();
+    this.nextCupRound();
   },
-  nextTourGame() {
+  drawGame() {
     if (!this.bag.length) {
-      this.bag = shuffle(Games.slice());
-      if (this.lastDef && this.bag[this.bag.length - 1] === this.lastDef) this.bag.unshift(this.bag.pop());
+      this.bag = shuffle(this.pool.slice());
+      if (this.lastDef && this.bag.length > 1 && this.bag[this.bag.length - 1] === this.lastDef) this.bag.unshift(this.bag.pop());
     }
-    this.play(this.bag.pop());
+    return this.bag.pop();
   },
-  /* A match = several quick rounds of the same mini game. Each round winner earns a star;
-     the first to `rounds` stars wins the match (and a cup in Party Cup mode). */
-  play(def) {
+  nextCupRound() {
+    const def = this.upcoming;
+    this.round++;
+    this.playRound(def);
+  },
+  playRound(def) {
     this.lastDef = def;
-    this.match = { def, round: 1, target: this.settings.rounds, wins: [0, 0, 0, 0] };
-    this.startRound();
-  },
-  startRound() {
-    const m = this.match;
     this.closeOverlay();
     document.body.classList.add('playing');
-    Engine.start(m.def, this.roster(), (res) => this.onRound(res), { round: m.round, target: m.target, quick: m.round > 1 });
+    const tour = this.mode === 'tour';
+    Engine.start(def, this.roster(), (res) => (tour ? this.onCupRound(res) : this.onResult(res)), tour ? { round: this.round, target: this.settings.target } : {});
   },
-  onRound(res) {
-    const m = this.match;
-    const prev = m.wins.slice();
-    for (const w of res.winners) m.wins[w.slot]++;
-    const done = res.winners.filter((w) => m.wins[w.slot] >= m.target);
-    Engine.showScore({ round: m.round, winners: res.winners, draw: !res.winners.length, wins: m.wins.slice(), prev, target: m.target, final: done.length > 0 }, () => {
-      if (done.length) this.onResult({ winners: done, ranking: [...res.ranking].sort((a, b) => m.wins[b.slot] - m.wins[a.slot]) });
-      else { m.round++; this.startRound(); }
+  onCupRound(res) {
+    const prev = this.cups.slice();
+    for (const w of res.winners) this.cups[w.slot]++;
+    const champs = res.winners.filter((w) => this.cups[w.slot] >= this.settings.target);
+    if (!champs.length) this.upcoming = this.drawGame();
+    Engine.showScore({
+      round: this.round, winners: res.winners, draw: !res.winners.length, wins: this.cups.slice(), prev,
+      target: this.settings.target, final: champs.length > 0, next: champs.length ? null : this.upcoming.name,
+    }, () => {
+      if (champs.length) this.onResult({ winners: champs, ranking: [...res.ranking].sort((a, b) => this.cups[b.slot] - this.cups[a.slot]) });
+      else this.nextCupRound();
     });
   },
+
   pause() {
     if (!Engine.running || Engine.phase === 'over' || Engine.phase === 'score' || this.overlay) return;
     Engine.pause();
@@ -169,62 +212,47 @@ const App = {
     this.show(this.mode === 'free' ? 'picker' : 'home');
   },
   next() {
-    if (this.mode === 'tour') {
-      if (this.champion != null) { this.champion = null; this.startTournament(); }
-      else this.nextTourGame();
-    } else this.play(this.lastDef);
+    if (this.mode === 'tour') this.startCup();
+    else this.playRound(this.lastDef);
   },
 
+  /* Result sheet: end of a single game (Mini Games) or the end of a Party Cup */
   onResult(res) {
-    const ranking = res.ranking;
+    const tour = this.mode === 'tour';
     const winners = res.winners || [];
     const w = winners[0] || null;
     const isWin = (p) => winners.some((x) => x.slot === p.slot);
-    const prevCups = this.cups.slice();
-    for (const x of winners) { this.wins[x.slot]++; if (this.mode === 'tour') this.cups[x.slot]++; }
-    this.champion = null;
-    const champs = this.mode === 'tour' ? winners.filter((x) => this.cups[x.slot] >= this.settings.target) : [];
-    if (champs.length) this.champion = champs[0].slot;
+    if (!tour) for (const x of winners) this.wins[x.slot]++;
+    this.champion = tour && w ? w.slot : null;
     const names = (list) => list.map((x) => COLORS[x.slot].name.toUpperCase()).join(' & ');
 
     const col = w ? COLORS[w.slot] : null;
-    $('#res-crown').innerHTML = w ? CROWN_SVG(this.champion != null ? '#FFBE0B' : col.main)
+    $('#res-crown').innerHTML = w ? CROWN_SVG(tour ? '#FFBE0B' : col.main)
       : `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="24" fill="#8E95C2"/><path d="M20 30h24M20 38h24" stroke="#fff" stroke-width="5" stroke-linecap="round"/></svg>`;
     const title = $('#res-title');
-    if (this.champion != null) {
-      title.textContent = champs.length > 1 ? `${names(champs)} ARE CHAMPIONS!` : `${names(champs)} IS CHAMPION!`;
+    if (tour) {
+      title.textContent = winners.length > 1 ? `${names(winners)} ARE CHAMPIONS!` : `${names(winners)} IS CHAMPION!`;
       Sfx.champion(); this.confetti();
     } else title.textContent = !w ? 'DRAW!' : winners.length > 1 ? `${names(winners)} WIN!` : `${names(winners)} WINS!`;
     title.style.color = col ? col.main : '#fff';
-    $('#res-sub').textContent = this.mode === 'tour'
-      ? (this.champion != null ? 'Party Cup complete' : `${this.lastDef.name} · first to ${this.settings.target} cups`)
-      : `${this.lastDef.name} · ${this.match.round} rounds played`;
+    $('#res-sub').textContent = tour ? `Party Cup · ${this.round} rounds played` : this.lastDef.name;
 
     const board = $('#res-board');
     board.innerHTML = '';
-    const rows = this.mode === 'tour'
-      ? [...ranking].sort((a, b) => this.cups[b.slot] - this.cups[a.slot])
-      : ranking;
-    for (const p of rows) {
+    for (const p of res.ranking) {
       const c = COLORS[p.slot];
       const row = document.createElement('div');
       row.className = 'brow' + (isWin(p) ? ' win' : '');
       row.style.setProperty('--col', c.main);
-      let right;
-      if (this.mode === 'tour') {
-        right = '<div class="cups">' + Array.from({ length: this.settings.target }, (_, k) => {
-          const on = k < this.cups[p.slot], isNew = on && k >= prevCups[p.slot];
-          return `<i class="${on ? 'on' : ''}${isNew ? ' new' : ''}"></i>`;
-        }).join('') + '</div>';
-      } else {
-        right = '<div class="stars">' + Array.from({ length: this.match.target }, (_, k) => `<i class="${k < this.match.wins[p.slot] ? 'on' : ''}"></i>`).join('') + '</div>';
-      }
+      const right = tour
+        ? '<div class="stars">' + Array.from({ length: this.settings.target }, (_, k) => `<i class="${k < this.cups[p.slot] ? 'on' : ''}"></i>`).join('') + '</div>'
+        : `<span class="score">${this.wins[p.slot]}</span>`;
       row.innerHTML = `<span class="dot">${faceSVG(p.human ? 'human' : 'cpu').replace('class="face"', '')}</span>
         <span class="nm">${c.name}${p.human ? '' : '<small>CPU</small>'}</span>${right}`;
       board.appendChild(row);
     }
-    $('#res-next').textContent = this.mode === 'tour' ? (this.champion != null ? 'New Cup' : 'Next Game') : 'Rematch';
-    $('#res-menu').textContent = this.mode === 'tour' ? 'Menu' : 'Games';
+    $('#res-next').textContent = tour ? 'New Cup' : 'Rematch';
+    $('#res-menu').textContent = tour ? 'Menu' : 'Games';
     this.openOverlay('result');
   },
 
@@ -251,7 +279,7 @@ const App = {
     if (this.overlay === 'pause') { this.resume(); return true; }
     if (this.overlay === 'result') { this.quit(); return true; }
     if (document.body.classList.contains('playing')) { this.pause(); return true; }
-    if (this.screen === 'picker') { this.show('home'); return true; }
+    if (this.screen === 'picker' || this.screen === 'cupsetup') { this.show('home'); return true; }
     return false;
   },
 };
