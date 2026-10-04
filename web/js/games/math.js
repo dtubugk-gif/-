@@ -2,13 +2,13 @@
 /* Brain Blitz — tap only when the equation is TRUE. */
 Games.push({
   id: 'math', name: 'Brain Blitz', control: 'TAP IF TRUE',
-  desc: 'Is the equation correct? Tap only if it is TRUE. Wrong taps cost a point. Most points wins!',
+  desc: 'Is the equation correct? Tap only if it is TRUE. Wrong taps cost a point. Score the most!',
   color: '#FFBE0B', grad: ['#FCD34D', '#F59E0B'], gradDark: '#B45309',
   icon: `<svg viewBox="0 0 64 64"><rect x="8" y="10" width="48" height="44" rx="10" fill="#fff"/><path d="M18 24h10M23 19v10M36 24h10M18 40h10M36 37h10M36 43h10" stroke="#F59E0B" stroke-width="4" stroke-linecap="round"/></svg>`,
 
   create(ctx) {
     const { players, arena: A, cx, cy } = ctx;
-    const GOAL = players.length > 2 ? 4 : 5;
+    const GOAL = players.length > 2 ? 2 : 3;
     const score = new Map(players.map((p) => [p, 0]));
     const locked = new Set();
     let q, state, t, limit, winner, plan, pop = 0;

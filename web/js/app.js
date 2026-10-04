@@ -12,7 +12,7 @@ const App = {
     const s = Store.get('slots', null);
     this.slots = Array.isArray(s) && s.length === 4 ? s : ['human', 'human', 'cpu', 'off'];
     if (this.slots.filter((x) => x !== 'off').length < 2) this.slots = ['human', 'human', 'off', 'off'];
-    this.settings = Object.assign({ sound: true, vibe: true, target: 5 }, Store.get('settings', {}));
+    this.settings = Object.assign({ sound: true, vibe: true, target: 5, rounds: 3 }, Store.get('settings', {}));
     this.applySettings();
     Engine.init();
     this.renderSlots();
@@ -27,6 +27,7 @@ const App = {
     Sfx.enabled = this.settings.sound;
     Haptics.enabled = this.settings.vibe;
     $('#target-lbl').textContent = this.settings.target;
+    $('#rounds-lbl').textContent = this.settings.rounds;
     Store.set('settings', this.settings);
   },
 
@@ -54,16 +55,18 @@ const App = {
     tap('#set-close', () => this.closeOverlay());
     $('#set-sound').addEventListener('change', (e) => { this.settings.sound = e.target.checked; this.applySettings(); Sfx.click(); });
     $('#set-vibe').addEventListener('change', (e) => { this.settings.vibe = e.target.checked; this.applySettings(); Haptics.buzz(30); });
-    document.querySelectorAll('#set-target button').forEach((b) => b.addEventListener('click', () => {
-      Sfx.click(); this.settings.target = +b.dataset.v; this.applySettings(); this.syncSettings();
-    }));
+    for (const key of ['target', 'rounds']) {
+      document.querySelectorAll(`#set-${key} button`).forEach((b) => b.addEventListener('click', () => {
+        Sfx.click(); this.settings[key] = +b.dataset.v; this.applySettings(); this.syncSettings();
+      }));
+    }
   },
 
   openSettings() { this.syncSettings(); this.openOverlay('settings'); },
   syncSettings() {
     $('#set-sound').checked = this.settings.sound;
     $('#set-vibe').checked = this.settings.vibe;
-    document.querySelectorAll('#set-target button').forEach((b) => b.classList.toggle('on', +b.dataset.v === this.settings.target));
+    for (const key of ['target', 'rounds']) document.querySelectorAll(`#set-${key} button`).forEach((b) => b.classList.toggle('on', +b.dataset.v === this.settings[key]));
   },
 
   /* ---------- players ---------- */
@@ -96,7 +99,7 @@ const App = {
     return this.slots
       .map((st, i) => ({ slot: i, human: st === 'human', state: st }))
       .filter((p) => p.state !== 'off')
-      .map((p) => ({ slot: p.slot, human: p.human, cups: this.mode === 'tour' ? this.cups[p.slot] : null, cupsTarget: this.mode === 'tour' ? this.settings.target : 0 }));
+      .map((p) => ({ slot: p.slot, human: p.human, cups: this.match ? this.match.wins[p.slot] : 0, cupsTarget: this.match ? this.match.target : 0 }));
   },
 
   /* ---------- game picker ---------- */
@@ -129,14 +132,31 @@ const App = {
     }
     this.play(this.bag.pop());
   },
+  /* A match = several quick rounds of the same mini game. Each round winner earns a star;
+     the first to `rounds` stars wins the match (and a cup in Party Cup mode). */
   play(def) {
     this.lastDef = def;
+    this.match = { def, round: 1, target: this.settings.rounds, wins: [0, 0, 0, 0] };
+    this.startRound();
+  },
+  startRound() {
+    const m = this.match;
     this.closeOverlay();
     document.body.classList.add('playing');
-    Engine.start(def, this.roster(), (res) => this.onResult(res));
+    Engine.start(m.def, this.roster(), (res) => this.onRound(res), { round: m.round, target: m.target, quick: m.round > 1 });
+  },
+  onRound(res) {
+    const m = this.match;
+    const prev = m.wins.slice();
+    for (const w of res.winners) m.wins[w.slot]++;
+    const done = res.winners.filter((w) => m.wins[w.slot] >= m.target);
+    Engine.showScore({ round: m.round, winners: res.winners, draw: !res.winners.length, wins: m.wins.slice(), prev, target: m.target, final: done.length > 0 }, () => {
+      if (done.length) this.onResult({ winners: done, ranking: [...res.ranking].sort((a, b) => m.wins[b.slot] - m.wins[a.slot]) });
+      else { m.round++; this.startRound(); }
+    });
   },
   pause() {
-    if (!Engine.running || Engine.phase === 'over' || this.overlay) return;
+    if (!Engine.running || Engine.phase === 'over' || Engine.phase === 'score' || this.overlay) return;
     Engine.pause();
     this.openOverlay('pause');
   },
@@ -177,8 +197,8 @@ const App = {
     } else title.textContent = !w ? 'DRAW!' : winners.length > 1 ? `${names(winners)} WIN!` : `${names(winners)} WINS!`;
     title.style.color = col ? col.main : '#fff';
     $('#res-sub').textContent = this.mode === 'tour'
-      ? (this.champion != null ? 'Tournament complete' : `${this.lastDef.name} · first to ${this.settings.target} cups`)
-      : this.lastDef.name;
+      ? (this.champion != null ? 'Party Cup complete' : `${this.lastDef.name} · first to ${this.settings.target} cups`)
+      : `${this.lastDef.name} · ${this.match.round} rounds played`;
 
     const board = $('#res-board');
     board.innerHTML = '';
@@ -196,7 +216,9 @@ const App = {
           const on = k < this.cups[p.slot], isNew = on && k >= prevCups[p.slot];
           return `<i class="${on ? 'on' : ''}${isNew ? ' new' : ''}"></i>`;
         }).join('') + '</div>';
-      } else right = `<span class="score">${this.wins[p.slot]}</span>`;
+      } else {
+        right = '<div class="stars">' + Array.from({ length: this.match.target }, (_, k) => `<i class="${k < this.match.wins[p.slot] ? 'on' : ''}"></i>`).join('') + '</div>';
+      }
       row.innerHTML = `<span class="dot">${faceSVG(p.human ? 'human' : 'cpu').replace('class="face"', '')}</span>
         <span class="nm">${c.name}${p.human ? '' : '<small>CPU</small>'}</span>${right}`;
       board.appendChild(row);

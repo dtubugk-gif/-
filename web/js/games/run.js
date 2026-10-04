@@ -10,7 +10,7 @@ Games.push({
     const { players, arena: A } = ctx;
     const n = players.length;
     const laneW = A.w / n, pad = 18, L = A.h - pad * 2, OFF = 0.2;
-    const D = 5.2, VR = 0.5, AIR = 0.42;
+    const D = 4.0, VR = 0.5, AIR = 0.42;
     const hurdles = [];
     for (let x = 0.7; x < D - 0.3;) {
       hurdles.push(x);

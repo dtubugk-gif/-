@@ -10,7 +10,7 @@ Games.push({
     const { players, S, arena: A } = ctx;
     const m = 8;
     const F = { x: A.x + m, y: A.y + m, w: A.w - m * 2, h: A.h - m * 2 };
-    const W = S * 0.034, SEG = 4, TURN = 3.2, LIMIT = 70;
+    const W = S * 0.034, SEG = 4, TURN = 3.2, LIMIT = 45;
     const Sn = players.map((p) => ({
       p, x: p.lay.home.x, y: p.lay.home.y, ang: p.lay.dir + Math.PI / 2 + 0.25, pts: [], len: S * 0.3, dead: false,
       think: 0, hold: false, grow: 0,

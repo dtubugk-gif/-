@@ -3,13 +3,13 @@
    Tapping too early, or while the orb is PURPLE, costs you a point. */
 Games.push({
   id: 'reflex', name: 'Quick Draw', control: 'TAP',
-  desc: 'Tap first when the orb turns WHITE: +1. Tap too early or on PURPLE: -1. First to 5!',
+  desc: 'Tap first when the orb turns WHITE: +1. Tap too early or on PURPLE: -1. First to 3!',
   color: '#00C2FF', grad: ['#22D3EE', '#3B82F6'], gradDark: '#1E4FB3',
   icon: `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="24" fill="#fff" opacity=".25"/><circle cx="32" cy="32" r="17" fill="#fff"/><path d="M35 14L22 35h9l-3 15 14-22h-9z" fill="#3B82F6"/></svg>`,
 
   create(ctx) {
     const { players, S, cx, cy } = ctx;
-    const GOAL = 5;
+    const GOAL = 3;
     const score = new Map(players.map((p) => [p, 0]));
     const locked = new Set();
     const hurt = new Map(players.map((p) => [p, 0]));

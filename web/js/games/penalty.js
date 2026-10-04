@@ -2,13 +2,13 @@
 /* Penalty Kicks — your aim swings left and right; tap to shoot past the keeper. */
 Games.push({
   id: 'penalty', name: 'Penalty Kicks', control: 'TAP TO SHOOT',
-  desc: 'Your aim swings left and right. Tap to shoot past the goalkeeper. Bank shots off the walls work too! First to 4.',
+  desc: 'Your aim swings left and right. Tap to shoot past the goalkeeper. Bank shots off the walls work too! First to 2 goals.',
   color: '#10B981', grad: ['#34D399', '#0F766E'], gradDark: '#134E4A',
   icon: `<svg viewBox="0 0 64 64"><path d="M8 14h48v20" stroke="#fff" stroke-width="5" fill="none" stroke-linejoin="round"/><path d="M8 14v20" stroke="#fff" stroke-width="5"/><path d="M12 18h40M12 24h40M12 30h40M18 14v20M28 14v20M38 14v20M48 14v20" stroke="#fff" stroke-width="1.5" opacity=".5"/><circle cx="40" cy="48" r="9" fill="#fff"/><path d="M40 44l3 2-1 4h-4l-1-4z" fill="#0F766E"/></svg>`,
 
   create(ctx) {
     const { players, S, arena: A, cx } = ctx;
-    const GOAL = 4;
+    const GOAL = 2;
     const GW = A.w * 0.56, BR = S * 0.028, KW = GW * 0.24, KH = 14;
     const goals = [
       { top: true, line: A.y + 16, kx: cx, kv: 0, tgt: cx, retarget: 0 },
@@ -54,7 +54,7 @@ Games.push({
     return {
       where(p) { const s = Sh.find((x) => x.p === p); return { x: s.x, y: s.y, r: S * 0.06 }; },
       update(dt) {
-        if (ctx.t > 60 && !ctx.over) { const r = [...players].sort((a, c) => score.get(c) - score.get(a)); ctx.end(r, score.get(r[0]) === score.get(r[1])); }
+        if (ctx.t > 35 && !ctx.over) { const r = [...players].sort((a, c) => score.get(c) - score.get(a)); ctx.end(r, score.get(r[0]) === score.get(r[1])); }
         // keepers: patrol, then rush to block incoming shots
         for (const gl of goals) {
           let target = null, soon = 1e9, tb = null;

@@ -2,13 +2,13 @@
 /* Turbo Racers — hold for gas, let go before the corners or you spin out. 4 laps. */
 Games.push({
   id: 'racing', name: 'Turbo Racers', control: 'HOLD = GAS',
-  desc: 'Hold for gas, let go to brake. Take a corner too fast and you crash! First to finish 4 laps wins.',
+  desc: 'Hold for gas, let go to brake. Take a corner too fast and you crash! First to finish 3 laps wins.',
   color: '#EF4444', grad: ['#F87171', '#B91C1C'], gradDark: '#7F1D1D',
   icon: `<svg viewBox="0 0 64 64"><rect x="20" y="8" width="24" height="48" rx="9" fill="#fff"/><rect x="24" y="18" width="16" height="10" rx="3" fill="#B91C1C"/><rect x="24" y="40" width="16" height="6" rx="2" fill="#B91C1C" opacity=".6"/><rect x="14" y="14" width="6" height="12" rx="2" fill="#fff" opacity=".8"/><rect x="44" y="14" width="6" height="12" rx="2" fill="#fff" opacity=".8"/><rect x="14" y="40" width="6" height="12" rx="2" fill="#fff" opacity=".8"/><rect x="44" y="40" width="6" height="12" rx="2" fill="#fff" opacity=".8"/></svg>`,
 
   create(ctx) {
     const { players, S, arena: A, cx, cy } = ctx;
-    const LAPS = 4;
+    const LAPS = 3;
     const n = players.length;
     const tw = A.w - 24, th = A.h - 24;
     const lw = clamp(S * 0.07, 20, 30), curb = 6;

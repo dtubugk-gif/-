@@ -221,6 +221,9 @@ body.playing .screen { display: none; }
 .cups i.on { background: var(--p3); box-shadow: 0 0 10px rgba(255,190,11,.6); }
 .cups i.new { animation: cupNew .6s .3s cubic-bezier(.2,1.8,.4,1) both; }
 @keyframes cupNew { from { transform: scale(0); } to { transform: none; } }
+.stars { display: flex; gap: 3px; }
+.stars i { width: 16px; height: 16px; background: rgba(255,255,255,.12); clip-path: polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
+.stars i.on { background: #FFE27A; }
 .brow .score { font-weight: 700; font-size: 18px; min-width: 22px; text-align: right; }
 
 .toggle { display: flex; align-items: center; justify-content: space-between; padding: 12px 6px; font-size: 18px; font-weight: 500; }

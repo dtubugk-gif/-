@@ -114,6 +114,16 @@ function rrect(g, x, y, w, h, r) {
   g.closePath();
 }
 
+function drawStar(g, x, y, r, fill) {
+  g.fillStyle = fill;
+  g.beginPath();
+  for (let k = 0; k < 10; k++) {
+    const rr = k % 2 ? r * 0.45 : r, a = (k / 10) * TAU - Math.PI / 2;
+    g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  g.closePath(); g.fill();
+}
+
 function font(size, weight = 700) { return `${weight} ${Math.round(size)}px ${FONT}`; }
 
 function text(g, str, x, y, size, color = '#fff', o = {}) {

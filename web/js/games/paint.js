@@ -2,13 +2,13 @@
 /* Paint Fight — roll around painting the floor your color. Most paint after 30 seconds wins. */
 Games.push({
   id: 'paint', name: 'Paint Fight', control: 'HOLD TO MOVE',
-  desc: 'You spin. Hold to roll and paint the floor your color. Grab paint bombs for big splashes! Most paint in 30 seconds wins.',
+  desc: 'You spin. Hold to roll and paint the floor your color. Grab paint bombs for big splashes! Most paint in 20 seconds wins.',
   color: '#EC4899', grad: ['#F9A8D4', '#DB2777'], gradDark: '#831843',
   icon: `<svg viewBox="0 0 64 64"><rect x="8" y="8" width="22" height="22" rx="5" fill="#fff"/><rect x="34" y="8" width="22" height="22" rx="5" fill="#fff" opacity=".45"/><rect x="8" y="34" width="22" height="22" rx="5" fill="#fff" opacity=".45"/><rect x="34" y="34" width="22" height="22" rx="5" fill="#fff"/><circle cx="32" cy="32" r="9" fill="#DB2777" stroke="#fff" stroke-width="3"/></svg>`,
 
   create(ctx) {
     const { players, S, arena: A } = ctx;
-    const TIME = 30;
+    const TIME = 20;
     const c = S / 11;
     const cols = Math.floor((A.w - 16) / c), rows = Math.floor((A.h - 16) / c);
     const gx = A.x + (A.w - cols * c) / 2, gy = A.y + (A.h - rows * c) / 2;

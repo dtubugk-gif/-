@@ -2,13 +2,13 @@
 /* Tower Stack — drop the sliding block right on top of your tower. Overhang gets sliced off. */
 Games.push({
   id: 'stack', name: 'Tower Stack', control: 'TAP TO DROP',
-  desc: 'A block slides back and forth. Tap to drop it on your tower. Anything hanging over gets cut off! First to 14 blocks wins.',
+  desc: 'A block slides back and forth. Tap to drop it on your tower. Anything hanging over gets cut off! First to 10 blocks wins.',
   color: '#06B6D4', grad: ['#67E8F9', '#0E7490'], gradDark: '#164E63',
   icon: `<svg viewBox="0 0 64 64"><rect x="14" y="44" width="36" height="10" rx="3" fill="#fff"/><rect x="16" y="32" width="32" height="10" rx="3" fill="#fff" opacity=".85"/><rect x="18" y="20" width="26" height="10" rx="3" fill="#fff" opacity=".7"/><rect x="30" y="8" width="26" height="10" rx="3" fill="#fff"/><path d="M8 13h16" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 5"/></svg>`,
 
   create(ctx) {
     const { players, arena: A } = ctx;
-    const n = players.length, GOAL = 14;
+    const n = players.length, GOAL = 10;
     const laneW = A.w / n, tw = Math.min(laneW - 18, 140);
     const bh = clamp(A.h * 0.045, 16, 26);
     const visible = Math.floor((A.h - 70) / bh);

@@ -2,13 +2,13 @@
 /* Ping Pong — your paddle slides by itself; tap to reverse it. Defend your edge. 3 lives. */
 Games.push({
   id: 'pong', name: 'Ping Pong', control: 'TAP TO TURN',
-  desc: 'Your paddle slides on its own. Tap to change direction. Don\'t let the ball past your edge. 3 lives, last one standing wins!',
+  desc: 'Your paddle slides on its own. Tap to change direction. Don\'t let the ball past your edge. Last one standing wins the round!',
   color: '#8B5CF6', grad: ['#C4B5FD', '#7C3AED'], gradDark: '#4C1D95',
   icon: `<svg viewBox="0 0 64 64"><rect x="14" y="8" width="36" height="7" rx="3.5" fill="#fff"/><rect x="14" y="49" width="36" height="7" rx="3.5" fill="#fff" opacity=".7"/><circle cx="36" cy="32" r="6" fill="#fff"/><path d="M22 22l8 6" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-dasharray="2 5"/></svg>`,
 
   create(ctx) {
     const { players, S, arena: A, cx, cy } = ctx;
-    const n = players.length, LIVES = players.length > 2 ? 2 : 3, BR = S * 0.022, PH = 10;
+    const n = players.length, LIVES = players.length > 2 ? 1 : 2, BR = S * 0.022, PH = 10;
     const inset = 16;
     const segOf = (p) => {
       const top = p.lay.side === 'top';
@@ -31,7 +31,7 @@ Games.push({
       const alive = Pd.filter((d) => !d.p.out);
       const tgt = pick(alive);
       const ang = Math.atan2(tgt.s.y - cy, (tgt.s.x0 + tgt.s.x1) / 2 - cx) + rand(-0.25, 0.25);
-      const sp = S * Math.min(1.1, 0.6 + ctx.t * 0.012);
+      const sp = S * Math.min(1.2, 0.72 + ctx.t * 0.02);
       balls.push({ x: cx, y: cy, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, sp, born: 0 });
     }
     function predict(b, yLine) {

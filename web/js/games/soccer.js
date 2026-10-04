@@ -2,7 +2,7 @@
 /* Soccer Clash — bottom team vs top team. Spin, hold to run, release next to the ball to kick. */
 Games.push({
   id: 'soccer', name: 'Soccer Clash', control: 'HOLD + RELEASE',
-  desc: 'Bottom team vs top team! You spin. Hold to run, let go next to the ball to kick. First to 3 goals!',
+  desc: 'Bottom team vs top team! You spin. Hold to run, let go next to the ball to kick. Score a goal to win the round!',
   color: '#22C55E', grad: ['#4ADE80', '#15803D'], gradDark: '#14532D',
   icon: `<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="22" fill="#fff"/><path d="M32 22l8 6-3 9h-10l-3-9z" fill="#15803D"/><path d="M32 10v12M40 28l11-4M37 37l7 9M27 37l-7 9M24 28l-11-4" stroke="#15803D" stroke-width="3"/></svg>`,
 
@@ -10,7 +10,7 @@ Games.push({
     const { players, S, arena: A, cx, cy } = ctx;
     const m = 12;
     const F = { x: A.x + m, y: A.y + m, w: A.w - m * 2, h: A.h - m * 2 };
-    const GW = F.w * 0.5, GD = 11, GOAL = 3, LIMIT = 75, CR = S * 0.09;
+    const GW = F.w * 0.5, GD = 11, GOAL = 1, LIMIT = 50, CR = S * 0.09;
     const PR = S * 0.055, BR = S * 0.03;
     const teamOf = (p) => (p.lay.side === 'bottom' ? 0 : 1);
     const size = [0, 0];

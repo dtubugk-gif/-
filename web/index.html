@@ -27,11 +27,11 @@
   <div class="modes">
     <button id="btn-tour" class="mode big">
       <span class="mode-ico"><svg viewBox="0 0 64 64"><path d="M18 10h28v10a14 14 0 0 1-28 0z" fill="#fff"/><path d="M18 14H9a9 9 0 0 0 10 12M46 14h9a9 9 0 0 1-10 12" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/><rect x="28" y="33" width="8" height="10" fill="#fff"/><rect x="20" y="43" width="24" height="8" rx="3" fill="#fff"/></svg></span>
-      <span class="mode-txt"><b>TOURNAMENT</b><small>Random games · first to <em id="target-lbl">5</em> cups</small></span>
+      <span class="mode-txt"><b>PARTY CUP</b><small>Random games · first to <em id="target-lbl">5</em> cups</small></span>
     </button>
     <button id="btn-free" class="mode">
       <span class="mode-ico"><svg viewBox="0 0 64 64"><rect x="8" y="8" width="20" height="20" rx="6" fill="#fff"/><rect x="36" y="8" width="20" height="20" rx="6" fill="#fff" opacity=".7"/><rect x="8" y="36" width="20" height="20" rx="6" fill="#fff" opacity=".7"/><rect x="36" y="36" width="20" height="20" rx="6" fill="#fff"/></svg></span>
-      <span class="mode-txt"><b>MINI GAMES</b><small>Pick any game</small></span>
+      <span class="mode-txt"><b>MINI GAMES</b><small>Pick a game · first to <em id="rounds-lbl">3</em> round wins</small></span>
     </button>
   </div>
 
@@ -79,6 +79,9 @@
     <h2>Settings</h2>
     <label class="toggle"><span>Sound</span><input type="checkbox" id="set-sound"><i></i></label>
     <label class="toggle"><span>Vibration</span><input type="checkbox" id="set-vibe"><i></i></label>
+    <div class="seg-wrap"><span>Rounds to win</span>
+      <div class="seg" id="set-rounds"><button data-v="2">2</button><button data-v="3">3</button><button data-v="5">5</button></div>
+    </div>
     <div class="seg-wrap"><span>Cups to win</span>
       <div class="seg" id="set-target"><button data-v="3">3</button><button data-v="5">5</button><button data-v="7">7</button></div>
     </div>

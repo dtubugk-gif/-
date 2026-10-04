@@ -16,7 +16,7 @@ Games.push({
     function newRound() {
       const alive = ctx.alive();
       holder = pick(alive);
-      fuseMax = fuse = rand(4.5, 9.5);
+      fuseMax = fuse = rand(2.5, 5.5);
       flight = null; botT = rand(0.25, 0.9); boomAt = null;
     }
     newRound();

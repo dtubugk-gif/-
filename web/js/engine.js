@@ -160,8 +160,9 @@ const Engine = {
   },
 
   /* ---------- lifecycle ---------- */
-  start(def, players, onEnd) {
+  start(def, players, onEnd, opts = {}) {
     this.def = def; this.onEnd = onEnd;
+    this.round = opts.round || 1; this.target = opts.target || 0; this.score = null; this.onScoreDone = null;
     this.players = players.map((p, i) => ({
       ...p, i, ptrs: 0, down: false, pressed: false, released: false, taps: 0,
       flash: 0, pv: 0, out: false, ready: false, botTapT: 0, botReadyAt: rand(0.5, 1.4),
@@ -172,8 +173,16 @@ const Engine = {
     FX.reset();
     this.inst = def.create(this.makeCtx());
     this.phase = 'intro'; this.phaseT = 0; this.playT = 0; this.lastCount = 4;
+    // later rounds of a match skip the instructions and go straight to the countdown
+    if (opts.quick) { this.players.forEach((p) => { p.ready = true; }); this.phase = 'count'; }
     this.paused = false;
     if (!this.running) { this.running = true; this.last = performance.now(); requestAnimationFrame(this.loop); }
+  },
+  /* Between-rounds scoreboard. info = { round, winners, draw, wins[slot], prev[slot], target, final } */
+  showScore(info, cb) {
+    this.phase = 'score'; this.phaseT = 0; this.score = info; this.onScoreDone = cb;
+    this.releaseAll();
+    if (!info.draw) for (let i = 0; i < info.winners.length; i++) Sfx.tone(988 + i * 200, 0.12, { type: 'triangle', vol: 0.14, delay: 0.5 + i * 0.12 });
   },
   stop() { this.running = false; this.inst = null; this.phase = 'idle'; this.releaseAll(); },
   pause() { if (!this.running) return; this.paused = true; this.releaseAll(); },
@@ -272,9 +281,15 @@ const Engine = {
       if (this.playT > 150 && this.phase === 'play') this.end([...this.players], true); // safety net
     } else if (this.phase === 'over') {
       this.inst.update(dt * 0.35);
-      if (this.phaseT > 2.0 && this.onEnd) {
+      if (this.phaseT > 1.6 && this.onEnd) {
         const cb = this.onEnd; this.onEnd = null;
         cb(this.result);
+      }
+    } else if (this.phase === 'score') {
+      const skip = this.phaseT > 1.0 && this.players.some((p) => p.human && p.pressed);
+      if ((this.phaseT > (this.score.final ? 2.6 : 3.4) || skip) && this.onScoreDone) {
+        const cb = this.onScoreDone; this.onScoreDone = null;
+        cb();
       }
     }
     FX.update(dt);
@@ -326,6 +341,7 @@ const Engine = {
     if (this.phase === 'intro') this.drawIntro(g);
     else if (this.phase === 'count') this.drawCount(g);
     else if (this.phase === 'over') this.drawOver(g);
+    else if (this.phase === 'score') this.drawScore(g);
   },
 
   drawButton(g, p) {
@@ -353,7 +369,9 @@ const Engine = {
 
     const cyT = top + (h - depth) / 2;
     let label, sub = p.human ? '' : 'CPU';
-    if (this.phase === 'intro') {
+    if (this.phase === 'score') {
+      label = p.human ? 'NEXT' : '';
+    } else if (this.phase === 'intro') {
       if (p.ready) label = 'READY!';
       else label = p.human ? 'TAP TO READY' : '...';
     } else if (out) label = 'OUT';
@@ -362,13 +380,11 @@ const Engine = {
     g.globalAlpha = out ? 0.5 : 1;
     text(g, label, 0, cyT + (sub ? -big * 0.18 : 0), big * (label.length > 8 ? 0.72 : 1), '#fff');
     if (sub) text(g, sub, 0, cyT + big * 0.72, big * 0.42, 'rgba(255,255,255,.75)', { shadow: false });
-    // cups (tournament)
-    if (p.cups != null && p.cupsTarget) {
-      const n = p.cupsTarget, s = 7, gap = 4, tw = n * s * 2 + (n - 1) * gap;
-      for (let i = 0; i < n; i++) {
-        g.fillStyle = i < p.cups ? '#FFE27A' : 'rgba(0,0,0,.18)';
-        g.beginPath(); g.arc(-tw / 2 + s + i * (s * 2 + gap), top + (h - depth) - 11, s * 0.62, 0, TAU); g.fill();
-      }
+    // round stars won in this match
+    if (p.cupsTarget) {
+      const val = this.phase === 'score' && this.score ? this.score.wins[p.slot] : p.cups;
+      const n = p.cupsTarget, s = 7, gap = 5, tw = n * s * 2 + (n - 1) * gap;
+      for (let i = 0; i < n; i++) drawStar(g, -tw / 2 + s + i * (s * 2 + gap), top + (h - depth) - 12, s, i < val ? '#FFE27A' : 'rgba(0,0,0,.2)');
     }
     g.globalAlpha = 1;
     g.restore();
@@ -445,6 +461,45 @@ const Engine = {
       g.save(); g.translate(0, a.h * 0.2); g.scale(s, s);
       g.globalAlpha = t > 0.75 ? 1 - (t - 0.75) / 0.25 : 1;
       text(g, String(Math.max(1, n)), 0, 0, Math.min(a.h * 0.16, 110), '#fff');
+      g.restore();
+      if (this.target) text(g, `ROUND ${this.round}`, 0, a.h * 0.2 - Math.min(a.h * 0.16, 110) * 0.85, 22, '#FFE27A');
+    });
+  },
+
+  drawScore(g) {
+    const a = this.arena, sc = this.score;
+    g.fillStyle = 'rgba(8,10,24,.72)'; g.fillRect(a.x, a.y, a.w, a.h);
+    const k = easeOutBack(Math.min(1, this.phaseT / 0.4));
+    const names = sc.winners.map((w) => COLORS[w.slot].name.toUpperCase()).join(' & ');
+    const wcol = sc.draw ? '#8E95C2' : COLORS[sc.winners[0].slot].main;
+    const total = sc.final ? 2.6 : 3.4;
+    this.mirror((g) => {
+      const n = this.players.length;
+      const cw = Math.min(a.w - 32, 340), rowH = Math.min(34, (a.h / 2 - 110) / n), ch = 78 + n * rowH + 22;
+      g.save(); g.translate(0, 12 + ch / 2); g.scale(k, k); g.translate(0, -ch / 2);
+      g.fillStyle = 'rgba(0,0,0,.3)'; rrect(g, -cw / 2, 6, cw, ch, 24); g.fill();
+      g.fillStyle = '#1E2448'; rrect(g, -cw / 2, 0, cw, ch, 24); g.fill();
+      g.fillStyle = wcol; rrect(g, -cw / 2, 0, cw, 6, 3); g.fill();
+      text(g, sc.final ? 'MATCH OVER!' : `ROUND ${sc.round}`, 0, 28, 24, '#fff');
+      text(g, sc.draw ? 'DRAW - NO STAR' : `${names} ${sc.winners.length > 1 ? 'GET' : 'GETS'} A STAR`, 0, 56, 15, wcol, { shadow: false });
+      this.players.forEach((p, i) => {
+        const y = 78 + i * rowH + rowH / 2, col = COLORS[p.slot];
+        const won = sc.winners.some((w) => w.slot === p.slot);
+        if (won) { g.fillStyle = 'rgba(255,255,255,.06)'; rrect(g, -cw / 2 + 10, y - rowH / 2 + 2, cw - 20, rowH - 4, 10); g.fill(); }
+        g.fillStyle = col.main; g.beginPath(); g.arc(-cw / 2 + 28, y, rowH * 0.3, 0, TAU); g.fill();
+        text(g, col.name + (p.human ? '' : ' CPU'), -cw / 2 + 46, y + 1, 15, '#fff', { align: 'left', shadow: false, weight: 600 });
+        const t = sc.target, r = Math.min(10, rowH * 0.34), gap = 6, tw = t * r * 2 + (t - 1) * gap;
+        for (let j = 0; j < t; j++) {
+          const on = j < sc.wins[p.slot], fresh = on && j >= sc.prev[p.slot];
+          let s = 1;
+          if (fresh) { const q = clamp((this.phaseT - 0.5) / 0.35, 0, 1); s = q < 1 ? easeOutBack(q) : 1; if (q <= 0) s = 0; }
+          const x = cw / 2 - 18 - tw + r + j * (r * 2 + gap);
+          drawStar(g, x, y, r, 'rgba(255,255,255,.12)');
+          if (on && s > 0) drawStar(g, x, y, r * s, '#FFE27A');
+        }
+      });
+      g.fillStyle = 'rgba(255,255,255,.1)'; rrect(g, -cw / 2 + 24, ch - 14, cw - 48, 4, 2); g.fill();
+      g.fillStyle = wcol; rrect(g, -cw / 2 + 24, ch - 14, (cw - 48) * Math.min(1, this.phaseT / total), 4, 2); g.fill();
       g.restore();
     });
   },
