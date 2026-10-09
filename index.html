@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Periapsis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one full-bleed canvas stage (a star with two orbits); HUD floats on top; menus are a single panel that sits beside the orbit on wide screens and below it on phones */
+:root {
+  --void: #0b0e2a;
+  --deep: #1a2056;
+  --ring: #4a52a8;
+  --text: #eef0ff;
+  --muted: #aab0dc;
+  --star: #ffb547;
+  --craft: #8fe6ff;
+  --debris: #ff5d7a;
+  --spark: #ffe08a;
+  --line: rgba(143, 160, 255, 0.24);
+  --panel: rgba(20, 25, 66, 0.88);
+  --well: rgba(143, 160, 255, 0.08);
+  --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--void);
+  color: var(--text);
+  font: 16px/1.5 var(--body);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+[hidden] { display: none !important; }
+button { font: inherit; color: inherit; }
+button:focus-visible, .seg input:focus-visible + label {
+  outline: 2px solid var(--craft);
+  outline-offset: 2px;
+}
+
+.app { position: relative; height: 100%; overflow: hidden; user-select: none; -webkit-user-select: none; }
+#stage { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: pointer; }
+
+/* HUD */
+.hud {
+  position: absolute; inset-inline: 0; top: 0;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 16px; pointer-events: none;
+}
+.readout { display: flex; flex-direction: column; gap: 2px; line-height: 1; }
+.label { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+#score { font-family: var(--display); font-weight: 800; font-size: clamp(32px, 8vw, 46px); font-variant-numeric: tabular-nums; margin-top: 4px; }
+.meta { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 6px; line-height: 1.3; }
+.app[data-state="menu"] .readout { visibility: hidden; }
+.hud-actions { display: flex; gap: 8px; pointer-events: auto; }
+.icon-btn {
+  width: 44px; height: 44px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--panel);
+  display: grid; place-items: center; cursor: pointer;
+}
+.icon-btn svg { width: 20px; height: 20px; }
+
+.coach-live {
+  position: absolute; inset-inline: 16px; bottom: 20px; margin: 0;
+  text-align: center; font-size: 15px; color: var(--muted);
+  pointer-events: none; transition: opacity 0.3s;
+}
+.coach-live:empty { opacity: 0; }
+.coach-live b { color: var(--craft); }
+
+/* Overlays */
+.overlay {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  padding: 16px; overflow-y: auto;
+  background: linear-gradient(to bottom, rgba(11, 14, 42, 0.15), rgba(11, 14, 42, 0.72));
+}
+#menu { place-items: end center; background: linear-gradient(to bottom, rgba(11, 14, 42, 0) 30%, rgba(11, 14, 42, 0.8)); }
+.panel {
+  width: 100%; max-width: 400px;
+  background: var(--panel);
+  border: 1px solid var(--line); border-radius: 20px;
+  padding: 22px;
+  display: flex; flex-direction: column; gap: 16px;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+.eyebrow { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--star); }
+h1, h2 { font-family: var(--display); font-weight: 800; margin: 0; line-height: 1; letter-spacing: -0.02em; text-wrap: balance; }
+h1 { font-size: clamp(34px, 10vw, 48px); }
+h2 { font-size: clamp(26px, 7vw, 34px); }
+.lede { margin: 0; color: var(--muted); max-width: 60ch; }
+.lede b { color: var(--text); }
+
+.modes { border: 0; padding: 0; margin: 0; min-width: 0; }
+.modes legend { padding: 0; margin-bottom: 8px; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: var(--well); padding: 4px; border-radius: 14px; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label {
+  min-height: 56px; padding: 6px 4px; border-radius: 10px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  text-align: center; font-weight: 700; font-size: 15px; color: var(--muted);
+}
+.seg label small { font-weight: 400; font-size: 11px; line-height: 1.2; }
+.seg input:checked + label { background: var(--deep); color: var(--text); box-shadow: inset 0 0 0 1px var(--craft); }
+
+.primary {
+  min-height: 52px; border: 0; border-radius: 14px; cursor: pointer;
+  background: var(--star); color: var(--void);
+  font-family: var(--display); font-weight: 800; font-size: 16px; letter-spacing: 0.02em;
+}
+.primary:hover { filter: brightness(1.06); }
+
+.facts { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; font-variant-numeric: tabular-nums; }
+.pts-d { color: var(--debris); } .pts-s { color: var(--spark); } .pts-c { color: var(--craft); }
+
+.final { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.final .big { font-family: var(--display); font-weight: 800; font-size: 64px; line-height: 1; font-variant-numeric: tabular-nums; }
+.final .sub { color: var(--muted); font-variant-numeric: tabular-nums; }
+.stats { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.stats li { display: flex; justify-content: space-between; gap: 8px; padding: 10px 12px; background: var(--well); border-radius: 10px; font-size: 14px; }
+.stats span { color: var(--muted); }
+.stats b { font-variant-numeric: tabular-nums; }
+.coach { display: flex; flex-direction: column; gap: 4px; }
+.coach .label { color: var(--craft); }
+.coach p { margin: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  min-height: 44px; padding: 0 18px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: transparent; font-weight: 700; font-size: 15px;
+}
+.chip:hover { background: var(--well); }
+.chip.is-primary { background: var(--star); border-color: var(--star); color: var(--void); }
+.chip.is-suggest { border-color: var(--craft); color: var(--craft); }
+.pause-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+@media (min-width: 860px) {
+  #menu { place-items: center start; padding-inline: max(16px, 6vw); background: linear-gradient(to right, rgba(11, 14, 42, 0.7), rgba(11, 14, 42, 0) 55%); }
+}
+@media (max-height: 640px) and (max-width: 859px) {
+  .lede { display: none; }
+}
+</style>
+
+<main class="app" id="app" data-state="menu">
+  <canvas id="stage" role="img" aria-label="Game field: a star with two orbits, your craft, debris and sparks"></canvas>
+
+  <header class="hud">
+    <div class="readout" aria-live="off">
+      <span class="label">Score</span>
+      <span id="score">0</span>
+      <span class="meta"><span id="orbits">0 orbits</span> · <span id="modeTag">Standard</span></span>
+    </div>
+    <div class="hud-actions">
+      <button class="icon-btn" id="soundBtn" type="button" aria-pressed="true" aria-label="Sound">
+        <svg id="icoSoundOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></svg>
+        <svg id="icoSoundOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>
+      </button>
+      <button class="icon-btn" id="pauseBtn" type="button" aria-label="Pause" hidden>
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <p class="coach-live" id="coachLive" role="status"></p>
+
+  <section class="overlay" id="menu" aria-labelledby="menuTitle">
+    <div class="panel" id="menuPanel">
+      <p class="eyebrow">Two orbits · one tap</p>
+      <h1 id="menuTitle">Periapsis</h1>
+      <p class="lede">Your craft circles a young star. <b>Tap to hop</b> between the inner and outer orbit, dodge debris, and collect sparks.</p>
+      <fieldset class="modes">
+        <legend class="label">Mode</legend>
+        <div class="seg">
+          <input type="radio" name="mode" id="mode-assist" value="assist"><label for="mode-assist">Assist<small>Slower, wider gaps</small></label>
+          <input type="radio" name="mode" id="mode-standard" value="standard"><label for="mode-standard">Standard<small>The real thing</small></label>
+          <input type="radio" name="mode" id="mode-hard" value="hard"><label for="mode-hard">Hard<small>Faster, denser</small></label>
+        </div>
+      </fieldset>
+      <button class="primary" id="launchBtn" type="button">Launch</button>
+      <dl class="facts">
+        <dt>Best</dt><dd id="menuBest">0</dd>
+        <dt>Points</dt><dd><span class="pts-d">Debris passed +1</span> · <span class="pts-s">Spark +3</span> · <span class="pts-c">Close call +2</span></dd>
+        <dt>Controls</dt><dd>Tap, click or Space · P pauses</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section class="overlay" id="over" aria-labelledby="overTitle" hidden>
+    <div class="panel">
+      <p class="eyebrow" id="overMode">Standard mode</p>
+      <h2 id="overTitle">Signal lost</h2>
+      <div class="final"><span class="big" id="finalScore">0</span><span class="sub" id="finalBest">Best 0</span></div>
+      <ul class="stats">
+        <li><span>Orbits</span><b id="stOrbits">0</b></li>
+        <li><span>Debris passed</span><b id="stDodged">0</b></li>
+        <li><span>Sparks</span><b id="stSparks">0</b></li>
+        <li><span>Close calls</span><b id="stClose">0</b></li>
+      </ul>
+      <div class="coach">
+        <span class="label">Coach</span>
+        <p id="coachTip"></p>
+      </div>
+      <div class="chips" id="chips"></div>
+    </div>
+  </section>
+
+  <section class="overlay" id="pause" aria-labelledby="pauseTitle" hidden>
+    <div class="panel">
+      <p class="eyebrow">Holding orbit</p>
+      <h2 id="pauseTitle">Paused</h2>
+      <div class="pause-actions">
+        <button class="chip is-primary" id="resumeBtn" type="button">Resume</button>
+        <button class="chip" id="quitBtn" type="button">End run</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const app = $('app'), canvas = $('stage'), ctx = canvas.getContext('2d');
+
+  const css = getComputedStyle(document.documentElement);
+  const C = {};
+  ['void', 'ring', 'text', 'muted', 'star', 'craft', 'debris', 'spark'].forEach((k) => { C[k] = css.getPropertyValue('--' + k).trim(); });
+  const alpha = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; };
+  const DISPLAY = css.getPropertyValue('--display').trim();
+
+  const motionQuery = matchMedia('(prefers-reduced-motion: reduce)');
+  let reduced = motionQuery.matches;
+  if (motionQuery.addEventListener) motionQuery.addEventListener('change', (e) => { reduced = e.matches; });
+
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('periapsis.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('periapsis.' + k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } }
+  };
+
+  const TAU = Math.PI * 2;
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const norm = (a) => { a = (a + Math.PI) % TAU; if (a < 0) a += TAU; return a - Math.PI; };
+  const SPAWN_AHEAD = 2.5;   // radians ahead of the craft where debris appears
+  const SWITCH_TIME = 0.13;  // seconds for an orbit hop
+
+  const MODES = {
+    assist:   { label: 'Assist',   speed: 0.75, gap: [1.05, 1.55] },
+    standard: { label: 'Standard', speed: 1,    gap: [0.8, 1.25] },
+    hard:     { label: 'Hard',     speed: 1.25, gap: [0.62, 1.0] }
+  };
+
+  let mode = 'standard';
+  let best = { assist: 0, standard: 0, hard: 0 };
+  let soundOn = true;
+  let totalRuns = 0;
+  const recent = [];
+
+  // ---------- geometry ----------
+  let W = 0, H = 0, S = 0, baseCx = 0, baseCy = 0;
+  let offX = 0, offY = 0, tgtX = 0, tgtY = 0;
+  const R = [0, 0];
+  let PR = 8, HR = 11, SR = 6;
+  const starsCv = document.createElement('canvas');
+
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = canvas.clientWidth; H = canvas.clientHeight;
+    if (!W || !H) return;
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    S = Math.max(220, Math.min(W - 32, H - 170, 640));
+    baseCx = W / 2; baseCy = H / 2 + 10;
+    R[0] = S * 0.27; R[1] = S * 0.45;
+    PR = Math.max(6, S * 0.024); HR = Math.max(8, S * 0.034); SR = Math.max(5, S * 0.022);
+    if (G.switchT >= 1) G.rad = R[G.ring];
+    starsCv.width = canvas.width; starsCv.height = canvas.height;
+    const s = starsCv.getContext('2d');
+    s.setTransform(dpr, 0, 0, dpr, 0, 0);
+    s.fillStyle = C.void; s.fillRect(0, 0, W, H);
+    const n = Math.round((W * H) / 5200);
+    for (let i = 0; i < n; i++) {
+      s.fillStyle = alpha(C.text, rand(0.08, 0.5));
+      s.beginPath(); s.arc(rand(0, W), rand(0, H), Math.random() < 0.08 ? 1.4 : 0.8, 0, TAU); s.fill();
+    }
+    aimCenter();
+  }
+
+  // Slide the orbit out from under the menu panel.
+  function aimCenter() {
+    tgtX = 0; tgtY = 0;
+    if (G.state === 'menu') {
+      if (W >= 860) tgtX = Math.min(W * 0.17, 240);
+      else tgtY = -Math.min(H * 0.2, $('menuPanel').offsetHeight * 0.45);
+    }
+    if (reduced) { offX = tgtX; offY = tgtY; }
+  }
+  const cx = () => baseCx + offX;
+  const cy = () => baseCy + offY;
+
+  // ---------- state ----------
+  const G = {
+    state: 'menu', demo: true, t: 0, theta: -Math.PI / 2, travelled: 0,
+    ring: 1, rad: 0, from: 0, switchT: 1,
+    hazards: [], sparks: [], parts: [], pops: [], trail: [],
+    lastSpawnRel: 0, nextGap: 1.4, lastRing: 1, firstSpawn: true,
+    score: 0, orbits: 0, dodged: 0, gotSparks: 0, close: 0,
+    lastSwitch: -9, switches: [], shake: 0, dyingT: 0, cause: 'stayed', hinting: false
+  };
+
+  function resetWorld(demo) {
+    Object.assign(G, {
+      demo, t: 0, theta: -Math.PI / 2, travelled: 0, ring: 1, switchT: 1,
+      hazards: [], sparks: [], parts: [], pops: [], trail: [],
+      lastSpawnRel: SPAWN_AHEAD - 1.4, nextGap: 1.4, lastRing: 1, firstSpawn: true,
+      score: 0, orbits: 0, dodged: 0, gotSparks: 0, close: 0,
+      lastSwitch: -9, switches: [], shake: 0, dyingT: 0, cause: 'stayed'
+    });
+    G.rad = G.from = R[1];
+  }
+
+  const activeMode = () => MODES[G.demo ? 'standard' : mode];
+  const omega = () => (1.5 + Math.min(1.4, G.orbits * 0.07)) * (G.demo ? 0.8 : activeMode().speed);
+
+  function spawn(rs) {
+    const m = activeMode();
+    const sincePrev = SPAWN_AHEAD - G.lastSpawnRel;
+    let ring = Math.random() < 0.5 ? 0 : 1;
+    if (G.firstSpawn) { ring = G.ring; G.firstSpawn = false; }
+    // Rocks on opposite orbits need enough time between them to hop twice.
+    if (ring !== G.lastRing && sincePrev < rs * 0.34) ring = G.lastRing;
+    const verts = Array.from({ length: 7 }, () => rand(0.72, 1.08));
+    G.hazards.push({ ring, phi: G.theta + SPAWN_AHEAD, rot: rand(0, TAU), spin: rand(-2, 2), verts, passed: false, minD: Infinity });
+    if (Math.random() < 0.45 && sincePrev > 0.7 && G.hazards.length > 1) {
+      G.sparks.push({ ring: Math.random() < 0.5 ? 0 : 1, phi: G.theta + SPAWN_AHEAD - sincePrev / 2, rot: 0 });
+    }
+    const tighten = 1 - Math.min(0.22, G.orbits * 0.015);
+    G.nextGap = Math.max(0.5, rs * 0.2, rand(m.gap[0], m.gap[1]) * tighten);
+    G.lastRing = ring;
+    G.lastSpawnRel = SPAWN_AHEAD;
+  }
+
+  function switchRing() {
+    G.from = G.rad; G.ring = 1 - G.ring; G.switchT = 0;
+    G.lastSwitch = G.t;
+    G.switches.push(G.t);
+    if (G.switches.length > 8) G.switches.shift();
+    if (!G.demo) {
+      sfx('hop');
+      if (G.hinting) { G.hinting = false; setCoachLive(''); }
+    }
+  }
+
+  const playerPos = () => [cx() + Math.cos(G.theta) * G.rad, cy() + Math.sin(G.theta) * G.rad];
+  const objPos = (o) => [cx() + Math.cos(o.phi) * R[o.ring], cy() + Math.sin(o.phi) * R[o.ring]];
+
+  function update(dt) {
+    G.t += dt;
+    const w = omega(), hw = w * 0.22, rs = w + hw;
+    G.theta += w * dt; G.travelled += w * dt;
+    const orbits = Math.floor(G.travelled / TAU);
+    if (orbits > G.orbits) {
+      G.orbits = orbits;
+      if (!G.demo) { const [x, y] = playerPos(); pop(`Orbit ${orbits}`, x, y - 26, C.muted); sfx('orbit'); }
+    }
+    if (G.switchT < 1) G.switchT = Math.min(1, G.switchT + dt / SWITCH_TIME);
+    const e = 1 - Math.pow(1 - G.switchT, 3);
+    G.rad = G.from + (R[G.ring] - G.from) * e;
+
+    G.lastSpawnRel -= rs * dt;
+    if (G.lastSpawnRel <= SPAWN_AHEAD - G.nextGap) spawn(rs);
+
+    const [px, py] = playerPos();
+    G.trail.push(px, py);
+    if (G.trail.length > 32) G.trail.splice(0, 2);
+    const hitR = (PR + HR) * 0.82, closeR = (PR + HR) * 1.7;
+
+    for (let i = G.hazards.length - 1; i >= 0; i--) {
+      const h = G.hazards[i];
+      h.phi -= hw * dt; h.rot += h.spin * dt;
+      const rel = norm(h.phi - G.theta);
+      const [hx, hy] = objPos(h);
+      const d = Math.hypot(hx - px, hy - py);
+      if (d < h.minD) h.minD = d;
+      if (d < hitR) {
+        if (G.demo) { burst(hx, hy, C.debris, 8); G.hazards.splice(i, 1); continue; }
+        crash(h, px, py, hx, hy);
+        return;
+      }
+      if (!h.passed && rel < -0.3) {
+        h.passed = true;
+        if (!G.demo) {
+          G.dodged++; G.score += 1;
+          if (h.minD < closeR) { G.close++; G.score += 2; pop('Close call +2', hx, hy - 18, C.craft); sfx('close'); }
+        }
+      }
+      if (rel < -1.3) G.hazards.splice(i, 1);
+    }
+
+    for (let i = G.sparks.length - 1; i >= 0; i--) {
+      const s = G.sparks[i];
+      s.phi -= hw * dt; s.rot += dt * 3;
+      const [sx, sy] = objPos(s);
+      if (Math.hypot(sx - px, sy - py) < PR + SR * 1.5) {
+        if (!G.demo) { G.score += 3; G.gotSparks++; pop('+3', sx, sy - 16, C.spark); sfx('spark'); }
+        burst(sx, sy, C.spark, reduced ? 4 : 10);
+        G.sparks.splice(i, 1);
+        continue;
+      }
+      if (norm(s.phi - G.theta) < -1.3) G.sparks.splice(i, 1);
+    }
+    updateFx(dt);
+  }
+
+  function updateFx(dt) {
+    for (let i = G.parts.length - 1; i >= 0; i--) {
+      const p = G.parts[i];
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vx *= 1 - 2.2 * dt; p.vy *= 1 - 2.2 * dt;
+      p.life -= dt / p.max;
+      if (p.life <= 0) G.parts.splice(i, 1);
+    }
+    for (let i = G.pops.length - 1; i >= 0; i--) {
+      const p = G.pops[i];
+      if (!reduced) p.y -= 32 * dt;
+      p.life -= dt / 0.9;
+      if (p.life <= 0) G.pops.splice(i, 1);
+    }
+    G.shake = Math.max(0, G.shake - dt * 30);
+  }
+
+  function burst(x, y, color, n) {
+    for (let i = 0; i < n; i++) {
+      const a = rand(0, TAU), v = reduced ? rand(10, 40) : rand(40, 220);
+      G.parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: rand(1.2, 3), color, life: 1, max: rand(0.5, 1.1) });
+    }
+  }
+  function pop(text, x, y, color) { G.pops.push({ text, x, y, color, life: 1 }); }
+
+  function autopilot() {
+    if (G.switchT < 1) return;
+    const danger = (ring, lo, hi) => G.hazards.some((h) => { const r = norm(h.phi - G.theta); return h.ring === ring && r > lo && r < hi; });
+    if (danger(G.ring, 0, 0.55) && !danger(1 - G.ring, -0.25, 0.5)) switchRing();
+    else if (Math.random() < 0.004 && !danger(1 - G.ring, -0.3, 0.9)) switchRing();
+  }
+
+  // ---------- crash + coach ----------
+  function crash(h, px, py, hx, hy) {
+    const sinceSwitch = G.t - G.lastSwitch;
+    const taps = G.switches.filter((t) => G.t - t < 1.5).length;
+    if (taps >= 4) G.cause = 'spam';
+    else if (sinceSwitch < 0.35) G.cause = h.ring === G.ring ? 'into' : 'late';
+    else G.cause = 'stayed';
+    G.state = 'dying'; G.dyingT = 0;
+    G.hinting = false; setCoachLive('');
+    burst(px, py, C.craft, reduced ? 10 : 28);
+    burst(hx, hy, C.debris, reduced ? 6 : 16);
+    G.shake = reduced ? 0 : 10;
+    sfx('crash');
+    try { if (navigator.vibrate) navigator.vibrate(60); } catch (e) { /* no vibration */ }
+    setState('dying');
+  }
+
+  const TIPS = {
+    into: 'You hopped onto debris. Check the orbit you are moving to before you tap.',
+    late: 'Almost cleared it. Tap a beat earlier, when the rock is about a quarter-turn ahead.',
+    spam: 'Fast tapping lands you on debris. One tap per rock works better.',
+    stayed: 'The rock was on your orbit. Watch the debris ahead of your craft, not the craft itself.'
+  };
+
+  function coachTip() {
+    const last3 = recent.slice(-3);
+    if (mode !== 'assist' && last3.length === 3 && last3.every((s) => s < 6)) {
+      return { suggest: 'assist', text: 'Three short runs in a row. Assist is 25% slower, spaces debris wider, and rings the rock you need to dodge.' };
+    }
+    if (mode === 'assist' && G.score >= 25) return { suggest: 'standard', text: `${G.score} points on Assist. You are ready for Standard speed.` };
+    if (mode === 'standard' && G.score >= 45) return { suggest: 'hard', text: `${G.score} points on Standard. Hard mode is 25% faster with tighter debris fields.` };
+    let text = TIPS[G.cause];
+    if (G.score >= 10 && G.gotSparks === 0) text += ' Sparks are worth 3 debris passes, so hop for them on quiet stretches.';
+    return { suggest: null, text };
+  }
+
+  function showOver() {
+    totalRuns++; store.set('runs', totalRuns);
+    recent.push(G.score); if (recent.length > 5) recent.shift();
+    const isBest = G.score > best[mode];
+    if (isBest) { best[mode] = G.score; store.set('best', best); }
+    $('overTitle').textContent = isBest && G.score > 0 ? 'New best' : 'Signal lost';
+    $('overMode').textContent = `${MODES[mode].label} mode`;
+    $('finalScore').textContent = G.score;
+    $('finalBest').textContent = `Best ${best[mode]}`;
+    $('stOrbits').textContent = G.orbits;
+    $('stDodged').textContent = G.dodged;
+    $('stSparks').textContent = G.gotSparks;
+    $('stClose').textContent = G.close;
+    const tip = coachTip();
+    $('coachTip').textContent = tip.text;
+    const chips = $('chips');
+    chips.replaceChildren();
+    const chip = (label, cls, fn) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip ' + cls; b.textContent = label;
+      b.addEventListener('click', fn);
+      chips.append(b);
+      return b;
+    };
+    const first = chip('Launch again', 'is-primary', launch);
+    if (tip.suggest) chip(`Switch to ${MODES[tip.suggest].label}`, 'is-suggest', () => { setMode(tip.suggest); launch(); });
+    chip('Menu', '', toMenu);
+    G.state = 'over';
+    setState('over');
+    first.focus({ preventScroll: true });
+  }
+
+  // ---------- flow ----------
+  function setState(s) {
+    app.dataset.state = s;
+    $('menu').hidden = s !== 'menu';
+    $('over').hidden = s !== 'over';
+    $('pause').hidden = s !== 'paused';
+    $('pauseBtn').hidden = s !== 'play';
+    aimCenter();
+  }
+
+  function setCoachLive(html) { $('coachLive').innerHTML = html; }
+
+  function launch() {
+    ensureAudio();
+    resetWorld(false);
+    G.state = 'play';
+    setState('play');
+    G.hinting = totalRuns === 0;
+    setCoachLive(G.hinting ? '<b>Tap anywhere</b> to hop orbits. Space works too.' : '');
+    if (mode === 'assist' && !G.hinting) setCoachLive('Assist: the ringed rock is the one to dodge.');
+    lastHud = '';
+    if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+  }
+
+  function toMenu() {
+    resetWorld(true);
+    G.state = 'menu';
+    setState('menu');
+    setCoachLive('');
+    syncMenu();
+  }
+
+  function togglePause() {
+    if (G.state === 'play') { G.state = 'paused'; setState('paused'); $('resumeBtn').focus({ preventScroll: true }); }
+    else if (G.state === 'paused') {
+      G.state = 'play'; setState('play');
+      if (document.activeElement) document.activeElement.blur();
+    }
+  }
+
+  function setMode(m) {
+    if (!MODES[m]) return;
+    if (m !== mode) recent.length = 0;
+    mode = m; store.set('mode', m);
+    syncMenu();
+  }
+
+  function syncMenu() {
+    const r = $('mode-' + mode); if (r) r.checked = true;
+    $('menuBest').textContent = `${best[mode]} on ${MODES[mode].label}`;
+    $('modeTag').textContent = MODES[mode].label;
+  }
+
+  let lastHud = '';
+  function updateHud() {
+    const key = G.score + '|' + G.orbits;
+    if (key === lastHud) return;
+    lastHud = key;
+    $('score').textContent = G.score;
+    $('orbits').textContent = `${G.orbits} ${G.orbits === 1 ? 'orbit' : 'orbits'}`;
+  }
+
+  // ---------- audio ----------
+  let actx = null;
+  function ensureAudio() {
+    if (!soundOn) return;
+    try {
+      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+    } catch (e) { actx = null; }
+  }
+  const SFX = {
+    hop:   [520, 760, 0.07, 'triangle', 0.05],
+    spark: [880, 1480, 0.14, 'sine', 0.07],
+    close: [660, 990, 0.1, 'square', 0.025],
+    orbit: [440, 880, 0.2, 'sine', 0.04],
+    crash: [200, 40, 0.5, 'sawtooth', 0.07]
+  };
+  function sfx(type) {
+    if (!soundOn || !actx) return;
+    try {
+      const [f0, f1, dur, wave, vol] = SFX[type];
+      const t = actx.currentTime, o = actx.createOscillator(), g = actx.createGain();
+      o.type = wave;
+      o.frequency.setValueAtTime(f0, t);
+      o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(actx.destination);
+      o.start(t); o.stop(t + dur + 0.02);
+    } catch (e) { /* audio unavailable */ }
+  }
+  function syncSound() {
+    $('soundBtn').setAttribute('aria-pressed', String(soundOn));
+    $('soundBtn').setAttribute('aria-label', soundOn ? 'Sound on' : 'Sound off');
+    $('icoSoundOn').hidden = !soundOn;
+    $('icoSoundOff').hidden = soundOn;
+  }
+
+  // ---------- drawing ----------
+  function draw(time) {
+    ctx.drawImage(starsCv, 0, 0, W, H);
+    ctx.save();
+    if (G.shake > 0.2) ctx.translate(rand(-G.shake, G.shake), rand(-G.shake, G.shake));
+    const X = cx(), Y = cy();
+
+    // star
+    const core = S * 0.07 * (reduced ? 1 : 1 + Math.sin(time * 1.7) * 0.035);
+    const glow = ctx.createRadialGradient(X, Y, core * 0.4, X, Y, core * 3.4);
+    glow.addColorStop(0, alpha(C.star, 0.5));
+    glow.addColorStop(1, alpha(C.star, 0));
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(X, Y, core * 3.4, 0, TAU); ctx.fill();
+    ctx.fillStyle = C.star;
+    ctx.beginPath(); ctx.arc(X, Y, core, 0, TAU); ctx.fill();
+    ctx.fillStyle = alpha(C.text, 0.5);
+    ctx.beginPath(); ctx.arc(X - core * 0.25, Y - core * 0.25, core * 0.45, 0, TAU); ctx.fill();
+
+    // orbits
+    const playing = G.state === 'play' || G.state === 'paused';
+    for (let i = 0; i < 2; i++) {
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = playing && i === G.ring ? alpha(C.craft, 0.45) : C.ring;
+      ctx.beginPath(); ctx.arc(X, Y, R[i], 0, TAU); ctx.stroke();
+    }
+
+    // sparks
+    for (const s of G.sparks) {
+      const [x, y] = objPos(s);
+      ctx.fillStyle = alpha(C.spark, 0.18);
+      ctx.beginPath(); ctx.arc(x, y, SR * 2.2, 0, TAU); ctx.fill();
+      ctx.save(); ctx.translate(x, y); ctx.rotate(reduced ? Math.PI / 4 : s.rot);
+      ctx.fillStyle = C.spark;
+      ctx.beginPath(); ctx.moveTo(0, -SR); ctx.lineTo(SR * 0.7, 0); ctx.lineTo(0, SR); ctx.lineTo(-SR * 0.7, 0); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+
+    // debris
+    const assistCue = !G.demo && mode === 'assist' && playing;
+    for (const h of G.hazards) {
+      const [x, y] = objPos(h);
+      if (assistCue && h.ring === G.ring) {
+        const rel = norm(h.phi - G.theta);
+        if (rel > 0 && rel < 1.1) {
+          ctx.strokeStyle = alpha(C.debris, 0.75); ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(x, y, HR * 1.75, 0, TAU); ctx.stroke();
+        }
+      }
+      ctx.save(); ctx.translate(x, y); ctx.rotate(h.rot);
+      ctx.fillStyle = C.debris;
+      ctx.beginPath();
+      h.verts.forEach((v, k) => {
+        const a = (k / h.verts.length) * TAU;
+        const px = Math.cos(a) * HR * v, py = Math.sin(a) * HR * v;
+        if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      });
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = alpha(C.void, 0.28);
+      ctx.beginPath(); ctx.arc(HR * 0.2, HR * 0.15, HR * 0.28, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+
+    // craft
+    if (G.state !== 'dying' && G.state !== 'over') {
+      if (!reduced) {
+        const t = G.trail;
+        for (let i = 2; i < t.length; i += 2) {
+          ctx.strokeStyle = alpha(C.craft, (i / t.length) * 0.5);
+          ctx.lineWidth = PR * 0.6 * (i / t.length);
+          ctx.beginPath(); ctx.moveTo(t[i - 2], t[i - 1]); ctx.lineTo(t[i], t[i + 1]); ctx.stroke();
+        }
+      }
+      const [px, py] = playerPos();
+      ctx.fillStyle = alpha(C.craft, 0.13);
+      ctx.beginPath(); ctx.arc(px, py, PR * 2.1, 0, TAU); ctx.fill();
+      ctx.save(); ctx.translate(px, py); ctx.rotate(G.theta + Math.PI / 2);
+      ctx.fillStyle = C.craft;
+      ctx.beginPath();
+      ctx.moveTo(PR * 1.45, 0); ctx.lineTo(-PR, PR * 0.85); ctx.lineTo(-PR * 0.45, 0); ctx.lineTo(-PR, -PR * 0.85);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+
+    // particles + popups
+    for (const p of G.parts) {
+      ctx.fillStyle = alpha(p.color, Math.max(0, p.life));
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, TAU); ctx.fill();
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `700 ${Math.round(11 + S * 0.022)}px ${DISPLAY}`;
+    for (const p of G.pops) {
+      ctx.fillStyle = alpha(p.color, Math.max(0, p.life));
+      ctx.fillText(p.text, p.x, p.y);
+    }
+    ctx.restore();
+  }
+
+  // ---------- loop ----------
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    const ease = Math.min(1, dt * 5);
+    offX += (tgtX - offX) * ease; offY += (tgtY - offY) * ease;
+    if (G.state === 'menu') { autopilot(); update(dt); }
+    else if (G.state === 'play') { update(dt); updateHud(); }
+    else if (G.state === 'dying') { G.dyingT += dt; updateFx(dt); if (G.dyingT > 0.8) showOver(); }
+    else if (G.state === 'over') updateFx(dt);
+    if (W && H) draw(now / 1000);
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- input ----------
+  canvas.addEventListener('pointerdown', (e) => {
+    if (G.state !== 'play') return;
+    e.preventDefault();
+    ensureAudio();
+    switchRing();
+  });
+  window.addEventListener('keydown', (e) => {
+    const k = e.key;
+    if (k === 'p' || k === 'P' || k === 'Escape') { if (!e.repeat) togglePause(); return; }
+    const hop = k === ' ' || k === 'ArrowUp' || k === 'ArrowDown' || k === 'Enter';
+    if (!hop) return;
+    if (G.state === 'play') { e.preventDefault(); if (!e.repeat) switchRing(); return; }
+    const onControl = document.activeElement && document.activeElement !== document.body;
+    if ((G.state === 'menu' || G.state === 'over') && !onControl && (k === ' ' || k === 'Enter')) { e.preventDefault(); launch(); }
+  });
+  $('launchBtn').addEventListener('click', launch);
+  $('pauseBtn').addEventListener('click', togglePause);
+  $('resumeBtn').addEventListener('click', togglePause);
+  $('quitBtn').addEventListener('click', toMenu);
+  $('soundBtn').addEventListener('click', () => {
+    soundOn = !soundOn; store.set('sound', soundOn); syncSound();
+    if (soundOn) { ensureAudio(); sfx('hop'); }
+  });
+  document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener('change', () => setMode(r.value)));
+  document.addEventListener('visibilitychange', () => { if (document.hidden && G.state === 'play') togglePause(); });
+  if ('ResizeObserver' in window) new ResizeObserver(resize).observe(canvas);
+  else window.addEventListener('resize', resize);
+
+  // ---------- boot ----------
+  function boot(data) {
+    data = data || {};
+    const m = data.mode || store.get('mode', 'standard');
+    mode = MODES[m] ? m : 'standard';
+    const b = data.best || store.get('best', {});
+    for (const k of Object.keys(best)) best[k] = Math.max(0, Number(b && b[k]) || 0);
+    soundOn = (data.soundOn ?? store.get('sound', true)) !== false;
+    totalRuns = Number(store.get('runs', 0)) || 0;
+    syncMenu(); syncSound();
+    resize();
+    resetWorld(true);
+    setState('menu');
+    if (!reduced) { offX = tgtX; offY = tgtY; }
+    requestAnimationFrame((t) => { last = t; frame(t); });
+  }
+  if (window.claude && window.claude.hot && window.claude.hot.snapshot) {
+    window.claude.hot.snapshot(() => ({ mode, best, soundOn }));
+  }
+  if (window.claude && window.claude.hot && window.claude.hot.ready) window.claude.hot.ready(boot);
+  else boot(window.claude && window.claude.hot && window.claude.hot.data);
+})();
+</script>
+
+</html>
