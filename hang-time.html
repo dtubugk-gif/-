@@ -440,7 +440,7 @@ function resize() {
   const dy = FLOOR - old;
   if (dy && ball) {
     ball.y += dy; ball.baseY += dy;
-    for (const o of hoops) { o.y += dy; o.baseY += dy; o.prevY += dy; }
+    for (const o of hoops) { o.y += dy; o.baseY += dy; o.prevY += dy; if (o.cloth) for (let k = 1; k < o.cloth.P.length; k += 3) { o.cloth.P[k] += dy; o.cloth.Q[k] += dy; } }
     for (const o of coins) o.y += dy;
     for (const o of powers) o.y += dy;
     for (const o of parts) o.y += dy;
@@ -492,7 +492,7 @@ function buildCrowd() {
 // Physics runs at a fixed 240 Hz so the ball behaves the same at any frame rate.
 // Ball is modelled as a hollow sphere (I = 2/3·m·r²) with restitution, Coulomb friction and spin.
 const G = 1500, FLAP = -520, DRAG = 0.0018, STEP = 1 / 240;
-const HOLLOW = 2.5;   // 1/m + r²/I for a hollow sphere, per unit mass
+const HOLLOW = 2.5, MAGNUS = 0.012;   // 1/m + r²/I for a hollow sphere, per unit mass
 let state = 'menu', T = 0, A = 0, acc = 0, timeScale = 1, last = 0, lockerReturn = 'menu';
 let ball = null, cam = { x: 0 }, hoops = [], coins = [], powers = [], parts = [], pops = [], trail = [], flashes = [];
 let score = 0, streak = 0, fire = false, made = 0, swishes = 0, runCoins = 0, quarter = 1;
@@ -523,7 +523,9 @@ const hoopMaxY = () => FLOOR - 120;
 function addHoop(x, y, amp, freq) {
   const w = rimW();
   hoops.push({ x, y, baseY: y, prevY: y, vy: 0, w, we: w * (wideT > 0 ? 1.3 : 1), amp, freq, phase: rand(0, TAU),
-    scored: false, done: false, rimT: false, boardT: false, net: { off: 0, v: 0, str: 0, sv: 0 } });
+    scored: false, done: false, rimT: false, boardT: false, net: { off: 0, v: 0, str: 0, sv: 0 },
+    flex: 0, flexV: 0, wob: 0 });
+  const h = hoops[hoops.length - 1]; h.cloth = makeCloth(h);
 }
 
 function spawnNext() {
@@ -552,6 +554,60 @@ function spawnNext() {
       }
     }
   }
+}
+
+/* ---------------- net cloth ---------------- */
+// Each net is a real verlet cloth: 12 cords × 4 rows of knots tied in a diamond mesh, top row tied to the rim.
+// Cords are ropes (they resist stretching, never compression), so the net hangs, sways, wraps the ball and snaps back.
+const NET_N = 12, NET_L = 4, NET_DROP = 40;
+const knot = (i, l) => l * NET_N + mod(i, NET_N);
+function makeCloth(h) {
+  const n = NET_N * (NET_L + 1), P = new Float32Array(n * 3), links = [];
+  for (let l = 0; l <= NET_L; l++) for (let i = 0; i < NET_N; i++) {
+    const s = l / NET_L, a = (i + (l % 2) * 0.5) / NET_N * TAU, r = lerp(h.we, h.we * 0.5, s), k = knot(i, l) * 3;
+    P[k] = h.x + Math.cos(a) * r; P[k + 1] = h.y + 2 + NET_DROP * s; P[k + 2] = Math.sin(a) * r;
+  }
+  const tie = (a, b, stiff, draw) => links.push(a, b, Math.hypot(P[a * 3] - P[b * 3], P[a * 3 + 1] - P[b * 3 + 1], P[a * 3 + 2] - P[b * 3 + 2]), stiff, draw);
+  for (let l = 0; l < NET_L; l++) for (let i = 0; i < NET_N; i++) {
+    const j = l % 2 ? 1 : -1;
+    tie(knot(i, l), knot(i, l + 1), 1, 1); tie(knot(i, l), knot(i + j, l + 1), 1, 1);
+  }
+  for (let l = 1; l <= NET_L; l++) for (let i = 0; i < NET_N; i++) tie(knot(i, l), knot(i + 1, l), l === NET_L ? 0.5 : 0.2, l === NET_L ? 1 : 0);
+  return { P, Q: Float32Array.from(P), links: Float32Array.from(links) };
+}
+function stepCloth(h, dt) {
+  const C = h.cloth, P = C.P, Q = C.Q, L = C.links, w = h.we, ry = h.y + h.flex + 2;
+  for (let i = 0; i < NET_N; i++) {
+    const a = i / NET_N * TAU, k = i * 3;
+    P[k] = Q[k] = h.x + Math.cos(a) * w; P[k + 1] = Q[k + 1] = ry; P[k + 2] = Q[k + 2] = Math.sin(a) * w;
+  }
+  const g = 1100 * dt * dt, damp = 0.965;
+  for (let k = NET_N * 3; k < P.length; k += 3) {
+    const x = P[k], y = P[k + 1], z = P[k + 2];
+    P[k] += (x - Q[k]) * damp; P[k + 1] += (y - Q[k + 1]) * damp + g; P[k + 2] += (z - Q[k + 2]) * damp;
+    Q[k] = x; Q[k + 1] = y; Q[k + 2] = z;
+  }
+  // the ball occupies the whole depth of the play slab, so it pushes cords at any depth that it overlaps on screen
+  const b = ball, R = b.r + 1.5, near = Math.abs(b.x - h.x) < w + R + 12 && b.y > h.y - R - 6 && b.y < h.y + NET_DROP + 40;
+  for (let it = 0; it < 4; it++) {
+    for (let m = 0; m < L.length; m += 5) {
+      const a = L[m] * 3, c = L[m + 1] * 3, rest = L[m + 2];
+      const dx = P[c] - P[a], dy = P[c + 1] - P[a + 1], dz = P[c + 2] - P[a + 2], d = Math.hypot(dx, dy, dz);
+      if (d <= rest) continue;
+      const f = (d - rest) / d * L[m + 3], wa = L[m] < NET_N ? 0 : 0.5, wc = 1 - wa;
+      P[a] += dx * f * wa; P[a + 1] += dy * f * wa; P[a + 2] += dz * f * wa;
+      P[c] -= dx * f * wc; P[c + 1] -= dy * f * wc; P[c + 2] -= dz * f * wc;
+    }
+    if (near) for (let k = NET_N * 3; k < P.length; k += 3) {
+      const dx = P[k] - b.x, dy = P[k + 1] - b.y, d2 = dx * dx + dy * dy;
+      if (d2 < R * R) { const d = Math.sqrt(d2) || 1e-4, s = R / d; P[k] = b.x + dx * s; P[k + 1] = b.y + dy * s; }
+    }
+  }
+}
+// a clean make snaps the net downward
+function kickCloth(h, v) {
+  const P = h.cloth.P, Q = h.cloth.Q;
+  for (let l = 1; l <= NET_L; l++) for (let i = 0; i < NET_N; i++) { const k = knot(i, l) * 3; Q[k + 1] = P[k + 1] - v * l / NET_L; Q[k] = P[k] - ball.vx * 0.004 * l; }
 }
 
 /* ---------------- effects ---------------- */
@@ -606,11 +662,15 @@ function physics(dt) {
     h.prevY = h.y;
     if (h.amp) h.y = h.baseY + Math.sin(T * h.freq + h.phase) * h.amp;
     h.vy = (h.y - h.prevY) / dt;
+    // the rim is sprung: hard hits push it down a few pixels, it rings back and soaks up some of the bounce
+    h.flexV += (-1400 * h.flex - 22 * h.flexV) * dt; h.flex = clamp(h.flex + h.flexV * dt, -3, 6);
     const tw = h.w * (wideT > 0 ? 1.3 : 1); h.we += (tw - h.we) * Math.min(1, dt * 5);
   }
   const b = ball, r = b.r;
   // gravity plus quadratic air drag (terminal velocity ≈ 900 px/s)
   b.vy += G * dt - DRAG * Math.abs(b.vy) * b.vy * dt;
+  // Magnus effect: a = k·(ω × v). Topspin off the rim makes the ball dip, backspin floats it
+  b.vx += -MAGNUS * b.w * b.vy * dt; b.vy += MAGNUS * b.w * b.vx * dt;
   // forward drive eases off right after a contact, so gravity decides whether a ball on the rim rolls in or out
   b.ct = Math.max(0, (b.ct || 0) - dt);
   if (state === 'play') b.vx += (cruise() - b.vx) * Math.min(1, dt * (b.ct > 0 ? 0.5 : 2.2)); else b.vx *= 1 - dt * 0.4;
@@ -705,11 +765,14 @@ function collideHoop(h, px, py, dt) {
   }
   // rim front and back edges, treated as the cross-section of a steel tube
   for (const sx of [-1, 1]) {
-    const qx = h.x + sx * w, qy = h.y, dx = b.x - qx, dy = b.y - qy, d = Math.hypot(dx, dy), m = r + rr;
+    const qx = h.x + sx * w, qy = h.y + h.flex, dx = b.x - qx, dy = b.y - qy, d = Math.hypot(dx, dy), m = r + rr;
     if (d < m && d > 1e-4) {
       const nx = dx / d, ny = dy / d; b.x = qx + nx * m; b.y = qy + ny * m;
-      const imp = contact(nx, ny, 0.6, 0.3, 0, h.vy);
-      if (imp > 0) { if (!h.scored) h.rimT = true; rimHit(h, Math.min(1, imp / 500), qx, qy); }
+      const imp = contact(nx, ny, 0.6, 0.3, 0, h.vy + h.flexV);
+      if (imp > 0) {
+        h.flexV += -ny * imp * 0.06;
+        if (!h.rimT || imp > 60) { if (!h.scored) h.rimT = true; rimHit(h, Math.min(1, imp / 500), qx, qy); }
+      }
     }
   }
   // backboard: glass is lively, so it gives a little more bounce than the rim
@@ -724,7 +787,7 @@ function collideHoop(h, px, py, dt) {
       const imp = contact(nx, ny, 0.68, 0.25, 0, h.vy);
       if (imp > 0) {
         if (!h.scored) h.boardT = true;
-        if (imp > 50) { sfx.board(); shake(3, 0.1); h.glassFlash = 1; }
+        if (imp > 50) { sfx.board(); shake(3, 0.1); h.glassFlash = 1; h.wob = Math.min(1, imp / 350); }
       }
     }
   }
@@ -767,6 +830,7 @@ function scoreHoop(h) {
   const col = fire ? '#ff8a5c' : perfect ? '#ffd34d' : kind === 'swish' ? '#ffe08a' : kind === 'bank' ? '#9fd8ff' : '#ffffff';
   pop(h.x, h.y - 50, label, col, `+${pts}`, perfect ? 1.25 : kind === 'rim' ? 0.85 : 1);
   h.net.sv += kind === 'swish' ? 9 : 5; h.net.v += ball.vx * 0.02;
+  kickCloth(h, kind === 'swish' ? 3.2 : 1.6);
   if (kind === 'swish') sfx.swish();
   sfx.score(kind === 'rim' ? 0 : streak, fire);
   if (perfect) sfx.perfect();
@@ -847,6 +911,8 @@ function update(dt, real) {
     n.v += (-70 * n.off - 6 * n.v) * dt; n.off += n.v * dt;
     n.sv += (-110 * n.str - 9 * n.sv) * dt; n.str += n.sv * dt;
     if (h.glassFlash) h.glassFlash = Math.max(0, h.glassFlash - dt * 4);
+    h.wob *= Math.exp(-dt * 7);
+    if (dt > 0 && h.x > cam.x - 120 && h.x < cam.x + VW + 120) stepCloth(h, Math.min(dt, 1 / 30));
   }
 
   // trail & fire
@@ -1018,42 +1084,32 @@ function ringPath(x, y, r, a0, a1) {
 }
 // steel tube: shadowed underside, painted body, specular top line
 function drawRim(h, back) {
-  const a0 = back ? 0 : Math.PI, a1 = back ? Math.PI : TAU;
+  const fy = h.y + h.flex, a0 = back ? 0 : Math.PI, a1 = back ? Math.PI : TAU;
   ctx.lineCap = 'round';
-  ringPath(h.x, h.y + 1.5, h.we, a0, a1); ctx.strokeStyle = back ? '#6f250e' : '#a33710'; ctx.lineWidth = 5.4; ctx.stroke();
-  ringPath(h.x, h.y, h.we, a0, a1); ctx.strokeStyle = back ? '#bf4819' : '#ff6b2c'; ctx.lineWidth = 4; ctx.stroke();
-  ringPath(h.x, h.y - 1.2, h.we, a0 + 0.2, a1 - 0.2); ctx.strokeStyle = back ? 'rgba(255,170,120,.3)' : 'rgba(255,218,190,.95)'; ctx.lineWidth = 1.3; ctx.stroke();
+  ringPath(h.x, fy + 1.5, h.we, a0, a1); ctx.strokeStyle = back ? '#6f250e' : '#a33710'; ctx.lineWidth = 5.4; ctx.stroke();
+  ringPath(h.x, fy, h.we, a0, a1); ctx.strokeStyle = back ? '#bf4819' : '#ff6b2c'; ctx.lineWidth = 4; ctx.stroke();
+  ringPath(h.x, fy - 1.2, h.we, a0 + 0.2, a1 - 0.2); ctx.strokeStyle = back ? 'rgba(255,170,120,.3)' : 'rgba(255,218,190,.95)'; ctx.lineWidth = 1.3; ctx.stroke();
 }
 
 // diamond-mesh net hanging from the rim, tapering and swinging
 function drawNet(h, front) {
-  const N = 12, L = 4, w = h.we, n = h.net, depth = netDepth(h), off = clamp(n.off, -14, 14);
-  const botW = w * 0.52 * (1 - clamp(n.str, 0, 0.6) * 0.3);
-  const P = (a, s) => {
-    const rx = lerp(w, botW, s), cx = h.x + off * s + Math.sin(s * Math.PI) * n.off * 0.15, cy = h.y + 2 + depth * s;
-    const u = Math.cos(a) * rx, v = Math.sin(a) * rx;
-    return [cx + u + KX * v, cy - KY * v];
-  };
+  const P = h.cloth.P, L = h.cloth.links;
   ctx.lineCap = 'round';
   ctx.strokeStyle = front ? 'rgba(255,255,255,.92)' : 'rgba(225,215,255,.38)'; ctx.lineWidth = front ? 1.3 : 1;
   ctx.beginPath();
-  for (let l = 0; l < L; l++) {
-    const s0 = l / L, s1 = (l + 1) / L, o = (l % 2) * 0.5;
-    for (let i = 0; i < N; i++) {
-      const a = (i + o) / N * TAU;
-      for (const dI of [0.5, -0.5]) {
-        const b2 = (i + o + dI) / N * TAU;
-        if ((Math.sin((a + b2) / 2) < 0) !== front) continue;
-        const p = P(a, s0), q = P(b2, s1); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]);
-      }
-    }
+  for (let m = 0; m < L.length; m += 5) {
+    if (!L[m + 4]) continue;
+    const a = L[m] * 3, c = L[m + 1] * 3;
+    if ((P[a + 2] + P[c + 2] < 0) !== front) continue;
+    ctx.moveTo(P[a] + KX * P[a + 2], P[a + 1] - KY * P[a + 2]);
+    ctx.lineTo(P[c] + KX * P[c + 2], P[c + 1] - KY * P[c + 2]);
   }
   ctx.stroke();
 }
 
 // glass backboard as a slab with thickness, hung from the rig on a pole
 function drawBoard(h) {
-  const x = h.x, y = h.y, w = h.we, bx = x + w + 6, Dz = 34, ox = KX * Dz, oy = KY * Dz, th = 5, top = y - 84, bot = y + 6;
+  const x = h.x, y = h.y, w = h.we, bx = x + w + 6 + Math.sin(A * 75) * h.wob * 1.6, Dz = 34, ox = KX * Dz, oy = KY * Dz, th = 5, top = y - 84, bot = y + 6;
   h.fade = lerp(h.fade ?? 1, h.scored ? 0.3 : 1, 0.08);
   const pg = ctx.createLinearGradient(bx, 0, bx + 6, 0);
   pg.addColorStop(0, '#2e2460'); pg.addColorStop(0.45, '#9488d0'); pg.addColorStop(1, '#251c50');
@@ -1078,8 +1134,8 @@ function drawBoard(h) {
   ctx.restore();
   // gooseneck bracket from rim to glass
   ctx.lineCap = 'round';
-  ctx.strokeStyle = '#7c290d'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x + w - 1, y + 1); ctx.lineTo(bx, y - 5); ctx.stroke();
-  ctx.strokeStyle = '#e0612a'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(x + w - 1, y - 0.5); ctx.lineTo(bx, y - 6.5); ctx.stroke();
+  ctx.strokeStyle = '#7c290d'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x + w - 1, y + 1 + h.flex); ctx.lineTo(bx, y - 5); ctx.stroke();
+  ctx.strokeStyle = '#e0612a'; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(x + w - 1, y - 0.5 + h.flex); ctx.lineTo(bx, y - 6.5); ctx.stroke();
 }
 
 function drawHoopBack(h) { drawBoard(h); drawRim(h, true); drawNet(h, false); }
@@ -1218,7 +1274,7 @@ function drawGuide() {
   if (state === 'ready') { vx = cruise() * 0.5; vy = FLAP; }
   const dt = 1 / 60;
   for (let i = 1; i <= 54; i++) {
-    vy += G * dt - DRAG * Math.abs(vy) * vy * dt;
+    vy += G * dt - DRAG * Math.abs(vy) * vy * dt + MAGNUS * ball.w * vx * dt;
     vx += (cruise() - vx) * Math.min(1, dt * 2.2);
     x += vx * dt; y += vy * dt;
     if (y > FLOOR - 4) break;
