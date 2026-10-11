@@ -284,6 +284,7 @@ G.sfx = (function () {
     },
 
     baa(pos, mega) {
+      if (typeof pos === 'boolean') { mega = pos; pos = null; }
       if (!gate(mega ? 'mbaa' : 'baa', mega ? 0.6 : 0.3)) return;
       const t = now(), dur = mega ? 1.4 : 0.5 + R() * 0.35;
       const v = voice(pos, mega ? 0.9 : 0.6, mega ? 0.7 : 0.2, dur, mega ? 2 : 1);
@@ -639,7 +640,25 @@ G.sfx = (function () {
       if (!gate('tick', 0.03)) return;
       const v = voice(null, 0.25, 0, 0.1, 2); if (!v) return;
       osc(v, 'square', 1400, 900, now(), 0.04, 0.4);
+    },
+
+    // Compatibility with the older, smaller sound API.
+    bonk(power, pos) { api.hit(power || 8, 'thud', pos); },
+    pickup() { api.powerup(); },
+    jet() { jetHold = (ctx ? ctx.currentTime : 0) + 0.15; },
+    quack(pos) {
+      if (!gate('quack', 0.2)) return;
+      const t = now(), v = voice(pos, 0.45, 0.1, 0.3, 0);
+      if (!v) return;
+      const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sawtooth';
+      o.frequency.setValueAtTime(640, t); o.frequency.exponentialRampToValueAtTime(380, t + 0.16);
+      env(g.gain, t, 0.01, 1, 0.18); o.connect(g);
+      formants(v, g, [[900, 7, 1.1], [1700, 7, 0.6]]);
+      o.start(t); o.stop(t + 0.25);
     }
   };
+  let jetHold = 0;
+  const loopsRaw = api.loops;
+  api.loops = (speed, jetting, sirenPos) => loopsRaw(speed, jetting || (ctx && ctx.currentTime < jetHold), sirenPos);
   return api;
 })();

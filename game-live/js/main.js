@@ -1,0 +1,356 @@
+// Input (keyboard, mouse, touch), camera, scoring, challenges and the main loop.
+(function () {
+  const { renderer, scene, camera, world, sun } = G;
+  const goat = G.goat;
+  const $ = id => document.getElementById(id);
+  const V3 = CANNON.Vec3;
+
+  let isTouch = G.mobile || 'ontouchstart' in window;
+  document.body.classList.toggle('touch', isTouch);
+  G.vibrate = ms => { if (isTouch && navigator.vibrate) try { navigator.vibrate(ms); } catch (_) { /* not allowed */ } };
+  let playing = false;
+
+  // ---------- Scoring ----------
+  let score = 0, combo = 0, comboT = 0, statues = 0;
+  const feed = $('feed');
+  G.addScore = function (label, pts, style) {
+    if (!playing) return;
+    combo = comboT > 0 ? combo + 1 : 1;
+    comboT = 3;
+    const mult = Math.min(10, 1 + Math.floor(combo / 3));
+    const gained = pts * mult;
+    score += gained;
+    $('score').textContent = score.toLocaleString();
+    $('combo').textContent = mult > 1 ? 'COMBO x' + mult : '';
+    if (combo > 1) G.sfx.combo(combo);
+    const el = document.createElement('div');
+    el.className = 'pop' + (style ? ' ' + style : '');
+    el.textContent = '+' + gained + ' ' + label;
+    feed.prepend(el);
+    while (feed.children.length > (isTouch ? 3 : 4)) feed.lastChild.remove();
+    setTimeout(() => el.remove(), 1600);
+  };
+  G.onStatue = function () {
+    statues++;
+    $('statueCount').textContent = statues + '/' + G.statues.length;
+    G.addScore('GOLDEN GOAT ' + statues + '/' + G.statues.length, 2000, 'big');
+    G.vibrate([40, 40, 80]); G.sfx.golden(goat.body.position);
+    if (statues === G.statues.length) setTimeout(() => G.addScore('YOU ARE THE GOAT', 10000, 'big'), 900);
+  };
+  G.onJetpack = function () { $('tJet').hidden = false; renderModes(); };
+
+  // ---------- Challenges ----------
+  const fallen = list => list.filter(b => b.quaternion.vmult(new V3(0, 1, 0)).y < 0.6).length;
+  let maxY = 0;
+  const missions = [
+    { name: 'Topple every domino', goal: 30, get: () => fallen(G.stats.dominoes) },
+    { name: 'Bowl a strike', goal: 10, get: () => fallen(G.stats.pins) },
+    { name: 'Wreck cars', goal: 3, get: () => G.stats.carsWrecked },
+    { name: 'Knock down people', goal: 15, get: () => G.stats.peopleDown },
+    { name: 'Chain 5 explosions', goal: 5, get: () => { const t = performance.now(); return G.stats.booms.filter(b => t - b < 4000).length; } },
+    { name: 'Land a 4x flip', goal: 4, get: () => G.stats.maxFlips },
+    { name: 'Reach 35 m high', goal: 35, get: () => Math.floor(maxY) }
+  ];
+  missions.forEach(m => { m.best = 0; m.done = false; });
+  function renderMissions() {
+    const list = isTouch ? missions.filter(m => !m.done).slice(0, 2) : missions;
+    const done = missions.filter(m => m.done).length;
+    $('missions').innerHTML = '<h2>CHALLENGES ' + done + '/' + missions.length + '</h2>' + list.map(m =>
+      '<div class="' + (m.done ? 'done' : '') + '"><span>' + (m.done ? '✔' : '•') + '</span><span>' + m.name + '</span><span>' + Math.min(m.best, m.goal) + '/' + m.goal + '</span></div>').join('');
+  }
+  function checkMissions() {
+    maxY = Math.max(maxY, goat.body.position.y);
+    let changed = false;
+    for (const m of missions) {
+      if (m.done) continue;
+      const v = m.get();
+      if (v > m.best) { m.best = v; changed = true; }
+      if (m.best >= m.goal) { m.done = true; changed = true; G.addScore('CHALLENGE: ' + m.name.toUpperCase(), 1500, 'big'); G.sfx.challenge(); G.vibrate([30, 30, 30]); }
+    }
+    if (changed) renderMissions();
+  }
+
+  // ---------- Toggles ----------
+  const modes = { moon: false, slow: false };
+  function renderModes() {
+    const m = [];
+    m.push('<span class="' + (modes.moon ? 'on' : '') + '">G moon gravity</span>');
+    m.push('<span class="' + (modes.slow ? 'on' : '') + '">T slow-mo</span>');
+    if (goat.jetpack) m.push('<span class="on">' + (isTouch ? '' : 'J ') + 'jetpack ' + Math.round(goat.fuel * 100) + '%</span>');
+    if (goat.ragManual) m.push('<span class="on">ragdolling</span>');
+    $('mode').innerHTML = m.join('');
+    $('mMoon').classList.toggle('on', modes.moon);
+    $('mSlow').classList.toggle('on', modes.slow);
+  }
+  function toggleMoon() {
+    modes.moon = !modes.moon;
+    world.gravity.set(0, modes.moon ? -5 : -22, 0);
+    G.addScore(modes.moon ? 'MOON GOAT' : 'EARTH GOAT', 10);
+    renderModes();
+  }
+  function toggleSlow() { modes.slow = !modes.slow; G.sfx.slowmo(modes.slow); G.addScore(modes.slow ? 'BULLET TIME' : 'REAL TIME', 10); renderModes(); }
+  let rainCd = 0;
+  function barrelRain() {
+    if (rainCd > 0) return;
+    rainCd = 2.5;
+    const p = goat.body.position;
+    for (let i = 0; i < 7; i++) {
+      const a = Math.random() * Math.PI * 2, r = 4 + Math.random() * 10;
+      G.barrel(p.x + Math.cos(a) * r, 18 + i * 3, p.z + Math.sin(a) * r);
+    }
+    G.addScore('IT IS RAINING BARRELS', 50, 'pink');
+  }
+
+  // ---------- Keyboard & mouse ----------
+  const keys = {};
+  const input = { x: 0, z: 0, jump: false, jumpHeld: false, sprint: false, jet: false };
+  let camYaw = Math.PI, camPitch = 0.35, camDist = isTouch ? 10 : 9, lookIdle = 0;
+
+  window.addEventListener('keydown', e => {
+    if (!playing) return;
+    const k = e.key.toLowerCase();
+    if (!keys[k]) {
+      if (k === ' ') input.jump = true;
+      if (k === 'f') goat.headbutt();
+      if (k === 'e') goat.lick();
+      if (k === 'q') goat.bleat();
+      if (k === 'r') { goat.ragdoll('toggle'); renderModes(); }
+      if (k === 'g') toggleMoon();
+      if (k === 't') toggleSlow();
+      if (k === 'b') barrelRain();
+      if (k === 'enter') goat.respawn();
+      if (k === 'm') { const on = !(G.sfx.opts.sfx || G.sfx.opts.music); G.sfx.setOpt('sfx', on); G.sfx.setOpt('music', on); }
+    }
+    keys[k] = true;
+    if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
+  });
+  window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+  window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+
+  const canvas = renderer.domElement;
+  let dragging = false, lastX = 0, lastY = 0;
+  const locked = () => document.pointerLockElement === canvas;
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+  canvas.addEventListener('mousedown', e => {
+    if (!playing || isTouch) return;
+    if (!locked()) {
+      try { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (_) { /* drag to look instead */ }
+      dragging = true; lastX = e.clientX; lastY = e.clientY;
+    }
+    if (locked()) { if (e.button === 0) goat.headbutt(); if (e.button === 2) goat.lick(); }
+  });
+  window.addEventListener('mouseup', () => { dragging = false; });
+  window.addEventListener('mousemove', e => {
+    if (isTouch) return;
+    let dx = 0, dy = 0;
+    if (locked()) { dx = e.movementX; dy = e.movementY; }
+    else if (dragging) { dx = e.clientX - lastX; dy = e.clientY - lastY; lastX = e.clientX; lastY = e.clientY; }
+    camYaw -= dx * 0.0035;
+    camPitch = Math.max(-0.2, Math.min(1.2, camPitch + dy * 0.003));
+  });
+  window.addEventListener('wheel', e => { camDist = Math.max(4, Math.min(22, camDist + e.deltaY * 0.01)); }, { passive: true });
+
+  // ---------- Touch: stick, drag-to-look, buttons ----------
+  const touchIn = { x: 0, z: 0 }, held = { jump: false, jet: false };
+  const stick = $('stick'), nub = $('nub');
+  let stickId = null;
+  const looks = new Map();
+  function moveStick(e) {
+    const r = stick.getBoundingClientRect();
+    let dx = (e.clientX - r.left - r.width / 2) / (r.width / 2), dy = (e.clientY - r.top - r.height / 2) / (r.height / 2);
+    const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; }
+    touchIn.x = -dx; touchIn.z = -dy;
+    nub.style.transform = 'translate(' + dx * 42 + 'px,' + dy * 42 + 'px)';
+  }
+  stick.addEventListener('pointerdown', e => { e.preventDefault(); stickId = e.pointerId; try { stick.setPointerCapture(e.pointerId); } catch (_) { /* ok */ } moveStick(e); });
+  stick.addEventListener('pointermove', e => { if (e.pointerId === stickId) moveStick(e); });
+  const endStick = e => { if (e.pointerId !== stickId) return; stickId = null; touchIn.x = touchIn.z = 0; nub.style.transform = ''; };
+  stick.addEventListener('pointerup', endStick); stick.addEventListener('pointercancel', endStick);
+  canvas.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') looks.set(e.pointerId, { x: e.clientX, y: e.clientY }); });
+  canvas.addEventListener('pointermove', e => {
+    const l = looks.get(e.pointerId);
+    if (!l) return;
+    camYaw -= (e.clientX - l.x) * 0.007;
+    camPitch = Math.max(-0.2, Math.min(1.2, camPitch + (e.clientY - l.y) * 0.005));
+    l.x = e.clientX; l.y = e.clientY;
+    lookIdle = 0;
+  });
+  const endLook = e => looks.delete(e.pointerId);
+  canvas.addEventListener('pointerup', endLook); canvas.addEventListener('pointercancel', endLook);
+  // First real touch on a laptop with a touchscreen switches the UI over
+  window.addEventListener('touchstart', () => {
+    if (isTouch) return;
+    isTouch = true;
+    document.body.classList.add('touch');
+    if (playing) { $('touch').hidden = false; $('tMenu').hidden = false; }
+    renderMissions();
+  }, { passive: true });
+
+  function hold(id, down, up) {
+    const b = $(id);
+    b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); b.classList.add('down'); down(); });
+    const off = () => { b.classList.remove('down'); if (up) up(); };
+    b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off);
+  }
+  hold('tJump', () => { input.jump = true; held.jump = true; }, () => { held.jump = false; });
+  hold('tButt', () => goat.headbutt());
+  hold('tLick', () => goat.lick());
+  hold('tRag', () => { goat.ragdoll('toggle'); renderModes(); });
+  hold('tBaa', () => goat.bleat());
+  hold('tJet', () => { held.jet = true; }, () => { held.jet = false; });
+
+  // Phone menu
+  const menu = $('menu');
+  $('tMenu').addEventListener('click', () => { menu.hidden = false; });
+  $('mMoon').addEventListener('click', toggleMoon);
+  $('mSlow').addEventListener('click', toggleSlow);
+  $('mRain').addEventListener('click', () => { barrelRain(); menu.hidden = true; });
+  $('mSpawn').addEventListener('click', () => { goat.respawn(); menu.hidden = true; });
+  $('mClose').addEventListener('click', () => { menu.hidden = true; });
+
+  function readInput() {
+    let x = 0, z = 0;
+    if (keys.w || keys.arrowup) z += 1;
+    if (keys.s || keys.arrowdown) z -= 1;
+    if (keys.a || keys.arrowleft) x += 1;
+    if (keys.d || keys.arrowright) x -= 1;
+    input.x = x + touchIn.x; input.z = z + touchIn.z;
+    input.sprint = !!keys.shift || Math.hypot(touchIn.x, touchIn.z) > 0.8;
+    input.jumpHeld = !!keys[' '] || held.jump;
+    input.jet = !!keys.j || held.jet;
+  }
+
+  // ---------- Camera ----------
+  const camTarget = new THREE.Vector3();
+  function updateCamera(dt) {
+    const p = goat.body.position;
+    camera.fov = camera.aspect < 1 ? 70 : 62;
+    camera.updateProjectionMatrix();
+    // On phones the camera drifts behind the goat when you are not steering it
+    lookIdle += dt;
+    if (isTouch && lookIdle > 1.2 && !goat.ragActive && Math.hypot(goat.body.velocity.x, goat.body.velocity.z) > 3) {
+      let dA = goat.yaw - camYaw; dA = Math.atan2(Math.sin(dA), Math.cos(dA));
+      camYaw += dA * Math.min(1, dt * 1.4);
+    }
+    camTarget.lerp(new THREE.Vector3(p.x, p.y + 1.2, p.z), Math.min(1, dt * 10));
+    const d = camDist + Math.min(6, goat.body.velocity.length() * 0.15) + (camera.aspect < 1 ? -1.5 : 0);
+    const off = new THREE.Vector3(Math.sin(camYaw) * Math.cos(camPitch), Math.sin(camPitch), Math.cos(camYaw) * Math.cos(camPitch)).multiplyScalar(-d);
+    camera.position.copy(camTarget).add(off);
+    // Pull the camera in front of walls so it never ends up inside a house
+    let best = 1;
+    const from = new V3(camTarget.x, camTarget.y, camTarget.z), to = new V3(camera.position.x, camera.position.y, camera.position.z);
+    world.raycastAll(from, to, { skipBackfaces: true }, r => {
+      if (r.body.mass === 0 && r.body !== G.groundBody && r.body.tag?.kind !== 'windmill') best = Math.min(best, r.distance / d);
+    });
+    if (best < 1) camera.position.copy(camTarget).addScaledVector(off, Math.max(0.08, best - 0.06));
+    if (camera.position.y < 0.6) camera.position.y = 0.6;
+    if (G.shake > 0) {
+      camera.position.x += (Math.random() - 0.5) * G.shake;
+      camera.position.y += (Math.random() - 0.5) * G.shake;
+      G.shake = Math.max(0, G.shake - dt * 2.5);
+    }
+    camera.lookAt(camTarget);
+    G.sfx.listen(p, Math.cos(camYaw), -Math.sin(camYaw));
+    sun.position.set(p.x + 40, 70, p.z + 25);
+    sun.target.position.set(p.x, 0, p.z);
+    G.sky.position.copy(camera.position);
+  }
+
+  // ---------- Occasional "physics bugs" for flavour ----------
+  let glitchT = 12 + Math.random() * 10;
+  function maybeGlitch(dt) {
+    glitchT -= dt;
+    if (glitchT > 0) return;
+    glitchT = 14 + Math.random() * 16;
+    const p = goat.body.position;
+    const near = G.dyn.filter(b => b.mass > 0 && b.mass < 100 && !b.goatPart && b.position.distanceTo(p) < 25);
+    if (!near.length) return;
+    const b = near[Math.floor(Math.random() * near.length)];
+    b.wakeUp();
+    b.velocity.set((Math.random() - 0.5) * 8, 28, (Math.random() - 0.5) * 8);
+    b.angularVelocity.set(30, 0, 30);
+    G.sfx.glitch();
+    G.addScore('PHYSICS BUG (FEATURE)', 75, 'pink');
+  }
+
+  // ---------- Loop ----------
+  const STEP = 1 / 60;
+  let acc = 0, last = performance.now(), time = 0, baaT = 6, hudT = 0, missionT = 0;
+  function stepPhysics(dt) {
+    acc += dt;
+    let n = 0;
+    while (acc >= STEP && n < 4) {
+      goat.prePhysics();
+      world.step(STEP);
+      const q = G.after; G.after = [];
+      for (const fn of q) fn();
+      acc -= STEP; n++;
+    }
+    if (n === 4) acc = 0;
+  }
+  function frame(now) {
+    requestAnimationFrame(frame);
+    let dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    if (!playing) {
+      time += dt; camYaw += dt * 0.15; lookIdle = 0;
+      G.updatePeople(dt, time); stepPhysics(dt); G.sync(); G.updateParticles(dt, time);
+      updateCamera(dt); renderer.render(scene, camera);
+      return;
+    }
+    const scale = modes.slow ? 0.3 : 1;
+    dt *= scale;
+    time += dt;
+    readInput();
+    goat.update(dt, input, camYaw, time);
+    input.jump = false;
+    G.updatePeople(dt, time);
+    stepPhysics(dt);
+    G.sync();
+    G.updateParticles(dt, time);
+    updateCamera(dt / scale);
+    maybeGlitch(dt);
+    comboT -= dt;
+    if (comboT <= 0 && combo) { combo = 0; $('combo').textContent = ''; }
+    baaT -= dt;
+    if (baaT <= 0) { baaT = 5 + Math.random() * 8; G.sfx.baa(); }
+    rainCd -= dt;
+    hudT -= dt;
+    if (hudT <= 0 && goat.jetpack) { hudT = 0.25; renderModes(); }
+    missionT -= dt;
+    if (missionT <= 0) { missionT = 0.4; checkMissions(); }
+    // Audio follows the action: wind at speed, jet roar, music heats up with the combo.
+    G.sfx.loops(goat.body.velocity.length(), !!goat.jetting, null);
+    G.sfx.setIntensity(combo >= 9 ? 3 : combo >= 5 ? 2 : combo >= 2 ? 1 : 0);
+    renderer.render(scene, camera);
+  }
+  document.addEventListener('visibilitychange', () => { last = performance.now(); acc = 0; G.sfx.suspend(document.hidden); });
+
+  $('play').addEventListener('click', () => {
+    G.sfx.init();
+    G.sfx.baa();
+    $('title').hidden = true;
+    playing = true;
+    if (isTouch) {
+      $('touch').hidden = false;
+      $('tMenu').hidden = false;
+      // Fullscreen + landscape where the browser allows it; fine if it doesn't
+      try {
+        const r = document.documentElement.requestFullscreen?.({ navigationUI: 'hide' });
+        if (r && r.then) r.then(() => screen.orientation?.lock?.('landscape')).catch(() => {});
+      } catch (_) { /* not available */ }
+    } else try { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (_) { /* drag to look instead */ }
+    renderModes();
+    renderMissions();
+  });
+
+  // Keep score across live updates of the page
+  window.claude?.hot?.snapshot?.(() => ({ score }));
+  const boot = data => { if (data && data.score) { score = data.score; $('score').textContent = score.toLocaleString(); } };
+  window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
+
+  renderModes();
+  renderMissions();
+  requestAnimationFrame(frame);
+  G.debug = { input, keys, missions, get playing() { return playing; } };
+})();

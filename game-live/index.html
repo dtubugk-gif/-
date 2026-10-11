@@ -1,0 +1,176 @@
+<title>Goat Mayhem</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#8fd3ff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800&display=swap">
+<style>
+/* Layout: full-bleed 3D canvas, HUD floats in the corners, thumb controls along the bottom. Single deliberate look (sunny cartoon town). */
+:root {
+  --sky: #8fd3ff;
+  --ink: #2b1d3a;
+  --paper: #fff7e0;
+  --pop: #ff4fa3;
+  --sun: #ffd23f;
+  --grass: #5cc85a;
+  --glass: rgba(255, 247, 224, .3);
+  --display: "Lilita One", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
+  --body: "Nunito", "Segoe UI", system-ui, sans-serif;
+  --top: calc(10px + env(safe-area-inset-top, 0px));
+  --bot: calc(14px + env(safe-area-inset-bottom, 0px));
+  --left: calc(14px + env(safe-area-inset-left, 0px));
+  --right: calc(14px + env(safe-area-inset-right, 0px));
+  color-scheme: light;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; overflow: hidden; position: fixed; inset: 0; background: var(--sky); color: var(--ink); font-family: var(--body); user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: none; overscroll-behavior: none; }
+#view { position: fixed; inset: 0; }
+#view canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+.hud { position: fixed; pointer-events: none; z-index: 5; }
+#scorebox { top: var(--top); left: var(--left); display: grid; gap: 2px; }
+#score { font-family: var(--display); font-size: clamp(26px, 5vw, 46px); color: var(--paper); -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; text-shadow: 0 4px 0 var(--ink); font-variant-numeric: tabular-nums; line-height: 1; }
+#combo { font-family: var(--display); font-size: 20px; color: var(--sun); -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill; min-height: 24px; }
+#side { top: var(--top); right: var(--right); display: grid; gap: 8px; justify-items: end; max-width: min(46vw, 260px); }
+#statues { font-weight: 800; font-size: 14px; background: var(--paper); border: 3px solid var(--ink); border-radius: 14px; padding: 4px 12px; box-shadow: 0 4px 0 var(--ink); white-space: nowrap; }
+#statues b { font-family: var(--display); font-weight: 400; font-size: 20px; color: var(--pop); }
+#missions { background: rgba(43, 29, 58, .78); color: var(--paper); border-radius: 12px; padding: 8px 10px; display: grid; gap: 3px; font-size: 12.5px; font-weight: 800; min-width: 0; }
+#missions h2 { margin: 0 0 2px; font-family: var(--display); font-weight: 400; font-size: 14px; letter-spacing: .04em; color: var(--sun); }
+#missions div { display: flex; gap: 6px; align-items: baseline; }
+#missions div span:last-child { margin-left: auto; padding-left: 8px; font-variant-numeric: tabular-nums; opacity: .8; }
+#missions div.done { opacity: .5; text-decoration: line-through; }
+#feed { left: 50%; top: 20%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; width: min(90vw, 520px); }
+.pop { font-family: var(--display); font-size: clamp(20px, 4.2vw, 38px); color: var(--paper); -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; text-shadow: 0 3px 0 var(--ink); animation: pop 1.6s ease-out forwards; white-space: nowrap; }
+.pop.big { color: var(--sun); font-size: clamp(26px, 6vw, 56px); }
+.pop.pink { color: var(--pop); }
+@keyframes pop { 0% { transform: scale(.3) rotate(-8deg); opacity: 0; } 12% { transform: scale(1.25) rotate(4deg); opacity: 1; } 22% { transform: scale(1) rotate(-2deg); } 80% { opacity: 1; } 100% { transform: translateY(-40px); opacity: 0; } }
+#mode { bottom: var(--bot); left: var(--left); font-weight: 800; font-size: 13px; display: flex; gap: 8px; flex-wrap: wrap; max-width: 60vw; }
+#mode span { background: var(--ink); color: var(--paper); border-radius: 999px; padding: 3px 10px; }
+#mode span.on { background: var(--pop); }
+.touch #mode { bottom: auto; top: calc(var(--top) + 64px); font-size: 11px; }
+.touch #mode span:not(.on) { display: none; }
+
+#title { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: var(--top) var(--right) var(--bot) var(--left); background: radial-gradient(circle at 50% 40%, rgba(255, 210, 63, .55), rgba(143, 211, 255, .2) 60%); overflow: auto; }
+#card { background: var(--paper); border: 4px solid var(--ink); border-radius: 22px; box-shadow: 0 10px 0 var(--ink); padding: 20px 22px 18px; width: min(560px, 100%); display: grid; gap: 12px; }
+#card h1 { margin: 0; font-family: var(--display); font-weight: 400; font-size: clamp(40px, 10vw, 76px); line-height: .9; color: var(--pop); -webkit-text-stroke: 3px var(--ink); paint-order: stroke fill; text-shadow: 0 6px 0 var(--ink); transform: rotate(-3deg); text-wrap: balance; }
+#card p { margin: 0; font-size: 15px; line-height: 1.45; max-width: 60ch; }
+.keys { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 14px; font-size: 14px; }
+.keys div { display: flex; gap: 8px; align-items: center; min-width: 0; }
+kbd { font-family: var(--display); font-size: 13px; background: var(--ink); color: var(--paper); border-radius: 6px; padding: 2px 7px; min-width: 14px; text-align: center; white-space: nowrap; }
+.touch .desk, body:not(.touch) .mob { display: none; }
+#play { font-family: var(--display); font-size: 30px; background: var(--sun); color: var(--ink); border: 4px solid var(--ink); border-radius: 16px; padding: 10px 18px; box-shadow: 0 6px 0 var(--ink); cursor: pointer; transition: transform .08s; touch-action: manipulation; }
+#play:hover { transform: translateY(-2px) rotate(-1deg); }
+#play:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--ink); }
+#play:focus-visible, .tbtn:focus-visible { outline: 4px solid var(--pop); outline-offset: 3px; }
+.hint { font-size: 13px; opacity: .75; }
+@media (max-height: 520px) {
+  #card { padding: 14px 18px 14px; gap: 8px; width: min(720px, 100%); grid-template-columns: 1fr 1fr; align-items: start; }
+  #card h1 { font-size: 38px; grid-column: 1 / -1; padding: 4px 0 10px; }
+  #card p { font-size: 13.5px; }
+  .keys { font-size: 13px; grid-template-columns: 1fr; gap: 4px; }
+  #play { font-size: 24px; padding: 8px 14px; grid-column: 1 / -1; }
+  .hint { grid-column: 1 / -1; }
+}
+
+/* Thumb controls */
+#touch { position: fixed; inset: 0; z-index: 6; pointer-events: none; }
+#stick { position: absolute; left: calc(var(--left) + 4px); bottom: calc(var(--bot) + 6px); width: 140px; height: 140px; border-radius: 50%; background: var(--glass); border: 3px solid rgba(43, 29, 58, .45); pointer-events: auto; touch-action: none; }
+#nub { position: absolute; left: 43px; top: 43px; width: 54px; height: 54px; border-radius: 50%; background: var(--paper); border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink); }
+#btns { position: absolute; right: var(--right); bottom: var(--bot); width: 214px; height: 200px; pointer-events: none; }
+.tbtn { position: absolute; width: 64px; height: 64px; border-radius: 50%; border: 3px solid var(--ink); background: var(--paper); font-family: var(--display); font-size: 13px; color: var(--ink); box-shadow: 0 4px 0 var(--ink); pointer-events: auto; touch-action: none; padding: 0; }
+.tbtn.down { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+#tJump { right: 0; bottom: 0; width: 84px; height: 84px; font-size: 17px; background: var(--sun); }
+#tButt { right: 96px; bottom: 0; background: #ffb3d4; }
+#tLick { right: 10px; bottom: 98px; background: #ffd0e0; }
+#tRag { right: 150px; bottom: 74px; width: 54px; height: 54px; font-size: 11px; }
+#tBaa { right: 84px; bottom: 120px; width: 54px; height: 54px; font-size: 12px; }
+#tJet { right: 160px; bottom: 140px; width: 54px; height: 54px; font-size: 12px; background: #ffa040; }
+#tMenu { position: fixed; z-index: 7; top: var(--top); left: 50%; margin-left: -22px; width: 44px; height: 44px; font-size: 20px; }
+@media (max-width: 520px) { #tMenu { left: var(--left); margin-left: 0; top: calc(var(--top) + 58px); } .touch #mode { top: calc(var(--top) + 110px); } }
+@media (max-height: 420px) { #stick { width: 120px; height: 120px; } #nub { left: 33px; top: 33px; } }
+@media (prefers-reduced-motion: reduce) { .pop { animation-duration: 2.4s; } }
+</style>
+
+<div id="view"></div>
+
+<div class="hud" id="scorebox"><div id="score">0</div><div id="combo"></div></div>
+<div class="hud" id="side">
+  <div id="statues">Golden goats <b id="statueCount">0/6</b></div>
+  <div id="missions"></div>
+</div>
+<div class="hud" id="feed"></div>
+<div class="hud" id="mode"></div>
+
+<div id="touch" hidden>
+  <div id="stick"><div id="nub"></div></div>
+  <div id="btns">
+    <button class="tbtn" id="tJump" type="button">JUMP</button>
+    <button class="tbtn" id="tButt" type="button">BUTT</button>
+    <button class="tbtn" id="tLick" type="button">LICK</button>
+    <button class="tbtn" id="tRag" type="button">FLOP</button>
+    <button class="tbtn" id="tBaa" type="button">BAA!</button>
+    <button class="tbtn" id="tJet" type="button" hidden>JET</button>
+  </div>
+</div>
+
+<div id="title">
+  <div id="card">
+    <h1>GOAT MAYHEM</h1>
+    <p>You are a goat. The town is full of crates, cars, explosive barrels and people who have places to be. Ruin their day, finish the challenges and find the six golden goats. Physics is optional.</p>
+    <div class="keys desk">
+      <div><kbd>WASD</kbd> run around</div>
+      <div><kbd>Mouse</kbd> look (click to lock)</div>
+      <div><kbd>Space</kbd> jump (hold: flail)</div>
+      <div><kbd>Shift</kbd> sprint</div>
+      <div><kbd>F</kbd>/<kbd>LMB</kbd> headbutt</div>
+      <div><kbd>E</kbd>/<kbd>RMB</kbd> lick &amp; drag</div>
+      <div><kbd>Q</kbd> bleat</div>
+      <div><kbd>R</kbd> ragdoll flop</div>
+      <div><kbd>G</kbd> moon gravity</div>
+      <div><kbd>T</kbd> slow motion</div>
+      <div><kbd>J</kbd> jetpack (find it)</div>
+      <div><kbd>B</kbd> barrel rain</div>
+      <div><kbd>M</kbd> sound on/off</div>
+    </div>
+    <div class="keys mob">
+      <div><kbd>Left thumb</kbd> stick to run, push far to sprint</div>
+      <div><kbd>Right thumb</kbd> drag anywhere to look</div>
+      <div><kbd>BUTT</kbd> headbutt · <kbd>LICK</kbd> grab things</div>
+      <div><kbd>FLOP</kbd> ragdoll · <kbd>BAA!</kbd> scare people</div>
+      <div><kbd>☰</kbd> moon gravity, slow-mo, barrel rain</div>
+      <div>Best played sideways, sound on.</div>
+    </div>
+    <button id="play" type="button">PLAY AS GOAT</button>
+    <div class="hint desk">Sound on. Things will break. That is the point.</div>
+  </div>
+</div>
+
+<div id="menu" hidden>
+  <div id="menuCard">
+    <button class="mbtn" id="mMoon" type="button">Moon gravity</button>
+    <button class="mbtn" id="mSlow" type="button">Slow motion</button>
+    <button class="mbtn" id="mRain" type="button">Barrel rain</button>
+    <button class="mbtn" id="mSpawn" type="button">Respawn</button>
+    <button class="mbtn" id="mClose" type="button">Back to chaos</button>
+  </div>
+</div>
+<style>
+#menu { position: fixed; inset: 0; z-index: 12; display: grid; place-items: center; background: rgba(43, 29, 58, .45); padding: var(--top) var(--right) var(--bot) var(--left); }
+#menuCard { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; width: min(420px, 100%); background: var(--paper); border: 4px solid var(--ink); border-radius: 20px; padding: 16px; box-shadow: 0 8px 0 var(--ink); }
+.mbtn { font-family: var(--display); font-size: 18px; color: var(--ink); background: var(--sun); border: 3px solid var(--ink); border-radius: 14px; padding: 12px; box-shadow: 0 4px 0 var(--ink); touch-action: manipulation; }
+.mbtn.on { background: var(--pop); color: var(--paper); }
+#mClose { grid-column: 1 / -1; background: var(--paper); }
+</style>
+<button class="tbtn" id="tMenu" type="button" hidden aria-label="Menu">☰</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.158.0/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/world.js"></script>
+<script src="js/town.js"></script>
+<script src="js/entities.js"></script>
+<script src="js/goatmodel.js"></script>
+<script src="js/people.js"></script>
+<script src="js/goat.js"></script>
+<script src="js/main.js"></script>
