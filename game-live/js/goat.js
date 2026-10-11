@@ -10,11 +10,14 @@
   const P = G.makeGoatParts();
   const rig = G.assembleGoat(P);
   outline(rig, 0.022);
+  G.bakeRig(rig, [rig, P.torso, ...P.legs, ...P.knees, P.neck, P.head, P.tail, ...P.ears], [...P.eyes, P.mouth]);
   root.add(rig);
+  root.userData.noBake = true;
   scene.add(root);
 
   const pack = G.makeJetpack();
   pack.position.set(0, 0.42, -0.12); pack.rotation.x = -1.25; pack.scale.setScalar(0.85); pack.visible = false;
+  G.bakeRig(pack, [pack], []);
   P.torso.add(pack);
   const flames = [];
   for (const x of [-0.17, 0.17]) {
@@ -24,6 +27,7 @@
 
   const tongueMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 1, 8), mat(0xff6f9d));
   tongueMesh.visible = false;
+  tongueMesh.userData.noBake = true;
   scene.add(tongueMesh);
 
   // Dizzy stars orbiting the head after a hard landing
@@ -41,7 +45,7 @@
     const w = new THREE.Group();
     part.position.set(ox, oy, oz);
     w.add(part); outline(part, 0.022);
-    w.visible = false; scene.add(w);
+    w.visible = false; w.userData.noBake = true; scene.add(w);
     return w;
   }
   const rv = {
@@ -50,6 +54,10 @@
     head: wrap(R.head, 0, 0, -0.25),
     legs: R.legs.map(l => wrap(l, 0, 0.29, 0))
   };
+  G.bakeRig(R.torso, [R.torso, R.tail], []);
+  G.bakeRig(R.neck, [R.neck], []);
+  G.bakeRig(R.head, [R.head, ...R.ears], [...R.eyes, R.mouth]);
+  R.legs.forEach((l, i) => G.bakeRig(l, [l, R.knees[i]], []));
   // straighten ragdoll legs (knees stay as modelled)
   R.legs.forEach(l => l.rotation.set(0, 0, 0));
 

@@ -319,6 +319,8 @@
     if (hudT <= 0 && goat.jetpack) { hudT = 0.25; renderModes(); }
     missionT -= dt;
     if (missionT <= 0) { missionT = 0.4; checkMissions(); }
+    G.perfTick(dt / scale);
+    G.lodTick(dt / scale);
     // Audio follows the action: wind at speed, jet roar, music heats up with the combo.
     G.sfx.loops(goat.body.velocity.length(), !!goat.jetting, null);
     G.sfx.setIntensity(combo >= 9 ? 3 : combo >= 5 ? 2 : combo >= 2 ? 1 : 0);
@@ -351,6 +353,7 @@
 
   renderModes();
   renderMissions();
+  G.optimizeScene();
   requestAnimationFrame(frame);
   G.debug = { input, keys, missions, get playing() { return playing; } };
 })();

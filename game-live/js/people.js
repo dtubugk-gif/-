@@ -47,6 +47,7 @@
       legR: limb(pant, 0.15, -0.08, 0.6, 0.11, shoe, 0x2b1d3a)
     };
     outline(rig, 0.025);
+    G.bakeRig(rig, [rig, head, parts.armL, parts.armR, parts.legL, parts.legR], [mouth, ...eyes]);
     return Object.assign(parts, { rig, head, mouth, eyes });
   }
 
@@ -189,6 +190,7 @@
       g.add(w); wheels.push(w);
     }
     outline(shell, 0.04);
+    G.bakeRig(g, [g, ...wheels], []);
     return { g, wheels };
   }
   function Car(a0, i) {

@@ -154,7 +154,23 @@
   [[30, -45], [31.2, -45], [30.6, -46.1], [29.4, -46], [8, 20], [-20, -5], [60, -5], [-44, 38], [-46, 39], [5, -30], [-60, -20], [70, 20]]
     .forEach(p => barrel(p[0], 0.6, p[1]).sleep());
 
-  const fireMat = new THREE.MeshBasicMaterial({ color: 0xffb02e, transparent: true });
+  // Pooled particles: shared geometry, reused meshes, no allocation per puff.
+  const puffGeo = new THREE.IcosahedronGeometry(1, 0), fireGeo = new THREE.IcosahedronGeometry(1, 1), debrisGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+  const POOL = G.mobile ? 70 : 140, pool = [];
+  for (let i = 0; i < POOL; i++) { const m = new THREE.Mesh(puffGeo, new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false })); m.visible = false; m.userData.noBake = true; scene.add(m); pool.push(m); }
+  function spawn(geo, color, opacity, x, y, z, q) {
+    let m = pool.pop();
+    if (!m) { const old = G.particles.shift(); if (!old || !old.pooled) return null; m = old.m; }
+    m.geometry = geo; m.material.color.setHex(color); m.material.opacity = opacity; m.material.userData.o0 = opacity;
+    m.position.set(x, y, z); m.rotation.set(0, 0, 0); m.scale.setScalar(q.size || 1); m.visible = true;
+    q.m = m; q.pooled = true; q.max = q.life;
+    G.particles.push(q);
+    return q;
+  }
+  // One flash light that always exists: changing its intensity is free, adding lights recompiles every shader.
+  const flash = new THREE.PointLight(0xffa040, 0, 36);
+  scene.add(flash);
+  let flashT = 0;
   function explode(b) {
     if (b.dead) return;
     b.dead = true;
@@ -169,24 +185,10 @@
     G.addScore('KABOOM', 500, 'big');
     G.stats.booms.push(performance.now());
     G.vibrate?.(60);
-    for (let i = 0; i < 3; i++) {
-      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), fireMat.clone());
-      m.material.color.setHex([0xffe066, 0xff8c1a, 0xff3d00][i]);
-      m.position.set(p.x, p.y + i * 0.4, p.z);
-      scene.add(m);
-      G.particles.push({ m, life: 0.6 + i * 0.15, max: 0.6 + i * 0.15, grow: radius * (0.9 - i * 0.2), vel: new THREE.Vector3(0, 2, 0), fade: true });
-    }
-    for (let i = 0; i < 4; i++) {
-      const m = new THREE.Mesh(new THREE.IcosahedronGeometry(1.2, 1), new THREE.MeshBasicMaterial({ color: 0x6b6470, transparent: true, opacity: 0.8 }));
-      m.position.set(p.x + (Math.random() - 0.5) * 2, p.y + 1, p.z + (Math.random() - 0.5) * 2);
-      scene.add(m);
-      G.particles.push({ m, life: 1.6, max: 1.6, grow: 4, vel: new THREE.Vector3(0, 4 + Math.random() * 3, 0), fade: true });
-    }
+    for (let i = 0; i < 3; i++) spawn(fireGeo, [0xffe066, 0xff8c1a, 0xff3d00][i], 1, p.x, p.y + i * 0.4, p.z, { life: 0.6 + i * 0.15, grow: radius * (0.9 - i * 0.2), vel: new THREE.Vector3(0, 2, 0), fade: true });
+    for (let i = 0; i < 4; i++) spawn(fireGeo, 0x6b6470, 0.8, p.x + (Math.random() - 0.5) * 2, p.y + 1, p.z + (Math.random() - 0.5) * 2, { life: 1.6, size: 1.2, grow: 4, vel: new THREE.Vector3(0, 4 + Math.random() * 3, 0), fade: true });
     for (let i = 0; i < (G.mobile ? 10 : 18); i++) debris(p, i % 3 ? 0x333333 : 0xe53935);
-    const flash = new THREE.PointLight(0xffa040, 30, radius * 4);
-    flash.position.set(p.x, p.y + 1, p.z);
-    scene.add(flash);
-    G.particles.push({ m: flash, life: 0.3, max: 0.3, light: true });
+    flash.position.set(p.x, p.y + 1, p.z); flash.intensity = 30; flashT = 0.3;
 
     for (const o of world.bodies.slice()) {
       if (o.mass === 0) continue;
@@ -209,17 +211,11 @@
   };
 
   function debris(p, color) {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), mat(color));
-    m.position.set(p.x, p.y + 0.5, p.z);
-    scene.add(m);
-    G.particles.push({ m, life: 1.4, max: 1.4, vel: new THREE.Vector3((Math.random() - 0.5) * 22, 8 + Math.random() * 14, (Math.random() - 0.5) * 22), grav: true, spin: true });
+    spawn(debrisGeo, color, 1, p.x, p.y + 0.5, p.z, { life: 1.4, vel: new THREE.Vector3((Math.random() - 0.5) * 22, 8 + Math.random() * 14, (Math.random() - 0.5) * 22), grav: true, spin: true });
   }
   G.puff = function (p, color, n, size) {
     for (let i = 0; i < (n || 6); i++) {
-      const m = new THREE.Mesh(new THREE.IcosahedronGeometry((size || 0.25) + Math.random() * 0.2, 0), new THREE.MeshBasicMaterial({ color: color || 0xffffff, transparent: true }));
-      m.position.set(p.x, p.y, p.z);
-      scene.add(m);
-      G.particles.push({ m, life: 0.6, max: 0.6, vel: new THREE.Vector3((Math.random() - 0.5) * 5, Math.random() * 4, (Math.random() - 0.5) * 5), fade: true, grow: 0.6 });
+      spawn(puffGeo, color || 0xffffff, 1, p.x, p.y, p.z, { life: 0.6, size: (size || 0.25) + Math.random() * 0.2, vel: new THREE.Vector3((Math.random() - 0.5) * 5, Math.random() * 4, (Math.random() - 0.5) * 5), fade: true, grow: 0.6 });
     }
   };
 
@@ -234,15 +230,16 @@
         if (q.m.position.y < 0.1) { q.m.position.y = 0.1; q.vel.multiplyScalar(0.5); q.vel.y = Math.abs(q.vel.y); }
       }
       if (q.spin) { q.m.rotation.x += dt * 9; q.m.rotation.z += dt * 7; }
-      if (q.grow) q.m.scale.setScalar(0.3 + t * q.grow);
+      if (q.grow) q.m.scale.setScalar((q.size || 1) * (0.3 + t * q.grow));
       if (q.fade) q.m.material.opacity = (1 - t) * (q.m.material.userData.o0 || 1);
       if (q.light) q.m.intensity = 30 * (1 - t);
       if (q.life <= 0) {
-        scene.remove(q.m);
-        if (q.m.material && q.fade) q.m.material.dispose();
+        if (q.pooled) { q.m.visible = false; pool.push(q.m); }
+        else { scene.remove(q.m); if (q.m.material && q.fade) q.m.material.dispose(); }
         G.particles.splice(i, 1);
       }
     }
+    if (flashT > 0) { flashT -= dt; flash.intensity = Math.max(0, 30 * flashT / 0.3); }
     // Ambient animation: trampolines spring back, clouds drift, fountain sprays, flag waves
     for (const pad of G.tramps) { pad.scale.y += (1 - pad.scale.y) * Math.min(1, dt * 10); pad.position.y += (0.85 - pad.position.y) * Math.min(1, dt * 10); }
     for (const c of G.clouds || []) { c.position.x += c.userData.v * dt; if (c.position.x > 300) c.position.x = -300; }

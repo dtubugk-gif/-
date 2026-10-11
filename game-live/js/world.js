@@ -51,7 +51,7 @@ window.G = window.G || {};
   const world = new CANNON.World();
   world.gravity.set(0, -22, 0); // heavier than Earth: snappier, sillier arcs
   world.broadphase = new CANNON.SAPBroadphase(world);
-  world.solver.iterations = 10;
+  world.solver.iterations = mobile ? 7 : 10;
   world.allowSleep = true;
   world.defaultContactMaterial.friction = 0.35;
   world.defaultContactMaterial.restitution = 0.25;
