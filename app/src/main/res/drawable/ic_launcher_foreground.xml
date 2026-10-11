@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- outer glow -->
+    <path
+        android:strokeColor="#4400E5FF"
+        android:strokeWidth="7"
+        android:strokeLineJoin="round"
+        android:pathData="M54,30 L72,72 L60,65 L54,71 L48,65 L36,72 Z" />
+    <!-- ship -->
+    <path
+        android:fillColor="#3300E5FF"
+        android:strokeColor="#FF00E5FF"
+        android:strokeWidth="3"
+        android:strokeLineJoin="round"
+        android:pathData="M54,30 L72,72 L60,65 L54,71 L48,65 L36,72 Z" />
+    <!-- cockpit -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M54,46 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+    <!-- engine flame -->
+    <path
+        android:fillColor="#FFFF2BD6"
+        android:pathData="M50,72 L54,84 L58,72 Z" />
+</vector>
