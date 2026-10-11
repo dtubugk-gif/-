@@ -120,8 +120,29 @@
     return s;
   };
 
+  // ---------- Character friction ----------
+  // cannon.js over-applies friction to rotation-locked bodies (~35x): the goat lost ~92% of its speed
+  // every physics step, so it crawled. Characters whose speed the code sets directly get a frictionless
+  // material against the world; the controllers do the braking. Knocked-down people and wrecked cars
+  // switch back to normal friction so they don't slide forever.
+  const slick = new CANNON.Material('slick'), solid = new CANNON.Material('solid');
+  function setupFriction() {
+    const w = G.world;
+    for (const b of w.bodies) if (!b.material) b.material = solid;
+    w.addContactMaterial(new CANNON.ContactMaterial(slick, solid, { friction: 0, restitution: 0 }));
+    w.addContactMaterial(new CANNON.ContactMaterial(solid, solid, { friction: w.defaultContactMaterial.friction, restitution: w.defaultContactMaterial.restitution }));
+    G.goat.body.material = slick;
+    const upd = G.updatePeople;
+    G.updatePeople = function (dt, time) {
+      for (const h of G.humans) h.body.material = h.state === 'down' ? solid : slick;
+      for (const c of G.cars) c.body.material = c.wrecked ? solid : slick;
+      return upd.call(this, dt, time);
+    };
+  }
+
   // ---------- Whole-scene pass, run once after everything is built ----------
   G.optimizeScene = function () {
+    setupFriction();
     // 1. Point lights cost every pixel on screen and force shader recompiles when added/removed.
     const lights = [];
     scene.traverse(o => { if (o.isPointLight) lights.push(o); });

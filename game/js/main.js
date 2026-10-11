@@ -251,11 +251,16 @@
     // On touch, drift the camera behind the goat while the player is steering and not looking around.
     if (isTouch && playing) {
       lookT -= dt;
-      const moving = Math.hypot(touchIn.x, touchIn.z) > 0.2;
-      if (lookT <= 0 && moving && goat.rag <= 0) {
-        let dA = (goat.yaw + Math.PI) - camYaw; dA = Math.atan2(Math.sin(dA), Math.cos(dA));
-        camYaw += dA * Math.min(1, dt * 1.6);
-        camPitch += (0.32 - camPitch) * Math.min(1, dt * 0.8);
+      const push = Math.hypot(touchIn.x, touchIn.z);
+      if (lookT <= 0 && push > 0.2 && goat.rag <= 0) {
+        // Behind the goat is camYaw == goat.yaw. Follow harder when pushing forward; hold when pulling back.
+        // Only follow while steering forward or sideways. Pulling back must never swing the camera:
+        // that flips which way 'back' points and the goat suddenly runs the other way.
+        const fwd = Math.max(0, touchIn.z / push), back = Math.max(0, -touchIn.z / push), side = Math.abs(touchIn.x) / push;
+        const rate = back > 0.3 ? 0 : (2.8 * fwd + 0.8 * side) * Math.min(1, push);
+        let dA = goat.yaw - camYaw; dA = Math.atan2(Math.sin(dA), Math.cos(dA));
+        camYaw += dA * Math.min(1, dt * rate);
+        camPitch += (0.32 - camPitch) * Math.min(1, dt * 1.2);
       }
     }
     const d = camDist + Math.min(6, goat.body.velocity.length() * 0.15);

@@ -75,7 +75,10 @@ kbd { font-family: var(--display); font-size: 13px; background: var(--ink); colo
 
 /* Thumb controls */
 #touch { position: fixed; inset: 0; z-index: 6; pointer-events: none; }
-#stick { position: absolute; left: calc(var(--left) + 4px); bottom: calc(var(--bot) + 6px); width: 140px; height: 140px; border-radius: 50%; background: var(--glass); border: 3px solid rgba(43, 29, 58, .45); pointer-events: auto; touch-action: none; }
+/* Floating stick: the zone catches the thumb anywhere on the lower left; the stick jumps under it. */
+#stickZone { position: absolute; left: 0; bottom: 0; width: min(50%, calc(100% - var(--right) - 236px)); height: 68%; pointer-events: auto; touch-action: none; }
+#stick { position: absolute; left: calc(var(--left) + 4px); bottom: calc(var(--bot) + 6px); width: 140px; height: 140px; border-radius: 50%; background: var(--glass); border: 3px solid rgba(43, 29, 58, .45); pointer-events: none; opacity: .45; transition: opacity .15s; }
+#stick.live { opacity: 1; transition: none; }
 #nub { position: absolute; left: 43px; top: 43px; width: 54px; height: 54px; border-radius: 50%; background: var(--paper); border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink); }
 #btns { position: absolute; right: var(--right); bottom: var(--bot); width: 214px; height: 200px; pointer-events: none; }
 .tbtn { position: absolute; width: 64px; height: 64px; border-radius: 50%; border: 3px solid var(--ink); background: var(--paper); font-family: var(--display); font-size: 13px; color: var(--ink); box-shadow: 0 4px 0 var(--ink); pointer-events: auto; touch-action: none; padding: 0; }
@@ -103,6 +106,7 @@ kbd { font-family: var(--display); font-size: 13px; background: var(--ink); colo
 <div class="hud" id="mode"></div>
 
 <div id="touch" hidden>
+  <div id="stickZone"></div>
   <div id="stick"><div id="nub"></div></div>
   <div id="btns">
     <button class="tbtn" id="tJump" type="button">JUMP</button>
@@ -134,7 +138,7 @@ kbd { font-family: var(--display); font-size: 13px; background: var(--ink); colo
       <div><kbd>M</kbd> sound on/off</div>
     </div>
     <div class="keys mob">
-      <div><kbd>Left thumb</kbd> stick to run, push far to sprint</div>
+      <div><kbd>Left thumb</kbd> touch anywhere on the left to run, push far to sprint</div>
       <div><kbd>Right thumb</kbd> drag anywhere to look</div>
       <div><kbd>BUTT</kbd> headbutt · <kbd>LICK</kbd> grab things</div>
       <div><kbd>FLOP</kbd> ragdoll · <kbd>BAA!</kbd> scare people</div>

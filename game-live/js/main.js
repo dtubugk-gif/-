@@ -152,20 +152,39 @@
 
   // ---------- Touch: stick, drag-to-look, buttons ----------
   const touchIn = { x: 0, z: 0 }, held = { jump: false, jet: false };
-  const stick = $('stick'), nub = $('nub');
-  let stickId = null;
+  // Floating stick: it appears under the thumb wherever it lands on the left side,
+  // and drags along if the thumb slides past the rim, so you never lose it.
+  const stick = $('stick'), nub = $('nub'), zone = $('stickZone');
+  let stickId = null, sx0 = 0, sy0 = 0;
   const looks = new Map();
-  function moveStick(e) {
-    const r = stick.getBoundingClientRect();
-    let dx = (e.clientX - r.left - r.width / 2) / (r.width / 2), dy = (e.clientY - r.top - r.height / 2) / (r.height / 2);
-    const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; }
-    touchIn.x = -dx; touchIn.z = -dy;
-    nub.style.transform = 'translate(' + dx * 42 + 'px,' + dy * 42 + 'px)';
+  function placeStick() {
+    const half = stick.offsetWidth / 2;
+    stick.style.left = (sx0 - half) + 'px'; stick.style.top = (sy0 - half) + 'px'; stick.style.bottom = 'auto';
   }
-  stick.addEventListener('pointerdown', e => { e.preventDefault(); stickId = e.pointerId; try { stick.setPointerCapture(e.pointerId); } catch (_) { /* ok */ } moveStick(e); });
-  stick.addEventListener('pointermove', e => { if (e.pointerId === stickId) moveStick(e); });
-  const endStick = e => { if (e.pointerId !== stickId) return; stickId = null; touchIn.x = touchIn.z = 0; nub.style.transform = ''; };
-  stick.addEventListener('pointerup', endStick); stick.addEventListener('pointercancel', endStick);
+  function moveStick(e) {
+    const R = stick.offsetWidth * 0.36;
+    let dx = (e.clientX - sx0) / R, dy = (e.clientY - sy0) / R;
+    const l = Math.hypot(dx, dy);
+    if (l > 1) { dx /= l; dy /= l; sx0 = e.clientX - dx * R; sy0 = e.clientY - dy * R; placeStick(); }
+    touchIn.x = -dx; touchIn.z = -dy;
+    nub.style.transform = 'translate(' + dx * R * 0.85 + 'px,' + dy * R * 0.85 + 'px)';
+  }
+  zone.addEventListener('pointerdown', e => {
+    if (stickId !== null) return;
+    e.preventDefault();
+    stickId = e.pointerId;
+    try { zone.setPointerCapture(e.pointerId); } catch (_) { /* ok */ }
+    sx0 = e.clientX; sy0 = e.clientY; placeStick();
+    stick.classList.add('live');
+    moveStick(e);
+  });
+  zone.addEventListener('pointermove', e => { if (e.pointerId === stickId) moveStick(e); });
+  const endStick = e => {
+    if (e.pointerId !== stickId) return;
+    stickId = null; touchIn.x = touchIn.z = 0; nub.style.transform = '';
+    stick.classList.remove('live'); stick.style.left = stick.style.top = stick.style.bottom = '';
+  };
+  zone.addEventListener('pointerup', endStick); zone.addEventListener('pointercancel', endStick); zone.addEventListener('lostpointercapture', endStick);
   canvas.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') looks.set(e.pointerId, { x: e.clientX, y: e.clientY }); });
   canvas.addEventListener('pointermove', e => {
     const l = looks.get(e.pointerId);
@@ -226,11 +245,19 @@
     const p = goat.body.position;
     camera.fov = camera.aspect < 1 ? 70 : 62;
     camera.updateProjectionMatrix();
-    // On phones the camera drifts behind the goat when you are not steering it
+    // Auto camera (touch): while you run with the stick and aren't dragging the view, the camera
+    // swings in behind the goat. It follows harder the more you push forward, holds still when you
+    // pull back (no 180-degree flips), and leaves you alone for a moment after you look around.
     lookIdle += dt;
-    if (isTouch && lookIdle > 1.2 && !goat.ragActive && Math.hypot(goat.body.velocity.x, goat.body.velocity.z) > 3) {
+    const push = Math.hypot(touchIn.x, touchIn.z);
+    if (isTouch && looks.size === 0 && lookIdle > 0.6 && push > 0.2 && !goat.ragActive && Math.hypot(goat.body.velocity.x, goat.body.velocity.z) > 2) {
+      // Only follow while steering forward or sideways. Pulling back must never swing the camera:
+      // that flips which way 'back' points and the goat suddenly runs the other way.
+      const fwd = Math.max(0, touchIn.z / push), back = Math.max(0, -touchIn.z / push), side = Math.abs(touchIn.x) / push;
+      const rate = back > 0.3 ? 0 : (2.8 * fwd + 0.8 * side) * Math.min(1, push);
       let dA = goat.yaw - camYaw; dA = Math.atan2(Math.sin(dA), Math.cos(dA));
-      camYaw += dA * Math.min(1, dt * 1.4);
+      camYaw += dA * Math.min(1, dt * rate);
+      camPitch += (0.32 - camPitch) * Math.min(1, dt * 1.2);
     }
     camTarget.lerp(new THREE.Vector3(p.x, p.y + 1.2, p.z), Math.min(1, dt * 10));
     const d = camDist + Math.min(6, goat.body.velocity.length() * 0.15) + (camera.aspect < 1 ? -1.5 : 0);

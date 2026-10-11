@@ -97,7 +97,8 @@
     G.tramps.push(pad);
   }
   G.tramps = [];
-  [[44, -62], [18, -14], [-6, 26], [60, 30], [-40, -40], [-48, 30]].forEach(p => trampoline(p[0], p[1]));
+  // Kept clear of the ring road (radius 51-65): two used to sit in the car lanes and wrecked the cars on spawn.
+  [[44, -62], [18, -14], [-6, 26], [60, 30], [-36, -33], [-42, 22]].forEach(p => trampoline(p[0], p[1]));
 
   // ---------- Windmill (kinematic spinning goat swatter) ----------
   addStatic(3, 8, 3, -62, 4, 44, 0xfff7e0);
@@ -151,7 +152,8 @@
     return b;
   }
   G.barrel = barrel;
-  [[30, -45], [31.2, -45], [30.6, -46.1], [29.4, -46], [8, 20], [-20, -5], [60, -5], [-44, 38], [-46, 39], [5, -30], [-60, -20], [70, 20]]
+  // All off the ring road (radius 51-65): barrels in the lanes blew up the cars seconds after loading.
+  [[25.2, -37.8], [26.4, -37.8], [25.8, -38.9], [24.6, -38.8], [8, 20], [-20, -5], [47, -12], [-34, 29.4], [-36, 30.4], [5, -30], [-44, -24], [70, 20]]
     .forEach(p => barrel(p[0], 0.6, p[1]).sleep());
 
   // Pooled particles: shared geometry, reused meshes, no allocation per puff.
