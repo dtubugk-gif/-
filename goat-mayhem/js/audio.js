@@ -125,6 +125,11 @@ G.sfx = (function () {
       osc('sine', 900, 180, 0.22, 0.3);
       noise(0.15, 0.2, 3000, 2);
     },
+    quack() {
+      if (!ok('quack', 0.2)) return;
+      osc('sawtooth', 620, 380, 0.16, 0.22);
+      noise(0.12, 0.15, 1200, 3);
+    },
     whoosh() {
       if (!ok('whoosh', 0.15)) return;
       noise(0.35, 0.35, 700, 0.7);
