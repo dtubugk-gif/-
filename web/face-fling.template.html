@@ -38,6 +38,7 @@
   }
   .hud[hidden] { display: none !important; }
   .score {
+    display: inline-block; transform-origin: left center;
     font-family: var(--font-display);
     font-size: clamp(22px, 5vw, 34px);
     line-height: 1;
@@ -47,7 +48,7 @@
     text-shadow: 0 3px 0 var(--bark);
     font-variant-numeric: tabular-nums;
   }
-  .level-name { font-size: 14px; font-weight: 700; color: var(--bark); opacity: 0.75; margin-top: 4px; }
+  .level-name { font-size: 14px; font-weight: 700; color: #fff; -webkit-text-stroke: 3px var(--bark); paint-order: stroke fill; margin-top: 6px; }
   .hud-buttons { display: flex; gap: 8px; pointer-events: auto; }
   .icon-btn {
     width: 46px; height: 46px; border-radius: 14px;
@@ -135,6 +136,18 @@
   .star.on path { fill: var(--gold); }
   .star.on { animation: pop 0.45s cubic-bezier(.2, 1.6, .4, 1) both; }
   .big-score { font-family: var(--font-display); font-size: 40px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .world-title { grid-column: 1 / -1; font-family: var(--font-display); font-size: 20px; text-align: start; margin-top: 4px; }
+  .world-title.total { text-align: center; color: var(--orange); -webkit-text-stroke: 1px var(--bark); font-size: 24px; margin-top: 0; }
+  .lvl.w1 { background: #e8794a; }
+  .lvl.w2 { background: #3d4a8a; }
+  .lvl.w1[disabled], .lvl.w2[disabled] { background: #a99a8a; }
+  .score.bump { animation: bump 0.25s cubic-bezier(.2, 1.6, .4, 1); }
+  @keyframes bump { from { transform: scale(1.25); } to { transform: scale(1); } }
+  .overlay:not([hidden]) { animation: fade 0.22s ease-out both; }
+  .overlay:not([hidden]) .panel { animation: rise 0.32s cubic-bezier(.2, 1.4, .4, 1) both; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes rise { from { transform: translateY(24px) scale(0.94); } to { transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .overlay:not([hidden]), .overlay:not([hidden]) .panel, .score.bump { animation: none; } }
   @keyframes pop { from { transform: scale(0.2) rotate(-30deg); } to { transform: scale(1) rotate(0); } }
   @media (prefers-reduced-motion: reduce) { .star.on { animation: none; } }
 </style>
@@ -155,7 +168,7 @@
 <div class="overlay" id="menu" dir="rtl">
   <div class="panel">
     <div class="logo" dir="ltr">FACE<br>FLING</div>
-    <p class="tagline">הפרצוף והגבס נגד החיידקים</p>
+    <p class="tagline">הפרצוף והגבס נגד החיידקים · 24 שלבים · 3 עולמות</p>
     <div class="cast">
       <figure><span class="ball" style="--c:#ff7a1a"><img src="__FACE__" alt=""></span><figcaption>הפרצוף<br>הקש: BLEH מהיר</figcaption></figure>
       <figure><span class="ball" style="--c:#2f9bff"><img src="__FACE__" alt=""></span><figcaption>המתפצל<br>הקש: שלושה פרצופים</figcaption></figure>
