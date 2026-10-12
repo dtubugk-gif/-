@@ -49,7 +49,10 @@
     { name: 'Knock down people', goal: 15, get: () => G.stats.peopleDown },
     { name: 'Chain 5 explosions', goal: 5, get: () => { const t = performance.now(); return G.stats.booms.filter(b => t - b < 4000).length; } },
     { name: 'Land a 4x flip', goal: 4, get: () => G.stats.maxFlips },
-    { name: 'Reach 35 m high', goal: 35, get: () => Math.floor(maxY) }
+    { name: 'Reach 35 m high', goal: 35, get: () => Math.floor(maxY) },
+    { name: 'Steal a car', goal: 1, get: () => G.stats.carjacks || 0 },
+    { name: 'Drive 1 km', goal: 1000, get: () => Math.floor(G.drive.dist) },
+    { name: 'Get 2 s of car air', goal: 2, get: () => Math.floor(G.stats.carAir || 0) }
   ];
   missions.forEach(m => { m.best = 0; m.done = false; });
   function renderMissions() {
@@ -78,6 +81,7 @@
     m.push('<span class="' + (modes.slow ? 'on' : '') + '">T slow-mo</span>');
     if (goat.jetpack) m.push('<span class="on">' + (isTouch ? '' : 'J ') + 'jetpack ' + Math.round(goat.fuel * 100) + '%</span>');
     if (goat.ragManual) m.push('<span class="on">ragdolling</span>');
+    if (G.drive && G.drive.car) m.push('<span class="on">' + (isTouch ? '' : 'F ') + 'nitro ' + Math.round(G.drive.nitro * 100) + '%</span>');
     $('mode').innerHTML = m.join('');
     $('mMoon').classList.toggle('on', modes.moon);
     $('mSlow').classList.toggle('on', modes.slow);
@@ -104,17 +108,28 @@
   // ---------- Keyboard & mouse ----------
   const keys = {};
   const input = { x: 0, z: 0, jump: false, jumpHeld: false, sprint: false, jet: false };
-  let camYaw = Math.PI, camPitch = 0.35, camDist = isTouch ? 10 : 9, lookIdle = 0;
+  // Third-person camera that only turns left/right: the tilt is fixed, dragging changes heading only.
+  const CAM_PITCH = 0.3;
+  let camYaw = Math.PI, camPitch = CAM_PITCH, camDist = isTouch ? 10 : 9, lookIdle = 0;
 
   window.addEventListener('keydown', e => {
     if (!playing) return;
     const k = e.key.toLowerCase();
     if (!keys[k]) {
-      if (k === ' ') input.jump = true;
-      if (k === 'f') goat.headbutt();
-      if (k === 'e') goat.lick();
-      if (k === 'q') goat.bleat();
-      if (k === 'r') { goat.ragdoll('toggle'); renderModes(); }
+      const D = G.drive;
+      if (k === 'c') { if (D.car) D.exit(); else D.enter(); }
+      else if (D.car) {
+        if (k === ' ') D.hop();
+        if (k === 'f' || k === 'shift') D.boost();
+        if (k === 'q' || k === 'e' || k === 'h') D.honk();
+        if (k === 'r') D.exit(true);
+      } else {
+        if (k === ' ') input.jump = true;
+        if (k === 'f') goat.headbutt();
+        if (k === 'e') goat.lick();
+        if (k === 'q') goat.bleat();
+        if (k === 'r') { goat.ragdoll('toggle'); renderModes(); }
+      }
       if (k === 'g') toggleMoon();
       if (k === 't') toggleSlow();
       if (k === 'b') barrelRain();
@@ -137,7 +152,7 @@
       try { const r = canvas.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (_) { /* drag to look instead */ }
       dragging = true; lastX = e.clientX; lastY = e.clientY;
     }
-    if (locked()) { if (e.button === 0) goat.headbutt(); if (e.button === 2) goat.lick(); }
+    if (locked()) { const D = G.drive; if (e.button === 0) (D.car ? D.boost() : goat.headbutt()); if (e.button === 2) (D.car ? D.honk() : goat.lick()); }
   });
   window.addEventListener('mouseup', () => { dragging = false; });
   window.addEventListener('mousemove', e => {
@@ -146,7 +161,7 @@
     if (locked()) { dx = e.movementX; dy = e.movementY; }
     else if (dragging) { dx = e.clientX - lastX; dy = e.clientY - lastY; lastX = e.clientX; lastY = e.clientY; }
     camYaw -= dx * 0.0035;
-    camPitch = Math.max(-0.2, Math.min(1.2, camPitch + dy * 0.003));
+    if (dx || dy) lookIdle = 0;
   });
   window.addEventListener('wheel', e => { camDist = Math.max(4, Math.min(22, camDist + e.deltaY * 0.01)); }, { passive: true });
 
@@ -190,7 +205,6 @@
     const l = looks.get(e.pointerId);
     if (!l) return;
     camYaw -= (e.clientX - l.x) * 0.007;
-    camPitch = Math.max(-0.2, Math.min(1.2, camPitch + (e.clientY - l.y) * 0.005));
     l.x = e.clientX; l.y = e.clientY;
     lookIdle = 0;
   });
@@ -211,11 +225,31 @@
     const off = () => { b.classList.remove('down'); if (up) up(); };
     b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('pointerleave', off);
   }
-  hold('tJump', () => { input.jump = true; held.jump = true; }, () => { held.jump = false; });
-  hold('tButt', () => goat.headbutt());
-  hold('tLick', () => goat.lick());
-  hold('tRag', () => { goat.ragdoll('toggle'); renderModes(); });
-  hold('tBaa', () => goat.bleat());
+  const D = G.drive;
+  hold('tJump', () => { if (D.car) D.hop(); else { input.jump = true; held.jump = true; } }, () => { held.jump = false; });
+  hold('tButt', () => (D.car ? D.boost() : goat.headbutt()));
+  hold('tLick', () => (D.car ? D.honk() : goat.lick()));
+  hold('tRag', () => { if (D.car) D.exit(true); else { goat.ragdoll('toggle'); renderModes(); } });
+  hold('tBaa', () => (D.car ? D.honk() : goat.bleat()));
+  hold('tDrive', () => { if (D.car) D.exit(); else D.enter(); });
+  // Buttons change jobs while driving; the DRIVE button only shows up next to a car.
+  const labels = { tJump: ['JUMP', 'HOP'], tButt: ['BUTT', 'NITRO'], tLick: ['LICK', 'HONK'], tRag: ['FLOP', 'BAIL'], tBaa: ['BAA!', 'BEEP'], tDrive: ['DRIVE', 'EXIT'] };
+  D.onChange = () => {
+    for (const id in labels) $(id).textContent = labels[id][D.car ? 1 : 0];
+    document.body.classList.toggle('driving', !!D.car);
+    renderModes();
+  };
+  let nearT = 0, nearShown = null;
+  function updateCarPrompt(dt) {
+    nearT -= dt;
+    if (nearT > 0) return;
+    nearT = 0.2;
+    const show = D.car ? 'exit' : D.nearest() ? 'enter' : '';
+    if (show === nearShown) return;
+    nearShown = show;
+    $('tDrive').hidden = !show;
+    $('carHint').hidden = isTouch || show !== 'enter';
+  }
   hold('tJet', () => { held.jet = true; }, () => { held.jet = false; });
 
   // Phone menu
@@ -240,36 +274,50 @@
   }
 
   // ---------- Camera ----------
-  const camTarget = new THREE.Vector3();
+  // Everything that moves the camera is smoothed: wall avoidance pulls in fast but eases back out,
+  // speed zoom eases, and the auto-follow only turns while you steer forward (never sideways or back).
+  const camTarget = new THREE.Vector3(), tmpV = new THREE.Vector3();
+  let camK = 1, speedZoom = 0, driveZoom = 0;
+  const thinPole = b => { const s = b.shapes[0]; return s && s.halfExtents && s.halfExtents.x < 0.6 && s.halfExtents.z < 0.6; };
   function updateCamera(dt) {
-    const p = goat.body.position;
-    camera.fov = camera.aspect < 1 ? 70 : 62;
-    camera.updateProjectionMatrix();
-    // Auto camera (touch): while you run with the stick and aren't dragging the view, the camera
-    // swings in behind the goat. It follows harder the more you push forward, holds still when you
-    // pull back (no 180-degree flips), and leaves you alone for a moment after you look around.
+    const D = G.drive, driving = !!D.car;
+    const tb = driving ? D.car.body : goat.body;
+    const p = tb.position;
+    const aspect = camera.aspect, fov = aspect < 1 ? 70 : 62;
+    if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
     lookIdle += dt;
     const push = Math.hypot(touchIn.x, touchIn.z);
-    if (isTouch && looks.size === 0 && lookIdle > 0.6 && push > 0.2 && !goat.ragActive && Math.hypot(goat.body.velocity.x, goat.body.velocity.z) > 2) {
-      // Only follow while steering forward or sideways. Pulling back must never swing the camera:
-      // that flips which way 'back' points and the goat suddenly runs the other way.
-      const fwd = Math.max(0, touchIn.z / push), back = Math.max(0, -touchIn.z / push), side = Math.abs(touchIn.x) / push;
-      const rate = back > 0.3 ? 0 : (2.8 * fwd + 0.8 * side) * Math.min(1, push);
-      let dA = goat.yaw - camYaw; dA = Math.atan2(Math.sin(dA), Math.cos(dA));
-      camYaw += dA * Math.min(1, dt * rate);
-      camPitch += (0.32 - camPitch) * Math.min(1, dt * 1.2);
+    if (driving) {
+      // Chase cam: sits behind the car unless you're looking around or reversing.
+      if (looks.size === 0 && lookIdle > 0.8 && D.speed > -1) {
+        let dA = D.yaw - camYaw; dA = Math.atan2(Math.sin(dA), Math.cos(dA));
+        camYaw += dA * Math.min(1, dt * (1.5 + Math.min(2.5, Math.abs(D.speed) * 0.12)));
+      }
+    } else if (isTouch && looks.size === 0 && lookIdle > 0.6 && push > 0.2 && !goat.ragActive && Math.hypot(goat.body.velocity.x, goat.body.velocity.z) > 2) {
+      // On foot: follow only while steering mostly forward. Sideways would spin the view as the goat
+      // turns; pulling back would flip which way "back" points.
+      const fwd = touchIn.z / push;
+      if (fwd > 0.35) {
+        let dA = goat.yaw - camYaw; dA = Math.atan2(Math.sin(dA), Math.cos(dA));
+        camYaw += dA * Math.min(1, dt * 2.2 * fwd * Math.min(1, push));
+      }
     }
-    camTarget.lerp(new THREE.Vector3(p.x, p.y + 1.2, p.z), Math.min(1, dt * 10));
-    const d = camDist + Math.min(6, goat.body.velocity.length() * 0.15) + (camera.aspect < 1 ? -1.5 : 0);
-    const off = new THREE.Vector3(Math.sin(camYaw) * Math.cos(camPitch), Math.sin(camPitch), Math.cos(camYaw) * Math.cos(camPitch)).multiplyScalar(-d);
-    camera.position.copy(camTarget).add(off);
-    // Pull the camera in front of walls so it never ends up inside a house
-    let best = 1;
-    const from = new V3(camTarget.x, camTarget.y, camTarget.z), to = new V3(camera.position.x, camera.position.y, camera.position.z);
+    camTarget.lerp(tmpV.set(p.x, p.y + (driving ? 1.6 : 1.2), p.z), Math.min(1, dt * (driving ? 14 : 10)));
+    speedZoom += (Math.min(4, tb.velocity.length() * 0.12) - speedZoom) * Math.min(1, dt * 2);
+    driveZoom += ((driving ? 2 : 0) - driveZoom) * Math.min(1, dt * 3);
+    const d = camDist + speedZoom + driveZoom + (aspect < 1 ? -1.5 : 0);
+    // Behind (opposite the heading) and above the target. The old code negated the height too, which
+    // buried the camera and left it clamped at ground level.
+    const off = tmpV.set(-Math.sin(camYaw) * Math.cos(camPitch) * d, Math.sin(camPitch) * d, -Math.cos(camYaw) * Math.cos(camPitch) * d);
+    // Keep out of walls. Thin poles and tree trunks are ignored so they don't make the camera pop.
+    let want = 1;
+    const from = new V3(camTarget.x, camTarget.y, camTarget.z), to = new V3(camTarget.x + off.x, camTarget.y + off.y, camTarget.z + off.z);
     world.raycastAll(from, to, { skipBackfaces: true }, r => {
-      if (r.body.mass === 0 && r.body !== G.groundBody && r.body.tag?.kind !== 'windmill') best = Math.min(best, r.distance / d);
+      const b = r.body;
+      if (b.mass === 0 && b !== G.groundBody && b.tag?.kind !== 'windmill' && !thinPole(b)) want = Math.min(want, Math.max(0.12, r.distance / d - 0.06));
     });
-    if (best < 1) camera.position.copy(camTarget).addScaledVector(off, Math.max(0.08, best - 0.06));
+    camK += (want - camK) * Math.min(1, dt * (want < camK ? 14 : 2.5));
+    camera.position.copy(camTarget).addScaledVector(off, camK);
     if (camera.position.y < 0.6) camera.position.y = 0.6;
     if (G.shake > 0) {
       camera.position.x += (Math.random() - 0.5) * G.shake;
@@ -331,9 +379,13 @@
     readInput();
     goat.update(dt, input, camYaw, time);
     input.jump = false;
+    G.drive.update(dt, input);
+    G.drive.updatePads(dt, time);
     G.updatePeople(dt, time);
     stepPhysics(dt);
     G.sync();
+    if (goat.riding) goat.ridePose(dt, time);
+    updateCarPrompt(dt / scale);
     G.updateParticles(dt, time);
     updateCamera(dt / scale);
     maybeGlitch(dt);
@@ -343,7 +395,7 @@
     if (baaT <= 0) { baaT = 5 + Math.random() * 8; G.sfx.baa(); }
     rainCd -= dt;
     hudT -= dt;
-    if (hudT <= 0 && goat.jetpack) { hudT = 0.25; renderModes(); }
+    if (hudT <= 0 && (goat.jetpack || G.drive.car)) { hudT = 0.25; renderModes(); }
     missionT -= dt;
     if (missionT <= 0) { missionT = 0.4; checkMissions(); }
     G.perfTick(dt / scale);
@@ -360,6 +412,7 @@
     G.sfx.baa();
     $('title').hidden = true;
     playing = true;
+    camYaw = goat.yaw; lookIdle = 0; // start right behind the goat
     if (isTouch) {
       $('touch').hidden = false;
       $('tMenu').hidden = false;

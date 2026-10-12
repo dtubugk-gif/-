@@ -137,6 +137,8 @@
   }
 
   function syncRagdoll() {
+    // Safety net: a heavy body can squeeze a ragdoll piece under the ground plane. Pop it back up.
+    for (const pb of rb.all) if (pb.position.y < 0.2) { pb.position.y = 0.6; if (pb.velocity.y < 0) pb.velocity.y = 2; }
     const pairs = [[rv.torso, rb.torso], [rv.neck, rb.neck], [rv.head, rb.head], ...rv.legs.map((w, i) => [w, rb.legs[i]])];
     for (const [w, b] of pairs) { w.position.set(b.position.x, b.position.y, b.position.z); w.quaternion.set(b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w); }
     body.position.copy(rb.torso.position);
@@ -178,6 +180,7 @@
   };
 
   goat.respawn = function () {
+    if (goat.riding) G.drive.exit(false, true);
     goat.release();
     if (rb) endRagdoll();
     goat.pendingRag = false; goat.rag = 0;
@@ -293,6 +296,7 @@
   goat.update = function (dt, input, camYaw, time) {
     goat.buttCd -= dt; goat.butt = Math.max(0, goat.butt - dt * 4);
     goat.bleatT -= dt; goat.onRamp = (goat.onRamp || 0) - dt;
+    if (goat.riding) { goat.pendingRag = false; return; } // posed after physics in ridePose
     if (goat.pendingRag) { goat.pendingRag = false; if (!rb) buildRagdoll(); }
 
     // Ground contact (main body, or any ragdoll piece)
@@ -389,6 +393,36 @@
     if (rb) syncRagdoll();
     animate(dt, input, time, len);
   };
+
+  // ---------- Riding a stolen car: surfing on the roof ----------
+  const roofSeat = new V3(0, 1.67, -0.35);
+  function ride(dt, time) {
+    const D = G.drive, cb = D.car.body;
+    const s = cb.pointToWorldFrame(roofSeat);
+    body.position.copy(s); body.velocity.copy(cb.velocity);
+    goat.yaw = D.yaw; goat.grounded = true; goat.airT = 0;
+    root.position.set(s.x, s.y, s.z);
+    root.quaternion.set(cb.quaternion.x, cb.quaternion.y, cb.quaternion.z, cb.quaternion.w);
+    const sp = Math.min(38, Math.abs(D.speed));
+    // Lean into turns, crouch with speed, wobble on bumps
+    rig.rotation.set(-sp * 0.006 + (D.grounded ? 0 : 0.25), 0, -D.steer * 0.35 + Math.sin(time * 9) * 0.03);
+    rig.position.y = -sp * 0.004 + (D.grounded ? Math.abs(Math.sin(time * 14)) * sp * 0.002 : 0);
+    goat.squash += (0 - goat.squash) * Math.min(1, dt * 8);
+    rig.scale.set(1, 1, 1);
+    P.legs.forEach((l, i) => { l.rotation.x = (i < 2 ? -0.45 : 0.45) + Math.sin(time * 20 + i) * (D.grounded ? 0.03 : 0.5); l.rotation.z = (i % 2 ? -0.3 : 0.3); });
+    P.knees.forEach((k, i) => { k.rotation.x = i < 2 ? 0.35 : -0.35; });
+    P.neck.rotation.x = -0.6 - sp * 0.01; P.neck.rotation.y = -D.steer * 0.4; P.neck.scale.z = 1; P.neck.position.z = L.NECK_AT.z;
+    P.tail.rotation.z = Math.sin(time * 28) * (0.4 + sp * 0.02);
+    P.ears.forEach((e, k) => { e.rotation.z = (k ? 1 : -1) * (-0.2 + sp * 0.02 + Math.sin(time * 34 + k) * sp * 0.012); });
+    P.mouth.scale.y = sp > 20 || !D.grounded ? 5 : 1;
+    for (const p of P.pupils) { p.position.x = 0; p.position.y = 0.02; p.rotation.z = 0; }
+    stars.visible = false;
+    for (const fl of flames) fl.visible = false;
+    const pv = new THREE.Vector3(s.x, s.y, s.z);
+    for (const st of G.statues) if (!st.got && st.m.position.distanceTo(pv) < 3.5) { st.got = true; scene.remove(st.m); G.onStatue(); }
+  }
+  goat.rideEnd = function () { root.quaternion.set(0, 0, 0, 1); rig.position.set(0, 0, 0); P.neck.rotation.y = 0; };
+  goat.parts = P; goat.rig = rig; goat.ridePose = ride;
 
   // ---------- Animation: squash, gait, floppy neck and ears, googly eyes, tongue ----------
   function animate(dt, input, time, len) {

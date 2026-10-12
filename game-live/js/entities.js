@@ -153,7 +153,7 @@
   }
   G.barrel = barrel;
   // All off the ring road (radius 51-65): barrels in the lanes blew up the cars seconds after loading.
-  [[25.2, -37.8], [26.4, -37.8], [25.8, -38.9], [24.6, -38.8], [8, 20], [-20, -5], [47, -12], [-34, 29.4], [-36, 30.4], [5, -30], [-44, -24], [70, 20]]
+  [[25.2, -37.8], [26.4, -37.8], [25.8, -38.9], [24.6, -38.8], [8, 20], [-20, -5], [38, -16], [-34, 29.4], [-36, 30.4], [5, -30], [-44, -24], [70, 20]]
     .forEach(p => barrel(p[0], 0.6, p[1]).sleep());
 
   // Pooled particles: shared geometry, reused meshes, no allocation per puff.

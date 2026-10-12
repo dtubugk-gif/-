@@ -89,6 +89,13 @@ kbd { font-family: var(--display); font-size: 13px; background: var(--ink); colo
 #tRag { right: 150px; bottom: 74px; width: 54px; height: 54px; font-size: 11px; }
 #tBaa { right: 84px; bottom: 120px; width: 54px; height: 54px; font-size: 12px; }
 #tJet { right: 160px; bottom: 140px; width: 54px; height: 54px; font-size: 12px; background: #ffa040; }
+#tDrive { right: 0; bottom: 200px; width: 96px; height: 50px; border-radius: 16px; font-size: 18px; background: #40e0ff; animation: nudge 1s ease-in-out infinite alternate; }
+.driving #tDrive { background: var(--paper); animation: none; }
+.driving #tButt { background: #ffa040; }
+@keyframes nudge { to { transform: translateY(-4px); } }
+#carHint { left: 50%; bottom: 22%; transform: translateX(-50%); background: var(--ink); color: var(--paper); font-weight: 800; font-size: 16px; border-radius: 999px; padding: 6px 14px; }
+#carHint kbd { background: #40e0ff; color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { #tDrive { animation: none; } }
 #tMenu { position: fixed; z-index: 7; top: var(--top); left: 50%; margin-left: -22px; width: 44px; height: 44px; font-size: 20px; }
 @media (max-width: 520px) { #tMenu { left: var(--left); margin-left: 0; top: calc(var(--top) + 58px); } .touch #mode { top: calc(var(--top) + 110px); } }
 @media (max-height: 420px) { #stick { width: 120px; height: 120px; } #nub { left: 33px; top: 33px; } }
@@ -104,6 +111,7 @@ kbd { font-family: var(--display); font-size: 13px; background: var(--ink); colo
 </div>
 <div class="hud" id="feed"></div>
 <div class="hud" id="mode"></div>
+<div class="hud" id="carHint" hidden>Press <kbd>C</kbd> to steal this car</div>
 
 <div id="touch" hidden>
   <div id="stickZone"></div>
@@ -115,13 +123,14 @@ kbd { font-family: var(--display); font-size: 13px; background: var(--ink); colo
     <button class="tbtn" id="tRag" type="button">FLOP</button>
     <button class="tbtn" id="tBaa" type="button">BAA!</button>
     <button class="tbtn" id="tJet" type="button" hidden>JET</button>
+    <button class="tbtn" id="tDrive" type="button" hidden>DRIVE</button>
   </div>
 </div>
 
 <div id="title">
   <div id="card">
     <h1>GOAT MAYHEM</h1>
-    <p>You are a goat. The town is full of crates, cars, explosive barrels and people who have places to be. Ruin their day, finish the challenges and find the six golden goats. Physics is optional.</p>
+    <p>You are a goat. The town is full of crates, cars, explosive barrels and people who have places to be. Ruin their day, steal a car, finish the challenges and find the six golden goats. Physics is optional.</p>
     <div class="keys desk">
       <div><kbd>WASD</kbd> run around</div>
       <div><kbd>Mouse</kbd> look (click to lock)</div>
@@ -135,6 +144,8 @@ kbd { font-family: var(--display); font-size: 13px; background: var(--ink); colo
       <div><kbd>T</kbd> slow motion</div>
       <div><kbd>J</kbd> jetpack (find it)</div>
       <div><kbd>B</kbd> barrel rain</div>
+      <div><kbd>C</kbd> steal / leave a car</div>
+      <div><kbd>Driving</kbd> WASD, Space hop, F nitro, Q honk, R bail</div>
       <div><kbd>M</kbd> sound on/off</div>
     </div>
     <div class="keys mob">
@@ -142,6 +153,7 @@ kbd { font-family: var(--display); font-size: 13px; background: var(--ink); colo
       <div><kbd>Right thumb</kbd> drag anywhere to look</div>
       <div><kbd>BUTT</kbd> headbutt · <kbd>LICK</kbd> grab things</div>
       <div><kbd>FLOP</kbd> ragdoll · <kbd>BAA!</kbd> scare people</div>
+      <div><kbd>DRIVE</kbd> next to a car: steal it, then HOP, NITRO, HONK, BAIL</div>
       <div><kbd>☰</kbd> moon gravity, slow-mo, barrel rain</div>
       <div>Best played sideways, sound on.</div>
     </div>
@@ -178,4 +190,5 @@ kbd { font-family: var(--display); font-size: 13px; background: var(--ink); colo
 <script src="js/goatmodel.js"></script>
 <script src="js/people.js"></script>
 <script src="js/goat.js"></script>
+<script src="js/drive.js"></script>
 <script src="js/main.js"></script>

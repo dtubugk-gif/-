@@ -182,6 +182,32 @@
     const bumper = boxMesh(2.1, 0.18, 0.15, 0xdddddd); bumper.position.set(0, -0.32, 2.3); g.add(bumper);
     const bumper2 = bumper.clone(); bumper2.position.z = -2.3; g.add(bumper2);
     if (i === 2) { const sign = boxMesh(0.8, 0.3, 0.25, 0xffffff); sign.position.set(0, 1.25, -0.4); g.add(sign); }
+    // Details: grille, plates, mirrors, door seams and handles, wheel arches, exhaust, per-car extras
+    const dark = 0x2b1d3a, chrome = 0xcfd6e0, body = carColors[i % 3];
+    const grille = boxMesh(1.1, 0.22, 0.06, dark); grille.position.set(0, -0.1, 2.27); g.add(grille);
+    for (let k = -2; k <= 2; k++) { const bar = boxMesh(0.04, 0.2, 0.08, chrome); bar.position.set(k * 0.2, -0.1, 2.28); g.add(bar); }
+    for (const z of [2.4, -2.4]) { const plate = boxMesh(0.5, 0.16, 0.04, 0xfff7e0); plate.position.set(0, -0.3, z); g.add(plate); }
+    for (const sx of [-1, 1]) {
+      const mirror = boxMesh(0.24, 0.14, 0.1, body); mirror.position.set(sx * 1.2, 0.5, 0.45); g.add(mirror);
+      for (const z of [0.25, -0.95]) { const seam = boxMesh(0.02, 0.55, 0.03, dark); seam.position.set(sx * 1.09, 0.05, z); g.add(seam); }
+      for (const z of [-0.05, -1.25]) { const handle = boxMesh(0.04, 0.05, 0.2, chrome); handle.position.set(sx * 1.1, 0.22, z); g.add(handle); }
+      for (const wz of [1.4, -1.4]) {
+        const arch = new THREE.Mesh(new THREE.TorusGeometry(0.52, 0.07, 5, 12, Math.PI), mat(dark));
+        arch.position.set(sx * 1.08, -0.35, wz); arch.rotation.y = Math.PI / 2; g.add(arch);
+      }
+    }
+    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.3, 8), mat(chrome)); pipe.rotation.x = Math.PI / 2; pipe.position.set(0.6, -0.38, -2.35); g.add(pipe);
+    if (i === 0) { // spoiler
+      const wing = boxMesh(1.9, 0.07, 0.42, dark); wing.position.set(0, 0.72, -2.05); g.add(wing);
+      for (const sx of [-0.7, 0.7]) { const post = boxMesh(0.07, 0.3, 0.1, dark); post.position.set(sx, 0.55, -2.05); g.add(post); }
+    }
+    if (i === 1) { // roof rack with a surfboard
+      for (const sx of [-0.6, 0.6]) { const rail = boxMesh(0.06, 0.06, 1.7, dark); rail.position.set(sx, 1.12, -0.35); g.add(rail); }
+      const board = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 1.5, 4, 8), mat(0xffd23f)); board.rotation.z = Math.PI / 2; board.rotation.y = Math.PI / 2; board.scale.set(1, 1, 0.25); board.position.set(0.85, 1.25, -0.35); g.add(board);
+    }
+    if (i === 2) { // taxi checkers
+      for (const sx of [-1, 1]) for (let k = 0; k < 8; k++) { const c = boxMesh(0.03, 0.12, 0.25, k % 2 ? dark : 0xffffff); c.position.set(sx * 1.1, 0.42, 1.0 - k * 0.27); g.add(c); }
+    }
     const wheels = [];
     for (const [wx, wz] of [[-1.05, 1.4], [1.05, 1.4], [-1.05, -1.4], [1.05, -1.4]]) {
       const w = new THREE.Group(); w.position.set(wx, -0.35, wz);
@@ -218,16 +244,27 @@
           G.sfx.honk(this.body.position); G.sfx.hit(18, 'metal', G.goat.body.position); G.sfx.baa(G.goat.body.position);
           G.addScore('HIT AND RUN', 400, 'big');
         });
-      } else if (G.impactSpeed(e) > 14) G.after.push(() => this.wreck());
+      } else if (G.impactSpeed(e) > (this.driven ? (e.body.mass > 0 && e.body.mass < 400 ? 999 : 19) : 14)) G.after.push(() => this.wreck());
     });
   }
   Car.prototype.wreck = function () {
     if (this.wrecked) return;
     this.wrecked = true; this.wreckT = 15;
+    G.sfx.crash?.(this.body.position);
     if (this.body.position.distanceTo(G.goat.body.position) < 30) { G.stats.carsWrecked++; G.addScore('TOTALLED', 350); }
   };
   Car.prototype.update = function (dt) {
     const b = this.body;
+    if (this.driven) return; // the goat has the wheel
+    if (this.parkedT > 0) {   // abandoned by the goat: sits there, then a tow truck (offscreen) returns it
+      this.parkedT -= dt;
+      const gp = G.goat.body.position;
+      if (this.parkedT <= 0 && b.position.distanceTo(gp) > 25) {
+        b.position.set(Math.cos(this.a) * this.R, 2, Math.sin(this.a) * this.R);
+        b.velocity.set(0, 0, 0); b.angularVelocity.set(0, 0, 0);
+      } else if (this.parkedT <= 0) this.parkedT = 3;
+      return;
+    }
     if (this.wrecked) {
       this.wreckT -= dt;
       if (this.wreckT <= 0) {

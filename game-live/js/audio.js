@@ -186,6 +186,19 @@ G.sfx = (function () {
     siren.connect(sg);
     if (sp) { sg.connect(sp); sp.connect(sfxBus); } else sg.connect(sfxBus);
     loops.siren = { g: sg, sp };
+
+    // Car engine: two detuned saws through a lowpass, pitched by speed. Tyres: narrow band of noise.
+    const eg = ctx.createGain(); eg.gain.value = 0;
+    const ef = ctx.createBiquadFilter(); ef.type = 'lowpass'; ef.frequency.value = 600; ef.Q.value = 4;
+    const e1 = ctx.createOscillator(), e2 = ctx.createOscillator(); e1.type = 'sawtooth'; e2.type = 'square';
+    e1.frequency.value = 45; e2.frequency.value = 22.6;
+    const e2g = ctx.createGain(); e2g.gain.value = 0.5;
+    e1.connect(ef); e2.connect(e2g); e2g.connect(ef); ef.connect(eg); eg.connect(shaper(sfxBus));
+    e1.start(); e2.start();
+    loops.engine = { g: eg, f: ef, o: [e1, e2] };
+    const tyre = mk(noiseSrc(), 'bandpass', 2600, 7);
+    tyre.g.connect(sfxBus);
+    loops.tyre = tyre;
   }
 
   // ---------- Music: an oom-pah goat polka that heats up with your combo ----------
@@ -281,6 +294,35 @@ G.sfx = (function () {
       const p = sirenPos ? place(sirenPos) : null;
       loops.siren.g.gain.setTargetAtTime(p ? p.g * 0.09 : 0, t, 0.2);
       if (p && loops.siren.sp) loops.siren.sp.pan.setTargetAtTime(p.pan, t, 0.1);
+    },
+
+    // Player car: engine pitch follows speed and throttle, tyres squeal with sideways slip.
+    drive(on, speed, throttle, slip) {
+      if (!ctx || !loops.engine) return;
+      const t = ctx.currentTime, sp = Math.abs(speed || 0);
+      const gear = sp % 9 / 9; // fake gear changes: pitch climbs, drops, climbs
+      const f = 38 + sp * 2.2 + gear * 30 + Math.max(0, throttle || 0) * 14;
+      loops.engine.g.gain.setTargetAtTime(on ? 0.16 + Math.max(0, throttle || 0) * 0.08 : 0, t, 0.08);
+      loops.engine.o[0].frequency.setTargetAtTime(f, t, 0.05);
+      loops.engine.o[1].frequency.setTargetAtTime(f * 0.502, t, 0.05);
+      loops.engine.f.frequency.setTargetAtTime(400 + sp * 55, t, 0.08);
+      loops.tyre.g.gain.setTargetAtTime(on ? Math.max(0, Math.min(1, (slip - 3) / 7)) * 0.2 : 0, t, 0.05);
+    },
+
+    nitro() {
+      if (!gate('nitro', 0.4)) return;
+      const t = now(), v = voice(null, 0.6, 0.3, 1.2, 2);
+      if (!v) return;
+      nz(v, t, 1.1, 0.8, 'bandpass', 300, 2600, 1.2, 0.02);
+      osc(shaper(v), 'sawtooth', 70, 160, t, 0.9, 0.35, { hold: 0.6 });
+      buzz([30, 20, 60]);
+    },
+
+    carDoor() {
+      const t = now(), v = voice(null, 0.5, 0.15, 0.3, 2);
+      if (!v) return;
+      osc(v, 'square', 160, 70, t, 0.08, 0.5);
+      nz(v, t, 0.06, 0.6, 'bandpass', 900, 500, 2);
     },
 
     baa(pos, mega) {
