@@ -135,7 +135,7 @@
     const upd = G.updatePeople;
     G.updatePeople = function (dt, time) {
       for (const h of G.humans) h.body.material = h.state === 'down' ? solid : slick;
-      for (const c of G.cars) c.body.material = c.wrecked || c.parkedT > 0 ? solid : slick;
+      for (const c of G.cars) c.body.material = c.driven || (!c.spot && !c.wrecked && !(c.parkedT > 0)) ? slick : solid;
       return upd.call(this, dt, time);
     };
   }

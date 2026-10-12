@@ -118,6 +118,7 @@
     if (!keys[k]) {
       const D = G.drive;
       if (k === 'c') { if (D.car) D.exit(); else D.enter(); }
+      else if (k === 'v') D.summon();
       else if (D.car) {
         if (k === ' ') D.hop();
         if (k === 'f' || k === 'shift') D.boost();
@@ -259,6 +260,7 @@
   $('mSlow').addEventListener('click', toggleSlow);
   $('mRain').addEventListener('click', () => { barrelRain(); menu.hidden = true; });
   $('mSpawn').addEventListener('click', () => { goat.respawn(); menu.hidden = true; });
+  $('mCar').addEventListener('click', () => { G.drive.summon(); menu.hidden = true; });
   $('mClose').addEventListener('click', () => { menu.hidden = true; });
 
   function readInput() {
@@ -413,6 +415,7 @@
     $('title').hidden = true;
     playing = true;
     camYaw = goat.yaw; lookIdle = 0; // start right behind the goat
+    if (isTouch) { const tip = $('tip'); tip.hidden = false; setTimeout(() => { tip.hidden = true; }, 7000); }
     if (isTouch) {
       $('touch').hidden = false;
       $('tMenu').hidden = false;

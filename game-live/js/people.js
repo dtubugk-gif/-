@@ -161,7 +161,7 @@
   });
 
   // ---------- Cars ----------
-  const carColors = [0xe53935, 0x1e88e5, 0xfdd835];
+  const carColors = [0xe53935, 0x1e88e5, 0xfdd835, 0x43a047];
   function buildCar(i) {
     const g = new THREE.Group();
     const s = new THREE.Shape();
@@ -169,7 +169,7 @@
     s.closePath();
     const geo = new THREE.ExtrudeGeometry(s, { depth: 2.0, bevelEnabled: true, bevelSize: 0.08, bevelThickness: 0.08, bevelSegments: 2 });
     geo.translate(0, 0, -1.0); geo.rotateY(-Math.PI / 2);
-    const shell = shade(new THREE.Mesh(geo, mat(carColors[i % 3])));
+    const shell = shade(new THREE.Mesh(geo, mat(carColors[i % carColors.length])));
     g.add(shell);
     const win = mat(0x2b3a67, { emissive: 0x1d2a4a });
     for (const sx of [-1.1, 1.1]) { const w = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.45, 1.4), win); w.position.set(sx, 0.72, -0.35); g.add(w); }
@@ -183,7 +183,7 @@
     const bumper2 = bumper.clone(); bumper2.position.z = -2.3; g.add(bumper2);
     if (i === 2) { const sign = boxMesh(0.8, 0.3, 0.25, 0xffffff); sign.position.set(0, 1.25, -0.4); g.add(sign); }
     // Details: grille, plates, mirrors, door seams and handles, wheel arches, exhaust, per-car extras
-    const dark = 0x2b1d3a, chrome = 0xcfd6e0, body = carColors[i % 3];
+    const dark = 0x2b1d3a, chrome = 0xcfd6e0, body = carColors[i % carColors.length];
     const grille = boxMesh(1.1, 0.22, 0.06, dark); grille.position.set(0, -0.1, 2.27); g.add(grille);
     for (let k = -2; k <= 2; k++) { const bar = boxMesh(0.04, 0.2, 0.08, chrome); bar.position.set(k * 0.2, -0.1, 2.28); g.add(bar); }
     for (const z of [2.4, -2.4]) { const plate = boxMesh(0.5, 0.16, 0.04, 0xfff7e0); plate.position.set(0, -0.3, z); g.add(plate); }
@@ -219,7 +219,8 @@
     G.bakeRig(g, [g, ...wheels], []);
     return { g, wheels };
   }
-  function Car(a0, i) {
+  // spot: {x, z, yaw} for a car that waits parked instead of driving the ring road.
+  function Car(a0, i, spot) {
     const body = new CANNON.Body({ mass: 900, linearDamping: 0.05, angularDamping: 0.3 });
     body.addShape(new CANNON.Box(new V3(1.1, 0.55, 2.25)), new V3(0, -0.25, 0));
     body.addShape(new CANNON.Box(new V3(0.95, 0.3, 1.0)), new V3(0, 0.75, -0.35));
@@ -233,7 +234,8 @@
     scene.add(m.g);
     body.mesh = m.g;
     G.dyn.push(body);
-    Object.assign(this, { body, wheels: m.wheels, a: a0, R, dir: i % 2 ? 1 : -1, speed: 13 + i * 2, wrecked: false, wreckT: 0 });
+    Object.assign(this, { body, wheels: m.wheels, a: a0, R, dir: i % 2 ? 1 : -1, speed: 13 + i * 2, wrecked: false, wreckT: 0, spot: spot || null });
+    if (spot) this.toSpot();
     body.addEventListener('collide', e => {
       if (e.body === G.groundBody) return;
       if ((e.body === G.goat?.body || e.body.goatPart) && !this.wrecked) {
@@ -253,9 +255,22 @@
     G.sfx.crash?.(this.body.position);
     if (this.body.position.distanceTo(G.goat.body.position) < 30) { G.stats.carsWrecked++; G.addScore('TOTALLED', 350); }
   };
+  Car.prototype.toSpot = function () {
+    const b = this.body, s = this.spot;
+    b.position.set(s.x, 0.9, s.z); b.velocity.set(0, 0, 0); b.angularVelocity.set(0, 0, 0);
+    b.quaternion.setFromAxisAngle(new V3(0, 1, 0), s.yaw);
+  };
   Car.prototype.update = function (dt) {
     const b = this.body;
     if (this.driven) return; // the goat has the wheel
+    if (this.spot) {         // parked car: waits for the goat, goes home when abandoned out of sight
+      if (this.wrecked) { this.wreckT -= dt; if (this.wreckT <= 0) { this.wrecked = false; this.toSpot(); } return; }
+      if (this.parkedT > 0) {
+        this.parkedT -= dt;
+        if (this.parkedT <= 0) { if (b.position.distanceTo(G.goat.body.position) > 25) this.toSpot(); else this.parkedT = 3; }
+      }
+      return;
+    }
     if (this.parkedT > 0) {   // abandoned by the goat: sits there, then a tow truck (offscreen) returns it
       this.parkedT -= dt;
       const gp = G.goat.body.position;
@@ -287,6 +302,8 @@
     for (const w of this.wheels) w.rotation.x += this.speed / 0.45 * dt;
   };
   [0, 2.1, 4.2].forEach((a, i) => G.cars.push(new Car(a, i)));
+  // A green car parked right next to where you start, ready to steal.
+  G.cars.push(new Car(0, 3, { x: 5.5, z: 22, yaw: Math.PI }));
 
   // ---------- Golden goats (statues built from the goat model) ----------
   const statueSpots = [[50, 26, -62], [0, 4.9, 0], [70, 1.6, 60], [-55, 10.5, -43], [-62, 1.6, 41], [22, 7.6, -6]];

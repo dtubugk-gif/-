@@ -12,7 +12,7 @@
 
   D.nearest = function () {
     if (D.car || goat.ragActive) return null;
-    let best = null, bd = 4.8;
+    let best = null, bd = 6.5;
     for (const c of G.cars) {
       if (c.wrecked) continue;
       const d = c.body.position.distanceTo(goat.body.position);
@@ -67,6 +67,43 @@
       else { G.sfx.carDoor(); G.sfx.whoosh(); }
     }
     D.onChange && D.onChange();
+  };
+
+  // Bring a car to the goat: the nearest free one pulls up alongside, parked.
+  D.summon = function () {
+    if (D.car || goat.ragActive) return false;
+    const gp = goat.body.position;
+    let best = null, bd = Infinity;
+    for (const c of G.cars) {
+      if (c.wrecked) continue;
+      const d = c.body.position.distanceTo(gp) - (c.spot ? 1000 : 0);
+      if (d < bd) { bd = d; best = c; }
+    }
+    if (!best) return false;
+    // Find a clear spot around the goat (right, left, behind, ahead; near then farther) so the car never
+    // appears inside a wall, a tree or another car and gets flung out by the physics.
+    // Everything counts as in the way, loose props too: dropping a car on a barrel is a bad day.
+    const blockers = world.bodies.filter(o => o !== G.groundBody && o !== best.body && o !== goat.body && !o.goatPart);
+    for (const o of blockers) if (o.aabbNeedsUpdate) o.computeAABB();
+    const clear = (x, z) => blockers.every(o => o.aabb.upperBound.x < x - 2.6 || o.aabb.lowerBound.x > x + 2.6 || o.aabb.upperBound.z < z - 2.6 || o.aabb.lowerBound.z > z + 2.6 || o.aabb.lowerBound.y > 2.2);
+    const fx = Math.sin(goat.yaw), fz = Math.cos(goat.yaw), rx = Math.cos(goat.yaw), rz = -Math.sin(goat.yaw);
+    let spot = null;
+    for (const dist of [3.6, 5.5, 8, 11]) {
+      for (const [dx, dz] of [[rx, rz], [-rx, -rz], [-fx, -fz], [fx, fz]]) {
+        const x = gp.x + dx * dist, z = gp.z + dz * dist;
+        if (clear(x, z)) { spot = [x, z]; break; }
+      }
+      if (spot) break;
+    }
+    if (!spot) return false;
+    const b = best.body;
+    b.position.set(spot[0], 1.2, spot[1]);
+    b.velocity.set(0, 0, 0); b.angularVelocity.set(0, 0, 0);
+    b.quaternion.setFromAxisAngle(new V3(0, 1, 0), goat.yaw);
+    best.parkedT = 25;
+    G.puff(b.position, 0xfff7e0, 10);
+    G.sfx.honk(b.position); G.sfx.whoosh(b.position);
+    return true;
   };
 
   D.hop = function () {

@@ -95,6 +95,8 @@ kbd { font-family: var(--display); font-size: 13px; background: var(--ink); colo
 @keyframes nudge { to { transform: translateY(-4px); } }
 #carHint { left: 50%; bottom: 22%; transform: translateX(-50%); background: var(--ink); color: var(--paper); font-weight: 800; font-size: 16px; border-radius: 999px; padding: 6px 14px; }
 #carHint kbd { background: #40e0ff; color: var(--ink); }
+#tip { left: 50%; top: calc(var(--top) + 64px); transform: translateX(-50%); width: min(80vw, 420px); text-align: center; background: var(--ink); color: var(--paper); font-weight: 800; font-size: 14px; border-radius: 14px; padding: 8px 12px; }
+#tip b { color: #40e0ff; }
 @media (prefers-reduced-motion: reduce) { #tDrive { animation: none; } }
 #tMenu { position: fixed; z-index: 7; top: var(--top); left: 50%; margin-left: -22px; width: 44px; height: 44px; font-size: 20px; }
 @media (max-width: 520px) { #tMenu { left: var(--left); margin-left: 0; top: calc(var(--top) + 58px); } .touch #mode { top: calc(var(--top) + 110px); } }
@@ -112,6 +114,7 @@ kbd { font-family: var(--display); font-size: 13px; background: var(--ink); colo
 <div class="hud" id="feed"></div>
 <div class="hud" id="mode"></div>
 <div class="hud" id="carHint" hidden>Press <kbd>C</kbd> to steal this car</div>
+<div class="hud" id="tip" hidden>The green car on your right is yours: walk up and tap <b>DRIVE</b>. Or ☰ → Get a car.</div>
 
 <div id="touch" hidden>
   <div id="stickZone"></div>
@@ -145,6 +148,7 @@ kbd { font-family: var(--display); font-size: 13px; background: var(--ink); colo
       <div><kbd>J</kbd> jetpack (find it)</div>
       <div><kbd>B</kbd> barrel rain</div>
       <div><kbd>C</kbd> steal / leave a car</div>
+      <div><kbd>V</kbd> bring a car to you</div>
       <div><kbd>Driving</kbd> WASD, Space hop, F nitro, Q honk, R bail</div>
       <div><kbd>M</kbd> sound on/off</div>
     </div>
@@ -153,7 +157,8 @@ kbd { font-family: var(--display); font-size: 13px; background: var(--ink); colo
       <div><kbd>Right thumb</kbd> drag anywhere to look</div>
       <div><kbd>BUTT</kbd> headbutt · <kbd>LICK</kbd> grab things</div>
       <div><kbd>FLOP</kbd> ragdoll · <kbd>BAA!</kbd> scare people</div>
-      <div><kbd>DRIVE</kbd> next to a car: steal it, then HOP, NITRO, HONK, BAIL</div>
+      <div><kbd>DRIVE</kbd> walk up to a car (one waits on your right), or ☰ → Get a car</div>
+      <div>Driving: left thumb = gas, brake, steer · HOP · NITRO · HONK · BAIL</div>
       <div><kbd>☰</kbd> moon gravity, slow-mo, barrel rain</div>
       <div>Best played sideways, sound on.</div>
     </div>
@@ -167,6 +172,7 @@ kbd { font-family: var(--display); font-size: 13px; background: var(--ink); colo
     <button class="mbtn" id="mMoon" type="button">Moon gravity</button>
     <button class="mbtn" id="mSlow" type="button">Slow motion</button>
     <button class="mbtn" id="mRain" type="button">Barrel rain</button>
+    <button class="mbtn" id="mCar" type="button">Get a car</button>
     <button class="mbtn" id="mSpawn" type="button">Respawn</button>
     <button class="mbtn" id="mClose" type="button">Back to chaos</button>
   </div>
