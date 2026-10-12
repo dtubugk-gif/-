@@ -1,0 +1,13 @@
+{
+  "name": "dtubugk-mods",
+  "description": "Claude Code mods by dtubugk-gif.",
+  "owner": {
+    "name": "dtubugk-gif"
+  },
+  "plugins": [
+    {
+      "name": "phone-control",
+      "source": "./"
+    }
+  ]
+}

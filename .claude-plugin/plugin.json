@@ -1,0 +1,28 @@
+{
+  "name": "phone-control",
+  "version": "0.1.0",
+  "description": "Lets Claude see and control an Android phone over ADB: screenshots, UI tree, taps, swipes, typing, keys and apps.",
+  "author": {
+    "name": "dtubugk-gif"
+  },
+  "userConfig": {
+    "adbPath": {
+      "type": "string",
+      "title": "adb path",
+      "description": "The adb executable (a full path when adb is not on PATH).",
+      "default": "adb"
+    },
+    "serial": {
+      "type": "string",
+      "title": "Device serial",
+      "description": "Which device to drive when several are connected (adb devices lists them). Empty: the only one.",
+      "default": ""
+    },
+    "screenshotDir": {
+      "type": "string",
+      "title": "Screenshot folder",
+      "description": "Where screenshots are saved on this computer. Empty: the system temp folder.",
+      "default": ""
+    }
+  }
+}
