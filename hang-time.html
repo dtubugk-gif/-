@@ -41,6 +41,7 @@ body{height:100%;background:var(--night);color:var(--white);font-family:var(--ro
 .chip.shield{color:#bfe6ff;border-color:rgba(134,204,255,.6)}
 .chip.wide{color:#ffe19a;border-color:rgba(255,201,74,.6)}
 .chip.mag{color:#ffc2d8;border-color:rgba(255,111,163,.6)}
+.chip.boss{color:#a7f3e6;border-color:rgba(94,234,212,.65)}
 .coin-ico{display:inline-block;width:15px;height:15px;border-radius:50%;flex:none;vertical-align:-2px;
   background:radial-gradient(circle at 35% 35%,#fff6c4 0 18%,#ffd24a 19% 55%,#e0a21a 56%);box-shadow:inset 0 0 0 1.5px #c48a0c}
 
@@ -88,6 +89,8 @@ body{height:100%;background:var(--night);color:var(--white);font-family:var(--ro
 .rules .hot dd{background:var(--pink)}
 .rules .gold{background:#fff4d1}
 .rules .gold dd{background:#e9a412}
+.rules .boss{background:#dcfaf4}
+.rules .boss dd{background:#14a38c}
 .actions{display:flex;flex-direction:column;gap:12px}
 .actions.row{flex-direction:row;flex-wrap:wrap}
 .actions.row .btn{flex:1 1 120px}
@@ -160,6 +163,7 @@ body{height:100%;background:var(--night);color:var(--white);font-family:var(--ro
       <div id="chipShield" class="chip shield" hidden>Shield</div>
       <div id="chipWide" class="chip wide" hidden>Wide rim</div>
       <div id="chipMag" class="chip mag" hidden>Magnet</div>
+      <div id="chipBoss" class="chip boss" hidden>Boss level · coins ×2</div>
     </div>
     <div id="board" class="board" aria-live="polite">
       <div class="cell"><span class="lbl">QTR</span><span id="hQ" class="num">1</span></div>
@@ -191,6 +195,7 @@ body{height:100%;background:var(--night);color:var(--white);font-family:var(--ro
         <div><dt>Rolls in off the rim</dt><dd>+1</dd></div>
         <div class="gold"><dt>Perfect swish, dead centre</dt><dd>+1</dd></div>
         <div class="hot"><dt>3 clean in a row: On fire</dt><dd>×2</dd></div>
+        <div class="boss"><dt>Every 250 pts: beat the Night Owls</dt><dd>Boss</dd></div>
       </dl>
       <div class="actions">
         <button id="btnPlay" class="btn primary">Tip off</button>
@@ -416,6 +421,13 @@ const sfx = {
   perfect() { [1047, 1319, 1568, 2093].forEach((f, i) => Sound.tone(f, 0.18, 'sine', 0.06, null, i * 0.045)); },
   coin(n) { const b = 988 * Math.pow(2, Math.min(n, 12) / 12); Sound.tone(b, 0.06, 'square', 0.035); Sound.tone(b * 1.335, 0.14, 'square', 0.035, null, 0.05); },
   pop() { Sound.tone(420, 0.09, 'sine', 0.12, 900); },
+  bossIn() { Sound.tone(110, 0.9, 'sawtooth', 0.08); Sound.tone(147, 0.9, 'sawtooth', 0.06, null, 0.15); Sound.tone(220, 0.6, 'square', 0.04, 330, 0.5); Sound.hiss(1.2, 0.14, 'bandpass', 400, 1200, 0, 0.3); },
+  block() { Sound.tone(320, 0.12, 'square', 0.06, 140); Sound.hiss(0.08, 0.1, 'lowpass', 1600, 300); },
+  thud() { Sound.tone(90, 0.2, 'sine', 0.3, 50); Sound.hiss(0.12, 0.14, 'lowpass', 900, 200); },
+  windup() { Sound.tone(500, 0.5, 'triangle', 0.05, 1100); },
+  toss() { Sound.hiss(0.2, 0.12, 'bandpass', 1800, 500); },
+  bossHit() { Sound.tone(240, 0.18, 'square', 0.07, 90); Sound.hiss(0.15, 0.12, 'lowpass', 2400, 400); },
+  ko() { [784, 659, 523, 392, 523, 659, 784, 1047].forEach((f, i) => Sound.tone(f, 0.16, 'triangle', 0.08, null, i * 0.08)); Sound.hiss(1.8, 0.22, 'bandpass', 500, 1500, 0.2, 0.3); },
   power() { [523, 659, 784, 1047].forEach((f, i) => Sound.tone(f, 0.12, 'triangle', 0.08, null, i * 0.06)); },
   fire() { Sound.hiss(1.5, 0.2, 'bandpass', 450, 1400, 0, 0.35); Sound.tone(220, 0.6, 'sawtooth', 0.04, 880); },
   horn() { Sound.tone(233, 0.55, 'sawtooth', 0.08); Sound.tone(294, 0.55, 'sawtooth', 0.06); },
@@ -504,7 +516,8 @@ let hitStop = 0, zoom = 1, flashA = 0, coinChain = 0, coinT = 0;
 const diff = () => clamp(made / 40, 0, 1);
 // past full difficulty it keeps creeping up slowly, so there is always a ceiling to chase
 const overtime = () => clamp((made - 40) / 60, 0, 1);
-const cruise = () => lerp(130, 235, diff()) + overtime() * 40;
+// the boss level runs 10% slower so there is time to read the owls
+const cruise = () => (lerp(130, 235, diff()) + overtime() * 40) * (boss && boss.phase !== 'ko' ? 0.9 : 1);
 const rimW = () => lerp(54, 36, diff()) - overtime() * 3;
 const curSkin = () => skinById(save.skin);
 
@@ -513,11 +526,12 @@ function reset() {
   cam.x = ball.x - VW * 0.3;
   hoops = []; coins = []; powers = []; parts = []; pops = []; trail = [];
   score = 0; streak = 0; fire = false; made = 0; swishes = 0; runCoins = 0; quarter = 1;
+  boss = null; nextBossAt = BOSS_EVERY; bossLevel = 0; bossShots = []; projs = [];
   shield = true; wideT = 0; magT = 0; itemGap = 0; passedBest = false; timeScale = 1; T = 0; acc = 0;
   addHoop(ball.x + 300, clamp(ball.y + 60, hoopMinY(), hoopMaxY()), 0, 0);
   hud();
 }
-const hoopMinY = () => Math.max(150, FLOOR - 520);
+const hoopMinY = () => Math.max(boss ? Math.max(150, VH * 0.24) + 110 : 150, FLOOR - 520);
 const hoopMaxY = () => FLOOR - 120;
 
 function addHoop(x, y, amp, freq) {
@@ -534,23 +548,25 @@ function spawnNext() {
   // rims start moving from quarter 2, and more of them move, further and faster, as you go
   const moveChance = made < 8 ? 0 : lerp(0.25, 0.7, clamp((made - 8) / 30, 0, 1));
   let amp = 0, freq = 0;
-  if (Math.random() < moveChance) { amp = rand(20, lerp(35, 80, d)); freq = rand(0.9, lerp(1.3, 2, d)); }
+  const bossOn = boss && boss.phase !== 'ko';
+  if (!bossOn && Math.random() < moveChance) { amp = rand(20, lerp(35, 80, d)); freq = rand(0.9, lerp(1.3, 2, d)); }
   const span = lerp(90, 190, d);
   const y = clamp(prev.baseY + rand(-span, span), hoopMinY() + amp, hoopMaxY() - amp);
   addHoop(x, y, amp, freq);
+  if (bossOn) addDefender(hoops[hoops.length - 1]);
   // collectibles in the gap
   itemGap++;
   const x0 = prev.x + prev.w + 90, x1 = x - 110;
   if (x1 - x0 > 80) {
-    if (itemGap > 4 && Math.random() < 0.22) {
+    if (itemGap > (bossOn ? 2 : 4) && Math.random() < (bossOn ? 0.35 : 0.22)) {
       itemGap = 0;
-      const r = Math.random(), type = r < 0.38 ? 'shield' : r < 0.72 ? 'wide' : 'magnet';
+      const r = Math.random(), type = r < (bossOn ? 0.55 : 0.38) ? 'shield' : r < 0.78 ? 'wide' : 'magnet';
       powers.push({ x: (x0 + x1) / 2, y: clamp(Math.min(prev.baseY, y) - 70, 70, FLOOR - 120), type, taken: false });
-    } else if (Math.random() < 0.6) {
+    } else if (bossOn || Math.random() < 0.6) {
       const n = 5, ya = prev.baseY - 60, yb = y - 90;
       for (let i = 0; i < n; i++) {
         const t = i / (n - 1);
-        coins.push({ x: lerp(x0, x1, t), y: clamp(lerp(ya, yb, t) - Math.sin(t * Math.PI) * 50, 50, FLOOR - 60), taken: false, ph: rand(0, TAU) });
+        coins.push({ x: lerp(x0, x1, t), y: clamp(lerp(ya, yb, t) - Math.sin(t * Math.PI) * 50, 50, FLOOR - 60), taken: false, ph: rand(0, TAU), v: bossOn ? 2 : 1 });
       }
     }
   }
@@ -608,6 +624,204 @@ function stepCloth(h, dt) {
 function kickCloth(h, v) {
   const P = h.cloth.P, Q = h.cloth.Q;
   for (let l = 1; l <= NET_L; l++) for (let i = 0; i < NET_N; i++) { const k = knot(i, l) * 3; Q[k + 1] = P[k + 1] - v * l / NET_L; Q[k] = P[k] - ball.vx * 0.004 * l; }
+}
+
+/* ---------------- boss level: the Night Owls ---------------- */
+// Every 250 points the rival team shows up. Their captain Big Hoot floats top-right and lobs balls at you,
+// and a small owl defender hovers over every rim. Each basket damages Big Hoot; coins are worth double
+// until he goes down, and beating him pays a big bonus.
+const BOSS_EVERY = 250;
+let boss = null, nextBossAt = BOSS_EVERY, bossLevel = 0, bossShots = [], projs = [];
+const OWL = { body: '#6b62d6', dark: '#2a2468', disc: '#b3acf6', jersey: '#19b39b', jerseyD: '#0e7f6e', iris: '#ffc94a', beak: '#ff9a3c' };
+const bossX = () => cam.x + VW - 88 + (boss ? boss.slide : 0);
+const bossY = () => Math.max(150, VH * 0.24) + Math.sin(A * 1.7) * 8 + (boss ? boss.drop : 0);
+const bossHand = () => [bossX() - 34, bossY() - 34];
+
+function startBoss() {
+  bossLevel++;
+  const hp = 18 + 8 * (bossLevel - 1);
+  boss = { phase: 'intro', t: 0, hp, max: hp, slide: 220, drop: 0, spin: 0, throwT: 2.2, windup: 0, flash: 0, mood: 'angry', aim: null };
+  shield = true;
+  banner('BOSS FIGHT', bossLevel === 1 ? 'The Night Owls are here · coins ×2' : `Night Owls round ${bossLevel} · coins ×2`);
+  sfx.bossIn(); shake(6, 0.4); flashA = 0.35;
+  // owls take the rims that are still well ahead of you
+  for (const h of hoops) if (!h.scored && !h.done && h.x > ball.x + 260) addDefender(h);
+  hud();
+}
+function addDefender(h) { h.def = { ph: rand(0, TAU), r: 13, x: h.x, y: h.y - 70, vx: 0, vy: 0, bumpT: 0, leave: 0, num: pick([3, 7, 11, 22, 31]) }; h.amp = 0; h.baseY = h.y; }
+function placeDefender(h) {
+  const d = h.def, a = T * 1.5 + d.ph, b2 = T * 2.1 + d.ph, sweep = h.we * 0.75;
+  d.x = h.x + Math.sin(a) * sweep; d.y = h.y - 70 + Math.sin(b2) * 10 - d.leave * d.leave * 260;
+  d.vx = Math.cos(a) * 1.5 * sweep; d.vy = Math.cos(b2) * 21;
+}
+function bossPhysics(dt) {
+  const b = ball;
+  for (const h of hoops) {
+    if (!h.def) continue;
+    if (h.scored || h.done || !boss || boss.phase === 'ko') h.def.leave = Math.min(1.5, h.def.leave + dt * 1.6);
+    placeDefender(h);
+    const d = h.def; d.bumpT = Math.max(0, d.bumpT - dt);
+    if (d.leave > 0) continue;
+    const dx = b.x - d.x, dy = b.y - d.y, dist = Math.hypot(dx, dy), m = b.r + d.r;
+    if (dist < m && dist > 1e-4) {
+      const nx = dx / dist, ny = dy / dist; b.x = d.x + nx * m; b.y = d.y + ny * m;
+      const imp = contact(nx, ny, 0.5, 0.2, d.vx, d.vy);
+      if (imp > 40 && !d.bumpT) { d.bumpT = 0.5; sfx.block(); mood('hurt', 0.4); shake(4, 0.12); pop(d.x, d.y - 26, 'BLOCKED!', '#5eead4', null, 0.85); }
+    }
+  }
+  // Big Hoot's throws
+  for (const p of projs) {
+    p.vy += 520 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += dt * 8;
+    if (!p.hit && Math.hypot(b.x - p.x, b.y - p.y) < b.r + 10) {
+      p.hit = true;
+      burst(p.x, p.y, 14, ['#5eead4', '#ffffff', '#19b39b'], 240, { g: 200, add: true });
+      if (shield) { shield = false; pop(b.x, b.y - 40, 'SHIELD BLOCK', '#9fd8ff'); sfx.power(); }
+      else { b.vx = -90; b.vy = Math.max(b.vy, 260); b.w += 12; mood('hurt', 0.6); shake(8, 0.25); pop(b.x, b.y - 36, 'OOF!', '#ffffff', null, 0.9); sfx.thud(); }
+      hud();
+    }
+    if (p.y > FLOOR - 10) { p.hit = true; burst(p.x, FLOOR - 6, 8, ['#5eead4', '#ffffff'], 140, { g: 300 }); }
+  }
+  projs = projs.filter(p => !p.hit && p.x > cam.x - 80);
+}
+function bossUpdate(dt, real) {
+  if (!boss) return;
+  boss.t += real; boss.flash = Math.max(0, boss.flash - real * 4);
+  if (boss.phase === 'intro') { boss.slide = 220 * Math.pow(1 - Math.min(1, boss.t / 1.3), 3); if (boss.t > 1.8) { boss.phase = 'fight'; boss.slide = 0; } }
+  else if (boss.phase === 'fight' && state === 'play') {
+    if (boss.windup > 0) {
+      boss.windup -= dt;
+      boss.aim = aimThrow();
+      if (boss.windup <= 0) {
+        const [hx, hy] = bossHand(), a = boss.aim;
+        projs.push({ x: hx, y: hy, vx: a.vx, vy: a.vy, rot: 0, hit: false });
+        sfx.toss(); boss.aim = null;
+        boss.throwT = rand(2.6, 3.6) / (1 + 0.25 * (bossLevel - 1));
+      }
+    } else if ((boss.throwT -= dt) <= 0) { boss.windup = 0.75; sfx.windup(); }
+  } else if (boss.phase === 'ko') {
+    boss.drop += boss.t * 420 * real; boss.spin += real * 6;
+    if (boss.t > 2.2) boss = null;
+  }
+  bossShots = bossShots.filter(s => {
+    s.t += real / 0.5;
+    if (s.t >= 1) { if (boss && boss.phase === 'fight') hurtBoss(s.dmg); return false; }
+    return true;
+  });
+}
+// lob aimed at where the ball will be ~0.8 s from now
+function aimThrow() {
+  const [hx, hy] = bossHand(), tf = 0.85, tx = ball.x + cruise() * tf * 0.6, ty = clamp(ball.y, 60, FLOOR - 40);
+  return { vx: (tx - hx) / tf, vy: (ty - hy - 0.5 * 520 * tf * tf) / tf, tx, ty };
+}
+function bossScore(h, pts) {
+  if (!boss || boss.phase !== 'fight') return;
+  bossShots.push({ x0: h.x, y0: h.y - 20, t: 0, dmg: pts });
+}
+function hurtBoss(dmg) {
+  boss.hp = Math.max(0, boss.hp - dmg); boss.flash = 1; sfx.bossHit(); shake(5, 0.15);
+  burst(bossX(), bossY(), 16, ['#ffc94a', '#ff6fa3', '#ffffff'], 300, { g: 300, add: true });
+  pops.push({ x: bossX() - 50, y: bossY() - 20, text: `-${dmg}`, color: '#ff6fa3', size: 0.9, life: 0.9, max: 0.9 });
+  if (boss.hp <= 0) bossDown();
+}
+function bossDown() {
+  boss.phase = 'ko'; boss.t = 0; projs = [];
+  const bonus = 100 * bossLevel;
+  save.coins += bonus; runCoins += bonus; persist();
+  nextBossAt = (Math.floor(score / BOSS_EVERY) + 1) * BOSS_EVERY;
+  banner('BOSS DEFEATED', `Big Hoot is out · +${bonus} coins`);
+  sfx.ko(); flashA = 0.5; zoom = 1.06; hitStop = 0.12; mood('happy', 2);
+  for (let i = 0; i < 40; i++) parts.push({ x: bossX() + rand(-30, 30), y: bossY() + rand(-30, 30), vx: rand(-260, 120), vy: rand(-380, -60), life: rand(1, 1.8), max: 1.8, c: '#ffd24a', sz: rand(5, 8), g: 700, kind: 'coin', rot: rand(0, TAU), vr: rand(-10, 10) });
+  pop(ball.x, ball.y - 50, `+${bonus} COINS`, '#ffd34d', 'boss bonus', 1.2);
+  hud();
+}
+
+// a Night Owl: round 2.5D body, facial discs, big amber eyes that track the ball, team jersey
+function drawOwl(c, x, y, r, o) {
+  c.save(); c.translate(x, y); if (o.spin) c.rotate(o.spin);
+  const fl = Math.sin(o.flap || 0);
+  for (const s of [-1, 1]) {
+    c.save(); c.translate(s * r * 0.78, r * 0.05); c.rotate(s * (0.35 + fl * 0.55));
+    const wg = c.createLinearGradient(0, -r * 0.3, 0, r * 0.3); wg.addColorStop(0, '#8b83ea'); wg.addColorStop(1, OWL.dark);
+    c.fillStyle = wg; c.beginPath(); c.ellipse(s * r * 0.28, 0, r * 0.44, r * 0.22, 0, 0, TAU); c.fill(); c.restore();
+  }
+  c.fillStyle = OWL.dark;
+  for (const s of [-1, 1]) { c.beginPath(); c.moveTo(s * r * 0.3, -r * 0.82); c.lineTo(s * r * 0.74, -r * 1.14); c.lineTo(s * r * 0.8, -r * 0.5); c.closePath(); c.fill(); }
+  let g = c.createRadialGradient(-r * 0.35, -r * 0.4, r * 0.1, 0, 0, r);
+  g.addColorStop(0, '#9a92f4'); g.addColorStop(0.6, OWL.body); g.addColorStop(1, OWL.dark);
+  c.fillStyle = g; c.beginPath(); c.ellipse(0, 0, r, r * 0.98, 0, 0, TAU); c.fill();
+  c.save(); c.beginPath(); c.ellipse(0, 0, r, r * 0.98, 0, 0, TAU); c.clip();
+  const jg = c.createLinearGradient(0, r * 0.15, 0, r); jg.addColorStop(0, OWL.jersey); jg.addColorStop(1, OWL.jerseyD);
+  c.fillStyle = jg; c.beginPath(); c.moveTo(-r, r * 0.3); c.quadraticCurveTo(0, r * 0.12, r, r * 0.3); c.lineTo(r, r); c.lineTo(-r, r); c.closePath(); c.fill();
+  c.fillStyle = '#ffffff'; c.font = `700 ${Math.round(r * 0.44)}px Fredoka, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText(String(o.num), 0, r * 0.64);
+  c.restore();
+  if (o.captain) { c.fillStyle = OWL.jersey; c.fillRect(-r * 0.86, -r * 0.62, r * 1.72, r * 0.16); c.fillStyle = 'rgba(255,255,255,.85)'; c.fillRect(-r * 0.86, -r * 0.56, r * 1.72, r * 0.04); }
+  const lx = clamp(o.lx || 0, -1, 1), ly = clamp(o.ly || 0, -1, 1), m = o.mood;
+  for (const s of [-1, 1]) {
+    const ex = s * r * 0.36, ey = -r * 0.16;
+    c.fillStyle = OWL.disc; c.beginPath(); c.arc(ex, ey, r * 0.37, 0, TAU); c.fill();
+    c.strokeStyle = OWL.dark; c.fillStyle = OWL.dark; c.lineWidth = Math.max(1.2, r * 0.07); c.lineCap = 'round';
+    if (m === 'ko') { const k = r * 0.15; c.beginPath(); c.moveTo(ex - k, ey - k); c.lineTo(ex + k, ey + k); c.moveTo(ex + k, ey - k); c.lineTo(ex - k, ey + k); c.stroke(); continue; }
+    if (m === 'hurt') { c.beginPath(); c.moveTo(ex - s * r * 0.16, ey - r * 0.12); c.lineTo(ex + s * r * 0.08, ey); c.lineTo(ex - s * r * 0.16, ey + r * 0.12); c.stroke(); continue; }
+    c.fillStyle = '#ffffff'; c.beginPath(); c.arc(ex, ey, r * 0.27, 0, TAU); c.fill();
+    const ix = ex + lx * r * 0.08, iy = ey + ly * r * 0.08;
+    c.fillStyle = OWL.iris; c.beginPath(); c.arc(ix, iy, r * 0.17, 0, TAU); c.fill();
+    c.fillStyle = '#1a1340'; c.beginPath(); c.arc(ix, iy, r * 0.09, 0, TAU); c.fill();
+    c.fillStyle = '#ffffff'; c.beginPath(); c.arc(ix - r * 0.05, iy - r * 0.05, r * 0.04, 0, TAU); c.fill();
+    if (m === 'sad') { c.fillStyle = OWL.disc; c.beginPath(); c.arc(ex, ey, r * 0.3, Math.PI, TAU); c.fill(); }
+    if (m === 'angry') { c.strokeStyle = OWL.dark; c.lineWidth = Math.max(1.6, r * 0.09); c.beginPath(); c.moveTo(ex + s * r * 0.28, ey - r * 0.36); c.lineTo(ex - s * r * 0.16, ey - r * 0.24); c.stroke(); }
+  }
+  c.fillStyle = OWL.beak; c.beginPath(); c.moveTo(-r * 0.1, r * 0.02); c.lineTo(r * 0.1, r * 0.02); c.lineTo(0, r * 0.2); c.closePath(); c.fill();
+  c.fillStyle = OWL.beak; for (const s of [-1, 1]) { c.beginPath(); c.ellipse(s * r * 0.3, r * 0.96, r * 0.13, r * 0.07, 0, 0, TAU); c.fill(); }
+  g = c.createRadialGradient(-r * 0.4, -r * 0.5, 0, -r * 0.4, -r * 0.5, r * 0.5);
+  g.addColorStop(0, 'rgba(255,255,255,.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = g; c.beginPath(); c.arc(-r * 0.4, -r * 0.5, r * 0.5, 0, TAU); c.fill();
+  if (o.flash) { c.fillStyle = `rgba(255,255,255,${o.flash * 0.75})`; c.beginPath(); c.ellipse(0, 0, r, r * 0.98, 0, 0, TAU); c.fill(); }
+  c.restore();
+}
+function drawRivalBall(x, y, r, rot) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  const g = ctx.createRadialGradient(-r * 0.35, -r * 0.4, 1, 0, 0, r);
+  g.addColorStop(0, '#b6fff1'); g.addColorStop(0.45, '#2fcfb4'); g.addColorStop(1, '#0b6e5f');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
+  ctx.strokeStyle = 'rgba(10,60,52,.8)'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-r, 0); ctx.lineTo(r, 0); ctx.moveTo(0, -r); ctx.lineTo(0, r); ctx.stroke();
+  ctx.restore();
+}
+function drawBossLayer() {
+  for (const h of hoops) if (h.def && h.def.leave < 1.4) {
+    const d = h.def;
+    ctx.save(); ctx.globalAlpha = clamp(1 - d.leave / 1.4, 0, 1);
+    drawOwl(ctx, d.x, d.y, d.r, { flap: A * 16 + d.ph, num: d.num, lx: (ball.x - d.x) / 80, ly: (ball.y - d.y) / 80, mood: d.leave > 0 ? 'sad' : d.bumpT ? 'angry' : 'normal' });
+    ctx.restore();
+  }
+  for (const p of projs) {
+    ctx.fillStyle = 'rgba(94,234,212,.18)'; ctx.beginPath(); ctx.arc(p.x - p.vx * 0.03, p.y - p.vy * 0.03, 9, 0, TAU); ctx.fill();
+    drawRivalBall(p.x, p.y, 10, p.rot);
+  }
+  for (const s of bossShots) {
+    const t = s.t, bx = bossX(), by = bossY(), cx = lerp(s.x0, bx, 0.5), cy = Math.min(s.y0, by) - 120;
+    const x = (1 - t) * (1 - t) * s.x0 + 2 * (1 - t) * t * cx + t * t * bx, y = (1 - t) * (1 - t) * s.y0 + 2 * (1 - t) * t * cy + t * t * by;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createRadialGradient(x, y, 0, x, y, 16); g.addColorStop(0, 'rgba(255,240,180,1)'); g.addColorStop(0.4, 'rgba(255,150,80,.8)'); g.addColorStop(1, 'rgba(255,90,60,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 16, 0, TAU); ctx.fill(); ctx.restore();
+  }
+  if (!boss) return;
+  const bx = bossX(), by = bossY(), R = 42;
+  if (boss.aim) {
+    const [hx, hy] = bossHand(), a = boss.aim;
+    ctx.fillStyle = `rgba(255,111,163,${0.5 + 0.3 * Math.sin(A * 20)})`;
+    for (let i = 1; i < 14; i++) { const t = i / 14 * 0.85; ctx.beginPath(); ctx.arc(hx + a.vx * t, hy + a.vy * t + 260 * t * t, 2.6, 0, TAU); ctx.fill(); }
+  }
+  drawOwl(ctx, bx, by, R, { flap: A * 7, num: 1, captain: true, lx: (ball.x - bx) / 200, ly: (ball.y - by) / 200, mood: boss.phase === 'ko' ? 'ko' : boss.flash > 0.3 ? 'hurt' : 'angry', flash: boss.flash, spin: boss.spin });
+  if (boss.windup > 0) { const [hx, hy] = bossHand(); drawRivalBall(hx, hy - 6 * Math.sin(boss.windup * 20), 10, A * 4); }
+  if (boss.phase !== 'ko') {
+    const w = 96, x0 = bx - w / 2, y0 = by + R + 12;
+    ctx.font = '700 13px Fredoka, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 4; ctx.strokeStyle = '#2b1f52'; ctx.strokeText('BIG HOOT', bx, y0 + 20); ctx.fillStyle = '#ffffff'; ctx.fillText('BIG HOOT', bx, y0 + 20);
+    ctx.fillStyle = 'rgba(28,21,64,.75)'; rrect(x0 - 2, y0 - 2, w + 4, 12, 6); ctx.fill();
+    const hg = ctx.createLinearGradient(x0, 0, x0 + w, 0); hg.addColorStop(0, '#ff6fa3'); hg.addColorStop(1, '#ffc94a');
+    ctx.fillStyle = hg; rrect(x0, y0, Math.max(4, w * boss.hp / boss.max), 8, 4); ctx.fill();
+  }
 }
 
 /* ---------------- effects ---------------- */
@@ -690,6 +904,7 @@ function physics(dt) {
   }
 
   for (const h of hoops) if (Math.abs(h.x - b.x) < h.we + 80) collideHoop(h, px, py, dt);
+  bossPhysics(dt);
   for (const h of hoops) {
     if (!h.scored && !h.done && b.x - r > h.x + h.we + 16) { h.done = true; missHoop(); if (state !== 'play') return; }
   }
@@ -699,7 +914,7 @@ function physics(dt) {
     const dx = b.x - c.x, dy = b.y - c.y, d = Math.hypot(dx, dy);
     if (magT > 0 && d < 190) { const s = Math.min(1, dt * 7); c.x += dx * s; c.y += dy * s; }
     if (d < r + 12) {
-      c.taken = true; save.coins++; runCoins++; sfx.coin(coinChain++); coinT = 0.7;
+      c.taken = true; save.coins += c.v || 1; runCoins += c.v || 1; sfx.coin(coinChain++); coinT = 0.7;
       if (ball.moodT <= 0) mood('happy', 0.25);
       burst(c.x, c.y, 8, ['#ffd24a', '#fff3b8'], 160, { life: 0.4, g: 0, add: true });
       hud();
@@ -847,7 +1062,9 @@ function scoreHoop(h) {
   try { navigator.vibrate && navigator.vibrate(perfect ? [12, 40, 12] : 12); } catch (e) {}
   for (let i = 0; i < (kind === 'rim' ? 3 : 10); i++) flashes.push({ x: rand(0, VW), y: rand(crowdTop, WALL - 45), life: rand(0.05, 0.2) });
   if (!passedBest && save.best > 0 && score > save.best) { passedBest = true; banner('NEW RECORD', 'Keep it going'); }
+  bossScore(h, pts);
   if (made % 8 === 0) nextQuarter();
+  if (!boss && score >= nextBossAt) startBoss();
   hud();
 }
 
@@ -895,6 +1112,7 @@ function update(dt, real) {
       if (state !== 'play' && state !== 'dying') { acc = 0; break; }
     }
     wideT = Math.max(0, wideT - dt); magT = Math.max(0, magT - dt);
+    bossUpdate(dt, real);
     if (state === 'dying') { deathT += real; if (deathT > 1.25) showOver(); }
   } else if (state === 'menu' || state === 'ready') {
     ball.y = ball.baseY + Math.sin(A * 3) * 7; ball.rot += real * 1.2;
@@ -1008,7 +1226,7 @@ function drawBackground() {
   fg.addColorStop(0, '#231a4d'); fg.addColorStop(1, '#17113a');
   ctx.fillStyle = fg; ctx.fillRect(-30, by, VW + 60, 30);
   ctx.save(); ctx.beginPath(); ctx.rect(0, by + 3, VW, 24); ctx.clip();
-  const msg = fire ? '  ON FIRE  ★  DOUBLE POINTS  ★' : '  HANG TIME  ★  SWISH +2  ★  OFF THE GLASS +2  ★  DEAD CENTRE = PERFECT +1  ★  3 CLEAN IN A ROW = ON FIRE  ★';
+  const msg = boss && boss.phase !== 'ko' ? '  BOSS FIGHT  ★  NIGHT OWLS  ★  COINS ×2  ★  DODGE THE THROWS  ★' : fire ? '  ON FIRE  ★  DOUBLE POINTS  ★' : '  HANG TIME  ★  SWISH +2  ★  OFF THE GLASS +2  ★  DEAD CENTRE = PERFECT +1  ★  3 CLEAN IN A ROW = ON FIRE  ★  250 PTS = BOSS FIGHT  ★';
   ctx.font = '600 14px Fredoka, sans-serif'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
   const tw = ctx.measureText(msg).width;
   ctx.fillStyle = fire ? '#ff9a6c' : 'rgba(255,215,122,.85)';
@@ -1150,7 +1368,7 @@ function drawHoopFront(h) {
 
 // coin with real thickness: back face, rim band, embossed front face
 function drawCoin(c) {
-  const ang = A * 3.2 + c.ph, cs = Math.cos(ang), sn = Math.sin(ang), y = c.y + Math.sin(A * 3 + c.ph) * 3, R = 8.5;
+  const ang = A * 3.2 + c.ph, cs = Math.cos(ang), sn = Math.sin(ang), y = c.y + Math.sin(A * 3 + c.ph) * 3, R = c.v === 2 ? 10.5 : 8.5;
   const rx = Math.max(0.8, Math.abs(cs) * R), off = sn * 2.6;
   const halo = ctx.createRadialGradient(c.x, y, 2, c.x, y, 16);
   halo.addColorStop(0, 'rgba(255,214,90,.3)'); halo.addColorStop(1, 'rgba(255,214,90,0)');
@@ -1234,6 +1452,7 @@ function render() {
     ctx.strokeStyle = 'rgba(200,236,255,.7)'; ctx.lineWidth = 1.2; ctx.stroke();
   }
   for (const h of hoops) drawHoopFront(h);
+  drawBossLayer();
   drawParts(false);
 
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -1294,6 +1513,10 @@ function drawParts(flamesOnly) {
     ctx.fillStyle = p.c;
     if (p.kind === 'conf') {
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillRect(-p.sz / 2, -p.sz / 4, p.sz, p.sz / 2); ctx.restore();
+    } else if (p.kind === 'coin') {
+      ctx.save(); ctx.translate(p.x, p.y); ctx.scale(Math.cos(p.rot * 2), 1);
+      ctx.fillStyle = '#e09a10'; ctx.beginPath(); ctx.arc(0, 0, p.sz, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#ffd24a'; ctx.beginPath(); ctx.arc(0, 0, p.sz * 0.78, 0, TAU); ctx.fill(); ctx.restore();
     } else if (p.kind === 'ring') {
       const g = 1 + (1 - a) * 1.4; ctx.strokeStyle = p.c; ctx.lineWidth = 4 * a;
       ctx.beginPath(); ctx.ellipse(p.x, p.y, p.sz * g, p.sz * 0.3 * g, 0, 0, TAU); ctx.stroke();
@@ -1324,6 +1547,7 @@ function hud() {
   $('chipShield').hidden = !shield;
   $('chipWide').hidden = !(wideT > 0);
   $('chipMag').hidden = !(magT > 0);
+  $('chipBoss').hidden = !(boss && boss.phase !== 'ko');
   $('board').classList.toggle('fire', fire);
   const pips = $('pips').children;
   for (let i = 0; i < pips.length; i++) pips[i].classList.toggle('on', i < Math.min(streak, 3));
@@ -1356,7 +1580,7 @@ function showOver() {
   $('oScore').textContent = score; $('oMade').textContent = made; $('oSwish').textContent = swishes;
   $('oQtr').textContent = qLabel(quarter); $('oCoins').textContent = '+' + runCoins; $('oBest').textContent = save.best;
   $('oRecord').hidden = !rec || score === 0;
-  $('oReason').textContent = deathReason === 'floor' ? 'Hit the hardwood' : 'Missed the rim';
+  $('oReason').textContent = boss && boss.phase !== 'ko' ? 'Big Hoot wins this round' : deathReason === 'floor' ? 'Hit the hardwood' : 'Missed the rim';
   show('over'); hud();
   setTimeout(() => $('btnAgain').focus({ preventScroll: true }), 0);
 }
@@ -1449,7 +1673,7 @@ function frame(now) {
   if (state !== 'paused') update(real * timeScale, real);
   // power-up chips expire on their own
   peek();
-  if ((now - lastChipCheck) > 250) { lastChipCheck = now; if ($('chipWide').hidden === (wideT > 0) || $('chipMag').hidden === (magT > 0)) hud(); }
+  if ((now - lastChipCheck) > 250) { lastChipCheck = now; if ($('chipWide').hidden === (wideT > 0) || $('chipMag').hidden === (magT > 0) || $('chipBoss').hidden === !!(boss && boss.phase !== 'ko')) hud(); }
   render();
   requestAnimationFrame(frame);
 }
