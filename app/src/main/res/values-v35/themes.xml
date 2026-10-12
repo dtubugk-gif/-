@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Keep classic insets on Android 15 so the action bar and content never sit under system bars. -->
+    <style name="Theme.ShakeLight" parent="Base.Theme.ShakeLight">
+        <item name="android:windowOptOutEdgeToEdgeEnforcement">true</item>
+    </style>
+</resources>

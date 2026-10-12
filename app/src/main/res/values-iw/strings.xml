@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ShakeLight</string>
+
+    <string name="channel_shake">זיהוי ניעור</string>
+    <string name="notif_title">ניעור להדלקת הפנס פעיל</string>
+    <string name="notif_torch_on">הפנס דולק — נער כדי לכבות</string>
+    <string name="notif_torch_off">הפנס כבוי — נער כדי להדליק</string>
+    <string name="action_toggle_torch">הדלקה/כיבוי פנס</string>
+    <string name="action_stop">עצור</string>
+    <string name="tile_label">פנס בניעור</string>
+
+    <string name="shake_title">נער להדלקה</string>
+    <string name="shake_status_on">פעיל — נער את הטלפון כדי להדליק או לכבות את הפנס, גם כשהמסך נעול.</string>
+    <string name="shake_status_off">כבוי — הפעל כדי לשלוט בפנס בניעור.</string>
+    <string name="no_flash">לא נמצא פנס במכשיר הזה</string>
+    <string name="battery_hint">אפשר שימוש בסוללה ללא הגבלה, כדי שהניעור ימשיך לעבוד גם כשהמסך כבוי לאורך זמן.</string>
+    <string name="battery_fix">אפשר</string>
+    <string name="tools_title">כלים</string>
+
+    <string name="feature_flashlight">פנס</string>
+    <string name="feature_flashlight_desc">עוצמה, הבהוב, SOS וקוד מורס</string>
+    <string name="feature_screen_light">תאורת מסך</string>
+    <string name="feature_screen_light_desc">הפוך את המסך למנורה צבעונית</string>
+    <string name="feature_projector">מקרן</string>
+    <string name="feature_projector_desc">הצג תמונות וסרטונים במקרן, בטלוויזיה או בקופסת עדשה</string>
+    <string name="feature_settings">הגדרות</string>
+    <string name="feature_settings_desc">רגישות ניעור, כיבוי אוטומטי, הגנת כיס</string>
+
+    <string name="torch_on">דולק</string>
+    <string name="torch_off">כבוי</string>
+    <string name="torch_busy">המצלמה בשימוש של אפליקציה אחרת</string>
+    <string name="pattern_ready">לחץ על הכפתור כדי להתחיל</string>
+    <string name="pattern_running">פועל — לחץ כדי לעצור</string>
+    <string name="mode_steady">אור</string>
+    <string name="mode_strobe">הבהוב</string>
+    <string name="mode_sos">SOS</string>
+    <string name="mode_morse">מורס</string>
+    <string name="strobe_speed">מהירות: %1$d הבהובים בשנייה</string>
+    <string name="strobe_warning">אזהרה: אור מהבהב עלול לגרום להתקף אצל אנשים עם אפילפסיה רגישה לאור.</string>
+    <string name="morse_hint">הודעה (אותיות באנגלית ומספרים)</string>
+    <string name="morse_invalid">הקלד אותיות באנגלית או מספרים כדי לשדר במורס</string>
+    <string name="brightness">עוצמה: %1$d%%</string>
+    <string name="brightness_unsupported">שליטה בעוצמת הפנס דורשת אנדרואיד 13 ומעלה וטלפון שהפלאש שלו תומך בזה.</string>
+
+    <string name="screen_light_hint">לחיצה מחליפה צבע · לחיצה ארוכה למצב מסיבה</string>
+
+    <string name="projector_explain">אמת מקצועית: לטלפון אין עדשת מקרן, ולכן הוא לא יכול להקרין תמונה על קיר בעצמו. ShakeLight נותן לך את שתי הדרכים שבאמת עובדות:\n\n• חיבור למקרן או לטלוויזיה — אלחוטי (Cast, Smart View, שיקוף מסך) או בכבל USB-C ל-HDMI. כשהמקרן מזוהה כמסך שני, התמונה מוצגת עליו והטלפון הופך לשלט.\n\n• קופסת עדשה ביתית — שים את הטלפון בקופסת נעליים חשוכה עם זכוכית מגדלת בחזית, בחדר חשוך. הפעל „סיבוב 180°” כדי שהתמונה תופיע ישרה על הקיר.</string>
+    <string name="proj_step_media">1. בחר מה להציג</string>
+    <string name="pick_image">תמונה</string>
+    <string name="pick_video">סרטון</string>
+    <string name="nothing_selected">עדיין לא נבחר כלום</string>
+    <string name="selected_image">תמונה: %1$s</string>
+    <string name="selected_video">סרטון: %1$s</string>
+    <string name="proj_step_setup">2. הגדר את ההקרנה</string>
+    <string name="proj_rotate">סיבוב 180° (קופסת עדשה)</string>
+    <string name="proj_mirror">היפוך ימין ↔ שמאל (הקרנה מאחור)</string>
+    <string name="proj_bright">בהירות מסך מקסימלית</string>
+    <string name="proj_loop">הפעל סרטון בלולאה</string>
+    <string name="proj_cast">חיבור לטלוויזיה / מקרן</string>
+    <string name="proj_no_display">אין מסך שני מחובר — התמונה תוצג בטלפון (או בטלוויזיה אם אתה משקף את המסך).</string>
+    <string name="proj_display">מסך שני מחובר: %1$s</string>
+    <string name="proj_start">התחל הקרנה</string>
+    <string name="proj_external_playing">מוצג על %1$s\nהטלפון הזה הוא עכשיו השלט.</string>
+    <string name="proj_ctrl_rotate">סיבוב</string>
+    <string name="proj_ctrl_mirror">היפוך</string>
+    <string name="proj_ctrl_play">נגן/השהה</string>
+    <string name="proj_ctrl_close">סגור</string>
+    <string name="proj_error">לא ניתן לפתוח את הקובץ</string>
+    <string name="cast_unavailable">פתח את ההגדרות המהירות ולחץ על „Cast”, „Smart View” או „שיקוף מסך”.</string>
+
+    <string name="pref_cat_shake">זיהוי ניעור</string>
+    <string name="pref_sensitivity">רגישות</string>
+    <string name="pref_sensitivity_summary">גבוה יותר = מספיק ניעור קל. הורד אם הפנס נדלק מעצמו.</string>
+    <string name="pref_shake_count">מספר ניעורים</string>
+    <string name="pref_shake_count_summary">כמה תנועות הלוך-חזור מהירות בתוך כשנייה</string>
+    <string name="pref_vibrate">רטט בהדלקה/כיבוי</string>
+    <string name="pref_vibrate_summary">רטט אחד = דלוק, שניים = כבוי</string>
+    <string name="pref_pocket">הגנת כיס</string>
+    <string name="pref_pocket_summary">התעלם מניעורים כשהטלפון בכיס או בתיק</string>
+    <string name="pref_screen_off">עבוד גם כשהמסך כבוי</string>
+    <string name="pref_screen_off_summary">נדרש ברוב הטלפונים. צורך מעט יותר סוללה.</string>
+    <string name="pref_auto_off">כיבוי אוטומטי של הפנס</string>
+    <string name="pref_boot">הפעל מחדש אחרי הפעלה מחדש של הטלפון</string>
+    <string name="pref_cat_torch">פנס</string>
+    <string name="pref_torch_level">עוצמת הפנס</string>
+    <string name="pref_torch_level_summary">משמש את הניעור ואת מסך הפנס (אנדרואיד 13+, בטלפונים תומכים)</string>
+    <string-array name="auto_off_entries">
+        <item>אף פעם</item>
+        <item>אחרי דקה</item>
+        <item>אחרי 2 דקות</item>
+        <item>אחרי 5 דקות</item>
+        <item>אחרי 10 דקות</item>
+        <item>אחרי 30 דקות</item>
+    </string-array>
+</resources>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark on purpose: a light tool is mostly used in the dark. -->
+    <style name="Base.Theme.ShakeLight" parent="Theme.Material3.Dark">
+        <item name="colorPrimary">#FFFFB300</item>
+        <item name="colorOnPrimary">#FF201600</item>
+        <item name="colorPrimaryContainer">#FF4A3600</item>
+        <item name="colorOnPrimaryContainer">#FFFFDF9E</item>
+        <item name="colorSecondary">#FFD8C4A0</item>
+        <item name="colorOnSecondary">#FF3B2F15</item>
+        <item name="colorSecondaryContainer">#FF52452A</item>
+        <item name="colorOnSecondaryContainer">#FFF5E0BB</item>
+        <item name="android:colorBackground">#FF15120E</item>
+        <item name="colorSurface">#FF15120E</item>
+        <item name="colorSurfaceContainer">#FF221E19</item>
+        <item name="colorSurfaceContainerLow">#FF1E1A15</item>
+        <item name="colorSurfaceContainerHigh">#FF2C2823</item>
+        <item name="colorSurfaceContainerHighest">#FF37332D</item>
+        <item name="android:statusBarColor">#FF15120E</item>
+        <item name="android:navigationBarColor">#FF15120E</item>
+    </style>
+
+    <style name="Theme.ShakeLight" parent="Base.Theme.ShakeLight" />
+
+    <style name="Base.Theme.ShakeLight.Fullscreen" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">#FFFFB300</item>
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+
+    <style name="Theme.ShakeLight.Fullscreen" parent="Base.Theme.ShakeLight.Fullscreen" />
+</resources>

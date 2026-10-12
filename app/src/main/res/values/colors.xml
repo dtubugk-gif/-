@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="amber">#FFFFB300</color>
+    <color name="amber_dim">#80FFB300</color>
+    <color name="power_off">#FF2B2620</color>
+    <color name="launcher_bg">#FF1B1610</color>
+</resources>

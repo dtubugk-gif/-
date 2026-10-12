@@ -1,0 +1,44 @@
+name: Build APK
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests
+        run: ./gradlew testReleaseUnitTest
+
+      - name: Build APK
+        run: ./gradlew assembleRelease
+
+      - name: Rename APK
+        run: cp app/build/outputs/apk/release/app-release.apk ShakeLight.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ShakeLight-apk
+          path: ShakeLight.apk
+
+      # On the main branch, publish a GitHub Release so the APK can be downloaded straight to a phone.
+      - name: Publish release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: ShakeLight build ${{ github.run_number }}
+          files: ShakeLight.apk

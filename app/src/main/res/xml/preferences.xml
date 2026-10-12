@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="@string/pref_cat_shake">
+
+        <SeekBarPreference
+            app:defaultValue="5"
+            app:key="sensitivity"
+            app:min="1"
+            android:max="10"
+            app:showSeekBarValue="true"
+            app:summary="@string/pref_sensitivity_summary"
+            app:title="@string/pref_sensitivity" />
+
+        <SeekBarPreference
+            app:defaultValue="3"
+            app:key="shake_count"
+            app:min="2"
+            android:max="6"
+            app:showSeekBarValue="true"
+            app:summary="@string/pref_shake_count_summary"
+            app:title="@string/pref_shake_count" />
+
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="vibrate"
+            app:summary="@string/pref_vibrate_summary"
+            app:title="@string/pref_vibrate" />
+
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="pocket_guard"
+            app:summary="@string/pref_pocket_summary"
+            app:title="@string/pref_pocket" />
+
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="work_screen_off"
+            app:summary="@string/pref_screen_off_summary"
+            app:title="@string/pref_screen_off" />
+
+        <ListPreference
+            app:defaultValue="0"
+            app:entries="@array/auto_off_entries"
+            app:entryValues="@array/auto_off_values"
+            app:key="auto_off_minutes"
+            app:title="@string/pref_auto_off"
+            app:useSimpleSummaryProvider="true" />
+
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:key="start_on_boot"
+            app:title="@string/pref_boot" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/pref_cat_torch">
+
+        <SeekBarPreference
+            app:defaultValue="100"
+            app:key="torch_level"
+            app:min="1"
+            android:max="100"
+            app:showSeekBarValue="true"
+            app:summary="@string/pref_torch_level_summary"
+            app:title="@string/pref_torch_level" />
+    </PreferenceCategory>
+</PreferenceScreen>
