@@ -60,7 +60,14 @@ body{height:100%;background:var(--night);color:var(--white);font-family:var(--ro
 .board.fire{border-color:rgba(255,138,92,.8);box-shadow:0 0 22px rgba(255,111,163,.45)}
 .board.fire .pips i{background:var(--sun);box-shadow:0 0 8px var(--peach)}
 
-.tools{display:flex;justify-content:flex-end;gap:8px}
+.tools{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.tool-row{display:flex;gap:8px}
+.pill-btn{pointer-events:auto;height:34px;display:flex;align-items:center;gap:6px;padding:0 12px 0 6px;border-radius:999px;cursor:pointer;
+  font:600 13px/1 var(--round);color:#a7f3e6;background:var(--glass);border:1.5px solid rgba(94,234,212,.65);white-space:nowrap;transition:transform .12s,opacity .2s}
+.pill-btn svg{width:24px;height:24px}
+.pill-btn:hover{transform:scale(1.05)}
+.pill-btn:active{transform:scale(.94)}
+.pill-btn:disabled{opacity:.35;cursor:default;transform:none}
 .icon-btn{pointer-events:auto;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
   background:var(--glass);border:1.5px solid var(--glass-line);color:var(--white);padding:0;transition:transform .12s}
 .icon-btn svg{width:18px;height:18px}
@@ -172,11 +179,17 @@ body{height:100%;background:var(--night);color:var(--white);font-family:var(--ro
       <div class="pips" id="pips" title="Clean shots in a row"><i></i><i></i><i></i></div>
     </div>
     <div class="tools">
+      <div class="tool-row">
       <button id="btnMute" class="icon-btn" aria-label="Mute sound">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path id="muteWave" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path id="muteX" d="M17 9l5 6M22 9l-5 6" style="display:none"/></svg>
       </button>
       <button id="btnPause" class="icon-btn" aria-label="Pause">
         <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+      </button>
+      </div>
+      <button id="btnBoss" class="pill-btn" aria-label="Go to the next boss fight now" title="Go to the next boss (B)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4l3 3.5h8L19 4l.5 6A8 8 0 1 1 4.5 10z" fill="#6b62d6"/><circle cx="9" cy="12" r="2.6" fill="#fff"/><circle cx="15" cy="12" r="2.6" fill="#fff"/><circle cx="9" cy="12" r="1.2" fill="#2a2468"/><circle cx="15" cy="12" r="1.2" fill="#2a2468"/><path d="M11 15h2l-1 1.6z" fill="#ff9a3c"/></svg>
+        <span>Next boss</span>
       </button>
     </div>
   </header>
@@ -1548,6 +1561,7 @@ function hud() {
   $('chipWide').hidden = !(wideT > 0);
   $('chipMag').hidden = !(magT > 0);
   $('chipBoss').hidden = !(boss && boss.phase !== 'ko');
+  $('btnBoss').disabled = bossBtnOff();
   $('board').classList.toggle('fire', fire);
   const pips = $('pips').children;
   for (let i = 0; i < pips.length; i++) pips[i].classList.toggle('on', i < Math.min(streak, 3));
@@ -1640,6 +1654,8 @@ window.addEventListener('keydown', e => {
     else if (state === 'ready' || state === 'play') { Sound.init(); flap(); }
     else if (state === 'over') startGame();
     else if (state === 'paused') resumeGame();
+  } else if (k === 'KeyB' && !onButton) {
+    goNextBoss();
   } else if (k === 'KeyP' || k === 'Escape') {
     if (state === 'play' || state === 'ready') pauseGame();
     else if (state === 'paused') resumeGame();
@@ -1655,6 +1671,16 @@ $('btnMenu').addEventListener('click', toMenu);
 $('btnResume').addEventListener('click', resumeGame);
 $('btnQuit').addEventListener('click', () => { persist(); toMenu(); });
 $('btnPause').addEventListener('click', () => { if (state === 'paused') resumeGame(); else pauseGame(); });
+// jump straight into the next boss fight (keeps your score; the round number still goes up)
+const bossBtnOff = () => !!boss || (state !== 'play' && state !== 'ready');
+function goNextBoss() {
+  if (bossBtnOff()) return;
+  Sound.init();
+  if (state === 'ready') { state = 'play'; $('hint').hidden = true; ball.vy = FLAP; }
+  startBoss();
+  cv.focus({ preventScroll: true });
+}
+$('btnBoss').addEventListener('click', goNextBoss);
 $('btnMute').addEventListener('click', () => {
   save.muted = !save.muted; Sound.setMuted(save.muted); persist(); syncMute(); if (!save.muted) { Sound.init(); sfx.click(); }
 });
@@ -1673,7 +1699,7 @@ function frame(now) {
   if (state !== 'paused') update(real * timeScale, real);
   // power-up chips expire on their own
   peek();
-  if ((now - lastChipCheck) > 250) { lastChipCheck = now; if ($('chipWide').hidden === (wideT > 0) || $('chipMag').hidden === (magT > 0) || $('chipBoss').hidden === !!(boss && boss.phase !== 'ko')) hud(); }
+  if ((now - lastChipCheck) > 250) { lastChipCheck = now; if ($('chipWide').hidden === (wideT > 0) || $('chipMag').hidden === (magT > 0) || $('chipBoss').hidden === !!(boss && boss.phase !== 'ko') || $('btnBoss').disabled !== bossBtnOff()) hud(); }
   render();
   requestAnimationFrame(frame);
 }
