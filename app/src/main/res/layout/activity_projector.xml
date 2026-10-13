@@ -102,8 +102,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="@string/proj_cast"
-            app:icon="@drawable/ic_cast" />
+            android:text="@string/proj_to_pc"
+            app:icon="@drawable/ic_computer" />
 
         <TextView
             android:id="@+id/displayStatus"

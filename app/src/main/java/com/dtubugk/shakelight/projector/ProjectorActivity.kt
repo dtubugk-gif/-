@@ -1,7 +1,5 @@
 package com.dtubugk.shakelight.projector
 
-import android.content.ActivityNotFoundException
-import android.content.Context
 import android.content.Intent
 import android.hardware.display.DisplayManager
 import android.net.Uri
@@ -9,13 +7,12 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.provider.OpenableColumns
-import android.provider.Settings
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.core.os.BundleCompat
 import com.dtubugk.shakelight.R
+import com.dtubugk.shakelight.cast.CastToPcActivity
 import com.dtubugk.shakelight.core.Prefs
 import com.dtubugk.shakelight.databinding.ActivityProjectorBinding
 import com.google.android.material.materialswitch.MaterialSwitch
@@ -55,7 +52,7 @@ class ProjectorActivity : AppCompatActivity() {
 
         binding.pickImage.setOnClickListener { pickImage.launch(arrayOf("image/*")) }
         binding.pickVideo.setOnClickListener { pickVideo.launch(arrayOf("video/*")) }
-        binding.castButton.setOnClickListener { openCastSettings(this) }
+        binding.castButton.setOnClickListener { startActivity(Intent(this, CastToPcActivity::class.java)) }
         binding.startButton.setOnClickListener { startProjection() }
 
         bindSwitch(binding.rotateSwitch, Prefs.PROJ_ROTATE, false)
@@ -140,25 +137,5 @@ class ProjectorActivity : AppCompatActivity() {
     companion object {
         private const val KEY_URI = "uri"
         private const val KEY_VIDEO = "video"
-
-        /** Opens the phone's own screen-casting screen (Cast / Smart View / Wireless display). */
-        fun openCastSettings(context: Context) {
-            val candidates = listOf(
-                Intent("android.settings.CAST_SETTINGS"),
-                Intent("android.settings.WIFI_DISPLAY_SETTINGS"),
-                Intent(Settings.ACTION_DISPLAY_SETTINGS),
-            )
-            for (intent in candidates) {
-                try {
-                    context.startActivity(intent)
-                    return
-                } catch (e: ActivityNotFoundException) {
-                    // try the next one
-                } catch (e: SecurityException) {
-                    // try the next one
-                }
-            }
-            Toast.makeText(context, R.string.cast_unavailable, Toast.LENGTH_LONG).show()
-        }
     }
 }

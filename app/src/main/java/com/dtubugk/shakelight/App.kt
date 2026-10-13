@@ -18,10 +18,16 @@ class App : Application() {
             getString(R.string.channel_shake),
             NotificationManager.IMPORTANCE_LOW,
         ).apply { setShowBadge(false) }
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        val castChannel = NotificationChannel(
+            CHANNEL_CAST,
+            getString(R.string.channel_cast),
+            NotificationManager.IMPORTANCE_LOW,
+        ).apply { setShowBadge(false) }
+        getSystemService(NotificationManager::class.java).createNotificationChannels(listOf(channel, castChannel))
     }
 
     companion object {
         const val CHANNEL_SHAKE = "shake_service"
+        const val CHANNEL_CAST = "screen_cast"
     }
 }

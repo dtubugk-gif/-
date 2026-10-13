@@ -21,6 +21,9 @@ object Prefs {
     const val PROJ_BRIGHT = "proj_bright"
     const val PROJ_LOOP = "proj_loop"
 
+    const val CAST_SOUND = "cast_sound"
+    const val CAST_LAST_IP = "cast_last_ip"
+
     /** Keys that change how shake detection behaves while the service runs. */
     val SHAKE_TUNING = setOf(SENSITIVITY, SHAKE_COUNT, POCKET_GUARD, SCREEN_OFF)
 

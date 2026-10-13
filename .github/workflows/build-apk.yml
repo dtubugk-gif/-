@@ -1,4 +1,4 @@
-name: Build APK
+name: Build apps
 
 on:
   push:
@@ -20,19 +20,35 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
       - name: Unit tests
         run: ./gradlew testReleaseUnitTest
 
-      - name: Build APK
+      - name: Build apps
         run: ./gradlew assembleRelease
 
       - name: Rename APK
         run: cp app/build/outputs/apk/release/app-release.apk ShakeLight.apk
 
+      - name: Build computer receivers
+        working-directory: receiver
+        run: |
+          go vet ./...
+          build() { CGO_ENABLED=0 GOOS=$1 GOARCH=$2 go build -trimpath -ldflags="-s -w" -o "../$3" .; }
+          build windows amd64 ShakeLight-Receiver-Windows.exe
+          build darwin arm64 ShakeLight-Receiver-Mac-AppleSilicon
+          build darwin amd64 ShakeLight-Receiver-Mac-Intel
+          build linux amd64 ShakeLight-Receiver-Linux
+
       - uses: actions/upload-artifact@v4
         with:
-          name: ShakeLight-apk
-          path: ShakeLight.apk
+          name: ShakeLight
+          path: |
+            ShakeLight.apk
+            ShakeLight-Receiver-*
 
       # On the main branch, publish a GitHub Release so the APK can be downloaded straight to a phone.
       - name: Publish release
@@ -41,4 +57,6 @@ jobs:
         with:
           tag_name: build-${{ github.run_number }}
           name: ShakeLight build ${{ github.run_number }}
-          files: ShakeLight.apk
+          files: |
+            ShakeLight.apk
+            ShakeLight-Receiver-*

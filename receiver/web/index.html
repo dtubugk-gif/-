@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShakeLight Receiver</title>
+<style>
+  :root { --amber: #ffb300; --text: #f3ead9; --muted: #a89c88; --bg: #000; --panel: #15120e; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 16px/1.5 "Segoe UI", system-ui, -apple-system, Roboto, "Noto Sans Hebrew", sans-serif; overflow: hidden; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  body.hide-cursor, body.hide-cursor * { cursor: none; }
+
+  #idle { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px;
+    background: radial-gradient(circle at 50% 30%, #2a2112 0%, #000 70%); }
+  #idle .card { max-width: 640px; width: 100%; text-align: center; }
+  .logo { width: 88px; height: 88px; margin: 0 auto 16px; border-radius: 24px; background: #1b1610;
+    display: grid; place-items: center; box-shadow: 0 0 60px rgba(255,179,0,.25); }
+  h1 { margin: 0 0 4px; font-size: 32px; font-weight: 600; }
+  .status { color: var(--amber); font-size: 20px; margin: 12px 0 28px; min-height: 30px; }
+  .pulse { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--amber);
+    margin-inline-end: 10px; animation: pulse 1.6s infinite; vertical-align: middle; }
+  @keyframes pulse { 0%,100% { opacity: .25 } 50% { opacity: 1 } }
+  .steps { text-align: start; background: var(--panel); border: 1px solid #2c2620; border-radius: 16px; padding: 20px 24px; }
+  .steps ol { margin: 0; padding-inline-start: 22px; }
+  .steps li { margin: 6px 0; }
+  .he { direction: rtl; color: var(--muted); font-size: 15px; margin-top: 14px; border-top: 1px solid #2c2620; padding-top: 12px; }
+  .name { color: var(--amber); font-weight: 600; }
+  .ips { margin-top: 16px; color: var(--muted); font-size: 14px; }
+  .keys { margin-top: 18px; color: var(--muted); font-size: 13px; }
+  kbd { border: 1px solid #4a4237; border-radius: 4px; padding: 0 5px; font: inherit; }
+
+  #toast { position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%); background: rgba(20,17,13,.92);
+    border: 1px solid #3a332a; padding: 10px 18px; border-radius: 999px; font-size: 15px; opacity: 0;
+    transition: opacity .3s; pointer-events: none; white-space: nowrap; }
+  #toast.show { opacity: 1; }
+  #sound { position: fixed; top: 20px; right: 20px; background: var(--amber); color: #201600; border: 0;
+    border-radius: 999px; padding: 10px 18px; font: inherit; font-weight: 600; cursor: pointer; display: none; }
+</style>
+</head>
+<body>
+<canvas id="screen"></canvas>
+
+<div id="idle">
+  <div class="card">
+    <div class="logo">
+      <svg width="52" height="52" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffb300" d="M6,2h12v3H6zM6,7v1l2,3v11h8V11l2,-3V7H6zM12,15.5c-0.83,0 -1.5,-0.67 -1.5,-1.5s0.67,-1.5 1.5,-1.5s1.5,0.67 1.5,1.5S12.83,15.5 12,15.5z"/></svg>
+    </div>
+    <h1>ShakeLight Receiver</h1>
+    <div class="status" id="status"><span class="pulse"></span>Waiting for your phone…</div>
+    <div class="steps">
+      <ol>
+        <li>Connect the phone and this computer to the <b>same Wi-Fi</b>.</li>
+        <li>On the phone open <b>ShakeLight → Project to computer</b>.</li>
+        <li>Tap <span class="name" id="pcName">this computer</span> and allow screen sharing.</li>
+      </ol>
+      <div class="he">
+        חבר את הטלפון והמחשב לאותה רשת Wi-Fi ← בטלפון פתח ShakeLight ← „הקרנה למחשב” ← לחץ על
+        <span class="name" id="pcNameHe">המחשב הזה</span> ואשר שיתוף מסך.
+      </div>
+    </div>
+    <div class="ips" id="ips"></div>
+    <div class="keys">
+      <kbd>F</kbd> full screen · <kbd>R</kbd> rotate 180° · <kbd>M</kbd> mirror · <kbd>S</kbd> sound on/off
+    </div>
+  </div>
+</div>
+
+<button id="sound">🔊 Click to turn on sound</button>
+<div id="toast"></div>
+
+<script>
+"use strict";
+const PKT = { HELLO: 0, CONFIG: 1, KEY: 2, DELTA: 3, AUDIO: 4, BYE: 127 };
+const HEADER = 13;
+
+const canvas = document.getElementById("screen");
+const ctx = canvas.getContext("2d");
+const idle = document.getElementById("idle");
+const statusEl = document.getElementById("status");
+const soundBtn = document.getElementById("sound");
+const toastEl = document.getElementById("toast");
+
+const view = {
+  rotate: localStorage.getItem("rotate") === "1",
+  mirror: localStorage.getItem("mirror") === "1",
+  sound: localStorage.getItem("sound") !== "0",
+};
+
+// ---------- info ----------
+fetch("/info").then(r => r.json()).then(info => {
+  document.getElementById("pcName").textContent = info.name;
+  document.getElementById("pcNameHe").textContent = info.name;
+  document.getElementById("ips").textContent =
+    "Phone can't find it? Enter this address in the app: " + info.addresses.join("  ·  ");
+}).catch(() => {});
+
+// ---------- UI helpers ----------
+let toastTimer;
+function toast(text) {
+  toastEl.textContent = text;
+  toastEl.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1800);
+}
+function setStatus(html) { statusEl.innerHTML = html; }
+function showIdle(message) {
+  idle.style.display = "grid";
+  setStatus('<span class="pulse"></span>' + message);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  soundBtn.style.display = "none";
+}
+function showVideo() { idle.style.display = "none"; }
+
+let cursorTimer;
+document.addEventListener("mousemove", () => {
+  document.body.classList.remove("hide-cursor");
+  clearTimeout(cursorTimer);
+  cursorTimer = setTimeout(() => document.body.classList.add("hide-cursor"), 2500);
+});
+
+function toggleFullscreen() {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen().catch(() => {});
+}
+document.addEventListener("dblclick", toggleFullscreen);
+document.addEventListener("keydown", e => {
+  const k = e.key.toLowerCase();
+  if (k === "f") toggleFullscreen();
+  else if (k === "r") { view.rotate = !view.rotate; localStorage.setItem("rotate", view.rotate ? "1" : "0"); toast(view.rotate ? "Rotated 180°" : "Rotation off"); draw(); }
+  else if (k === "m") { view.mirror = !view.mirror; localStorage.setItem("mirror", view.mirror ? "1" : "0"); toast(view.mirror ? "Mirrored" : "Mirror off"); draw(); }
+  else if (k === "s") { view.sound = !view.sound; localStorage.setItem("sound", view.sound ? "1" : "0"); toast(view.sound ? "Sound on" : "Sound off"); if (view.sound) resumeAudio(); }
+});
+
+// ---------- video ----------
+let decoder = null, codecConfig = null, codecString = null, needKey = true;
+let lastFrame = null, drawPending = false;
+
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(innerWidth * dpr);
+  canvas.height = Math.round(innerHeight * dpr);
+  draw();
+}
+addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+function draw() {
+  const f = lastFrame;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  if (!f) return;
+  const fw = f.displayWidth, fh = f.displayHeight;
+  const scale = Math.min(canvas.width / fw, canvas.height / fh);
+  const w = fw * scale, h = fh * scale;
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  if (view.rotate) ctx.rotate(Math.PI);
+  if (view.mirror) ctx.scale(-1, 1);
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(f, -w / 2, -h / 2, w, h);
+}
+
+function onFrame(frame) {
+  if (lastFrame) lastFrame.close();
+  lastFrame = frame;
+  if (!drawPending) {
+    drawPending = true;
+    requestAnimationFrame(() => { drawPending = false; draw(); });
+  }
+}
+
+function findNal(data, type) {
+  for (let i = 0; i + 3 < data.length; i++) {
+    if (data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 1) {
+      if ((data[i + 3] & 0x1f) === type) return data.subarray(i + 3);
+      i += 2;
+    }
+  }
+  return null;
+}
+const hex = b => b.toString(16).padStart(2, "0");
+
+function createDecoder() {
+  if (decoder && decoder.state !== "closed") decoder.close();
+  decoder = new VideoDecoder({
+    output: onFrame,
+    error: e => { console.warn("decoder error", e); decoder = null; needKey = true; },
+  });
+  decoder.configure({ codec: codecString, optimizeForLatency: true });
+  needKey = true;
+  fetch("/keyframe", { method: "POST" }).catch(() => {});
+}
+
+function onConfig(payload) {
+  const annexB = payload.slice(4);
+  const sps = findNal(annexB, 7);
+  if (!sps || sps.length < 4) return;
+  codecConfig = annexB;
+  codecString = "avc1." + hex(sps[1]) + hex(sps[2]) + hex(sps[3]);
+  if (!("VideoDecoder" in window)) {
+    setStatus("This browser can't show the video. Please open it in Chrome or Edge.");
+    return;
+  }
+  createDecoder();
+}
+
+function onVideo(pts, payload, isKey) {
+  if (!codecConfig) return;
+  if (!decoder || decoder.state === "closed") createDecoder();
+  if (needKey && !isKey) return;
+  // A backlog means we're falling behind: drop it and restart from the next key frame.
+  if (decoder.decodeQueueSize > 8 && !isKey) { needKey = true; fetch("/keyframe", { method: "POST" }).catch(() => {}); return; }
+  needKey = false;
+  let data = payload;
+  if (isKey) { // Annex B decoding needs SPS/PPS in front of every key frame.
+    data = new Uint8Array(codecConfig.length + payload.length);
+    data.set(codecConfig, 0);
+    data.set(payload, codecConfig.length);
+  }
+  try {
+    decoder.decode(new EncodedVideoChunk({ type: isKey ? "key" : "delta", timestamp: pts, data }));
+    showVideo();
+  } catch (e) {
+    console.warn(e);
+    needKey = true;
+  }
+}
+
+// ---------- audio ----------
+let audioCtx = null, nextAudioTime = 0;
+function resumeAudio() {
+  if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+}
+soundBtn.addEventListener("click", () => { resumeAudio(); soundBtn.style.display = "none"; });
+
+function onAudio(payload) {
+  if (!view.sound) return;
+  if (!audioCtx) audioCtx = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" });
+  if (audioCtx.state === "suspended") { soundBtn.style.display = "block"; return; }
+  soundBtn.style.display = "none";
+  const frames = payload.length >> 2;
+  if (!frames) return;
+  const buffer = audioCtx.createBuffer(2, frames, 48000);
+  const left = buffer.getChannelData(0), right = buffer.getChannelData(1);
+  const dv = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
+  for (let i = 0; i < frames; i++) {
+    left[i] = dv.getInt16(i * 4, true) / 32768;
+    right[i] = dv.getInt16(i * 4 + 2, true) / 32768;
+  }
+  const src = audioCtx.createBufferSource();
+  src.buffer = buffer;
+  src.connect(audioCtx.destination);
+  const now = audioCtx.currentTime;
+  // Small jitter buffer: stay 60–300 ms ahead of the clock.
+  if (nextAudioTime < now + 0.02 || nextAudioTime > now + 0.3) nextAudioTime = now + 0.06;
+  src.start(nextAudioTime);
+  nextAudioTime += buffer.duration;
+}
+
+// ---------- stream ----------
+function handlePacket(type, pts, payload) {
+  switch (type) {
+    case PKT.HELLO: {
+      let name = "phone";
+      try { name = JSON.parse(new TextDecoder().decode(payload)).name || name; } catch (e) {}
+      setStatus('<span class="pulse"></span>Connecting to ' + name.replace(/[<>&]/g, "") + "…");
+      toast("Connected: " + name);
+      break;
+    }
+    case PKT.CONFIG: onConfig(payload); break;
+    case PKT.KEY: onVideo(pts, payload, true); break;
+    case PKT.DELTA: onVideo(pts, payload, false); break;
+    case PKT.AUDIO: onAudio(payload); break;
+    case PKT.BYE:
+      codecConfig = null;
+      if (decoder && decoder.state !== "closed") decoder.close();
+      decoder = null;
+      if (lastFrame) { lastFrame.close(); lastFrame = null; }
+      showIdle("Phone disconnected — waiting for your phone…");
+      break;
+  }
+}
+
+class PacketReader {
+  constructor() { this.buf = new Uint8Array(1 << 20); this.len = 0; }
+  push(chunk) {
+    if (this.len + chunk.length > this.buf.length) {
+      const bigger = new Uint8Array(Math.max(this.buf.length * 2, this.len + chunk.length));
+      bigger.set(this.buf.subarray(0, this.len));
+      this.buf = bigger;
+    }
+    this.buf.set(chunk, this.len);
+    this.len += chunk.length;
+    let off = 0;
+    while (this.len - off >= HEADER) {
+      const b = this.buf;
+      const n = ((b[off + 1] << 24) | (b[off + 2] << 16) | (b[off + 3] << 8) | b[off + 4]) >>> 0;
+      if (this.len - off < HEADER + n) break;
+      const dv = new DataView(b.buffer, b.byteOffset + off + 5, 8);
+      const pts = Number(dv.getBigInt64(0));
+      const payload = b.slice(off + HEADER, off + HEADER + n);
+      handlePacket(b[off], pts, payload);
+      off += HEADER + n;
+    }
+    if (off > 0) { this.buf.copyWithin(0, off, this.len); this.len -= off; }
+  }
+}
+
+async function run() {
+  for (;;) {
+    try {
+      const res = await fetch("/stream", { cache: "no-store" });
+      const reader = res.body.getReader();
+      const packets = new PacketReader();
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        packets.push(value);
+      }
+    } catch (e) {
+      console.warn("stream", e);
+    }
+    handlePacket(PKT.BYE, 0, new Uint8Array());
+    setStatus('<span class="pulse"></span>Receiver stopped. Start ShakeLight Receiver again.');
+    await new Promise(r => setTimeout(r, 2000));
+  }
+}
+run();
+</script>
+</body>
+</html>

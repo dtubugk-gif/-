@@ -50,7 +50,7 @@
     <string name="screen_light_hint">Tap to change color · Long-press for party mode</string>
 
     <!-- Projector -->
-    <string name="projector_explain">Honest note: a phone has no projector lens, so it cannot throw a picture onto a wall by itself. ShakeLight gives you the two ways that really work:\n\n• Connect to a projector or TV — wirelessly (Cast, Smart View, Screen mirroring) or with a USB-C to HDMI cable. When the projector appears as a second screen, the picture plays there and your phone becomes the remote.\n\n• DIY lens box — put the phone in a dark shoebox with a magnifying glass in the front, in a dark room. Turn on “Rotate 180°” so the picture lands upright on the wall.</string>
+    <string name="projector_explain">Honest note: a phone has no projector lens, so it cannot throw a picture onto a wall by itself. ShakeLight gives you the ways that really work:\n\n• Project to computer: run ShakeLight Receiver on a computer that is connected to a projector or TV, and your phone shows on it over Wi-Fi.\n\n• Cable: connect a USB-C to HDMI adapter straight to the projector. The picture plays there and your phone becomes the remote.\n\n• DIY lens box: put the phone in a dark shoebox with a magnifying glass in the front, in a dark room. Turn on “Rotate 180°” so the picture lands upright on the wall.</string>
     <string name="proj_step_media">1. Choose what to show</string>
     <string name="pick_image">Photo</string>
     <string name="pick_video">Video</string>
@@ -62,8 +62,7 @@
     <string name="proj_mirror">Mirror left ↔ right (rear projection)</string>
     <string name="proj_bright">Maximum screen brightness</string>
     <string name="proj_loop">Repeat video</string>
-    <string name="proj_cast">Connect to TV / projector</string>
-    <string name="proj_no_display">No second screen connected — the picture will show on this phone (or on a TV if you mirror your screen).</string>
+    <string name="proj_no_display">No cable-connected screen — the picture will show on this phone. To use a computer, tap “Project to computer”.</string>
     <string name="proj_display">Second screen connected: %1$s</string>
     <string name="proj_start">Start projecting</string>
     <string name="proj_external_playing">Playing on %1$s\nThis phone is now the remote.</string>
@@ -72,7 +71,32 @@
     <string name="proj_ctrl_play">Play/Pause</string>
     <string name="proj_ctrl_close">Close</string>
     <string name="proj_error">This file could not be opened</string>
-    <string name="cast_unavailable">Open your quick settings and tap “Cast”, “Smart View” or “Screen mirroring”.</string>
+
+    <!-- Project to computer -->
+    <string name="feature_cast_pc">Project to computer</string>
+    <string name="feature_cast_pc_desc">Show your phone on a computer or projector over Wi-Fi</string>
+    <string name="channel_cast">Screen projection</string>
+    <string name="cast_intro">Shows this phone\'s screen and sound on a computer, and on a projector or TV plugged into that computer. It goes straight over your Wi-Fi: no Google Cast and no internet needed.\n\nOn the computer, open the ShakeLight Receiver app first.</string>
+    <string name="cast_sound">Send sound too (Android 10+)</string>
+    <string name="cast_found_title">Computers on your Wi-Fi</string>
+    <string name="cast_searching">Searching… Open ShakeLight Receiver on the computer and connect both to the same Wi-Fi.</string>
+    <string name="cast_receiver_item">%1$s  ·  %2$s</string>
+    <string name="cast_manual_hint">Or type the computer\'s address</string>
+    <string name="cast_manual_connect">Connect</string>
+    <string name="cast_manual_invalid">Type the address shown on the computer screen, for example 192.168.1.20</string>
+    <string name="cast_tips">Tips: rotate the phone for full-screen videos. Apps that block screenshots (Netflix, banking) show black. On the computer: F = full screen, R = rotate 180°, M = mirror.</string>
+    <string name="cast_state_idle">Not projecting</string>
+    <string name="cast_state_connecting">Connecting to %1$s…</string>
+    <string name="cast_state_casting">Projecting to %1$s</string>
+    <string name="cast_stop">Stop</string>
+    <string name="cast_started_toast">Projecting! Open any app and it shows on the computer.</string>
+    <string name="cast_error_connect">Couldn\'t reach the computer. Check that ShakeLight Receiver is open, both are on the same Wi-Fi, and the computer\'s firewall allows it.</string>
+    <string name="cast_error_lost">The connection to the computer was lost.</string>
+    <string name="cast_error_encoder">This phone couldn\'t start screen capture.</string>
+    <string name="cast_error_permission">Screen sharing was not allowed.</string>
+    <string name="cast_notif_title">Projecting to %1$s</string>
+    <string name="cast_notif_text">Your screen is showing on the computer</string>
+    <string name="proj_to_pc">Project to computer</string>
 
     <!-- Settings -->
     <string name="pref_cat_shake">Shake detection</string>

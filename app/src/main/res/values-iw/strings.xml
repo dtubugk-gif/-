@@ -45,7 +45,7 @@
 
     <string name="screen_light_hint">לחיצה מחליפה צבע · לחיצה ארוכה למצב מסיבה</string>
 
-    <string name="projector_explain">אמת מקצועית: לטלפון אין עדשת מקרן, ולכן הוא לא יכול להקרין תמונה על קיר בעצמו. ShakeLight נותן לך את שתי הדרכים שבאמת עובדות:\n\n• חיבור למקרן או לטלוויזיה — אלחוטי (Cast, Smart View, שיקוף מסך) או בכבל USB-C ל-HDMI. כשהמקרן מזוהה כמסך שני, התמונה מוצגת עליו והטלפון הופך לשלט.\n\n• קופסת עדשה ביתית — שים את הטלפון בקופסת נעליים חשוכה עם זכוכית מגדלת בחזית, בחדר חשוך. הפעל „סיבוב 180°” כדי שהתמונה תופיע ישרה על הקיר.</string>
+    <string name="projector_explain">אמת מקצועית: לטלפון אין עדשת מקרן, ולכן הוא לא יכול להקרין תמונה על קיר בעצמו. ShakeLight נותן לך את הדרכים שבאמת עובדות:\n\n• הקרנה למחשב: הפעל את ShakeLight Receiver במחשב שמחובר למקרן או לטלוויזיה, והטלפון יוצג עליו דרך ה-Wi-Fi.\n\n• כבל: חבר מתאם USB-C ל-HDMI ישירות למקרן. התמונה מוצגת שם והטלפון הופך לשלט.\n\n• קופסת עדשה ביתית: שים את הטלפון בקופסת נעליים חשוכה עם זכוכית מגדלת בחזית, בחדר חשוך. הפעל „סיבוב 180°” כדי שהתמונה תופיע ישרה על הקיר.</string>
     <string name="proj_step_media">1. בחר מה להציג</string>
     <string name="pick_image">תמונה</string>
     <string name="pick_video">סרטון</string>
@@ -57,8 +57,7 @@
     <string name="proj_mirror">היפוך ימין ↔ שמאל (הקרנה מאחור)</string>
     <string name="proj_bright">בהירות מסך מקסימלית</string>
     <string name="proj_loop">הפעל סרטון בלולאה</string>
-    <string name="proj_cast">חיבור לטלוויזיה / מקרן</string>
-    <string name="proj_no_display">אין מסך שני מחובר — התמונה תוצג בטלפון (או בטלוויזיה אם אתה משקף את המסך).</string>
+    <string name="proj_no_display">אין מסך מחובר בכבל — התמונה תוצג בטלפון. כדי להשתמש במחשב, לחץ על „הקרנה למחשב”.</string>
     <string name="proj_display">מסך שני מחובר: %1$s</string>
     <string name="proj_start">התחל הקרנה</string>
     <string name="proj_external_playing">מוצג על %1$s\nהטלפון הזה הוא עכשיו השלט.</string>
@@ -67,7 +66,32 @@
     <string name="proj_ctrl_play">נגן/השהה</string>
     <string name="proj_ctrl_close">סגור</string>
     <string name="proj_error">לא ניתן לפתוח את הקובץ</string>
-    <string name="cast_unavailable">פתח את ההגדרות המהירות ולחץ על „Cast”, „Smart View” או „שיקוף מסך”.</string>
+
+    <!-- Project to computer -->
+    <string name="feature_cast_pc">הקרנה למחשב</string>
+    <string name="feature_cast_pc_desc">הצג את הטלפון על מחשב או מקרן דרך ה-Wi-Fi</string>
+    <string name="channel_cast">הקרנת מסך</string>
+    <string name="cast_intro">מציג את המסך והצליל של הטלפון על מחשב, ועל מקרן או טלוויזיה שמחוברים למחשב. ישירות דרך ה-Wi-Fi שלך: בלי Google Cast ובלי אינטרנט.\n\nבמחשב, פתח קודם את התוכנה ShakeLight Receiver.</string>
+    <string name="cast_sound">שלח גם צליל (אנדרואיד 10 ומעלה)</string>
+    <string name="cast_found_title">מחשבים ברשת ה-Wi-Fi שלך</string>
+    <string name="cast_searching">מחפש… פתח את ShakeLight Receiver במחשב וחבר את שניהם לאותה רשת Wi-Fi.</string>
+    <string name="cast_receiver_item">%1$s  ·  %2$s</string>
+    <string name="cast_manual_hint">או הקלד את כתובת המחשב</string>
+    <string name="cast_manual_connect">התחבר</string>
+    <string name="cast_manual_invalid">הקלד את הכתובת שמופיעה על מסך המחשב, לדוגמה 192.168.1.20</string>
+    <string name="cast_tips">טיפים: סובב את הטלפון לסרטונים במסך מלא. אפליקציות שחוסמות צילום מסך (נטפליקס, בנקים) יופיעו שחורות. במחשב: F = מסך מלא, R = סיבוב 180°, M = היפוך.</string>
+    <string name="cast_state_idle">לא מקרין</string>
+    <string name="cast_state_connecting">מתחבר אל %1$s…</string>
+    <string name="cast_state_casting">מקרין אל %1$s</string>
+    <string name="cast_stop">עצור</string>
+    <string name="cast_started_toast">מקרין! פתח כל אפליקציה והיא תופיע במחשב.</string>
+    <string name="cast_error_connect">לא הצלחתי להגיע למחשב. בדוק ש-ShakeLight Receiver פתוח, ששניהם באותה רשת Wi-Fi ושחומת האש של המחשב מאפשרת זאת.</string>
+    <string name="cast_error_lost">החיבור למחשב נותק.</string>
+    <string name="cast_error_encoder">הטלפון הזה לא הצליח להתחיל צילום מסך.</string>
+    <string name="cast_error_permission">שיתוף המסך לא אושר.</string>
+    <string name="cast_notif_title">מקרין אל %1$s</string>
+    <string name="cast_notif_text">המסך שלך מוצג במחשב</string>
+    <string name="proj_to_pc">הקרנה למחשב</string>
 
     <string name="pref_cat_shake">זיהוי ניעור</string>
     <string name="pref_sensitivity">רגישות</string>
