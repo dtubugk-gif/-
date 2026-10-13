@@ -172,6 +172,9 @@ func routes(h *hub, dm *desktopManager, name string) http.Handler {
 		page("index.html", "text/html; charset=utf-8")(w, r)
 	})
 	mux.HandleFunc("/desktop", page("desktop.html", "text/html; charset=utf-8"))
+	if extraRoutes != nil {
+		extraRoutes(mux)
+	}
 	mux.HandleFunc("/stream.js", page("stream.js", "text/javascript; charset=utf-8"))
 	dm.routes(mux)
 
@@ -335,3 +338,6 @@ func broadcastAddrs() []net.IP {
 }
 
 func logf(format string, args ...any) { log.Printf(format, args...) }
+
+// extraRoutes lets test builds add endpoints.
+var extraRoutes func(*http.ServeMux)

@@ -173,6 +173,20 @@ func (m *desktopManager) routes(mux *http.ServeMux) {
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"ok": "starting"})
 	})
+	mux.HandleFunc("/desktop/apps", func(w http.ResponseWriter, r *http.Request) {
+		s := m.active()
+		if s == nil {
+			fail(w, "the desktop is not running")
+			return
+		}
+		data, err := s.apps()
+		if err != nil {
+			fail(w, err.Error())
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(data)
+	})
 	mux.HandleFunc("/desktop/stop", func(w http.ResponseWriter, r *http.Request) {
 		m.stop()
 		writeJSON(w, http.StatusOK, map[string]string{"ok": "stopped"})

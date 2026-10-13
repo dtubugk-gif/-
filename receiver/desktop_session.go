@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -61,7 +62,11 @@ type desktopSession struct {
 	saved   map[string]string
 
 	width, height atomic.Int32 // current video size; input positions must use exactly this
+	displayID     atomic.Int32 // the desktop screen on the phone (from the server log)
 	lastReset     atomic.Int64
+	awakeByApp    bool
+	appsMu        sync.Mutex
+	appsJSON      []byte
 	stopOnce      sync.Once
 	done          chan struct{}
 }
@@ -183,6 +188,11 @@ func (s *desktopSession) serve() error {
 		for sc.Scan() {
 			line := sc.Text()
 			logf("[phone] %s", line)
+			if m := displayIDRe.FindStringSubmatch(line); m != nil {
+				if id, err := strconv.Atoi(m[1]); err == nil {
+					s.displayID.Store(int32(id))
+				}
+			}
 			select {
 			case serverLog <- line:
 			default:
@@ -190,6 +200,9 @@ func (s *desktopSession) serve() error {
 		}
 		close(serverLog)
 	}()
+
+	// Keep the phone awake: a sleeping phone stops drawing the desktop screen too.
+	s.keepAwake(serial)
 
 	// 4. Connect video, audio, control — in this order.
 	video, err := s.connectFirst(serverLog)
@@ -238,6 +251,113 @@ func (s *desktopSession) serve() error {
 	}
 	go s.readControl(control)
 	return s.readVideo(vr)
+}
+
+var displayIDRe = regexp.MustCompile(`New display: .*\(id=(\d+)\)`)
+
+const shakelightPkg = "com.dtubugk.shakelight"
+
+// keepAwake asks the ShakeLight app to hold the phone awake (it shows a notification meanwhile).
+// Without the app (or an old version), the receiver wakes the phone whenever it starts to doze.
+func (s *desktopSession) keepAwake(serial string) {
+	out, err := adb.shell(serial, 10*time.Second, "am start-foreground-service -n "+shakelightPkg+"/.cast.DesktopAwakeService")
+	if err == nil && !strings.Contains(out, "Error") && !strings.Contains(out, "not found") {
+		s.awakeByApp = true
+		return
+	}
+	logf("ShakeLight app not available to keep the phone awake (%s); waking it as needed.", firstLine(out))
+	adb.shell(serial, 5*time.Second, "input keyevent KEYCODE_WAKEUP")
+	go func() {
+		t := time.NewTicker(4 * time.Second)
+		defer t.Stop()
+		for {
+			select {
+			case <-s.done:
+				return
+			case <-t.C:
+				state, _ := adb.shell(serial, 5*time.Second, "dumpsys power | grep -m1 mWakefulness=")
+				if !strings.Contains(state, "Awake") {
+					adb.shell(serial, 5*time.Second, "input keyevent KEYCODE_WAKEUP")
+				}
+			}
+		}
+	}()
+}
+
+// apps returns the phone's apps for the Start menu (names and icons come from the ShakeLight app;
+// without it, just the package names).
+func (s *desktopSession) apps() ([]byte, error) {
+	s.appsMu.Lock()
+	defer s.appsMu.Unlock()
+	if s.appsJSON != nil {
+		return s.appsJSON, nil
+	}
+	out, err := adb.shell(s.req.Serial, 40*time.Second, "content read --uri content://"+shakelightPkg+".desktop/apps")
+	if err == nil && strings.HasPrefix(out, "[") && json.Valid([]byte(out)) {
+		s.appsJSON = []byte(out)
+		return s.appsJSON, nil
+	}
+	list, err := adb.shell(s.req.Serial, 20*time.Second,
+		"cmd package query-activities --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER")
+	if err != nil {
+		return nil, fmt.Errorf("could not list the phone's apps: %s", firstLine(list))
+	}
+	var apps []map[string]string
+	seen := map[string]bool{}
+	for _, line := range strings.Split(list, "\n") {
+		line = strings.TrimSpace(line)
+		pkg, _, ok := strings.Cut(line, "/")
+		if !ok || seen[pkg] || strings.ContainsAny(line, " =") {
+			continue
+		}
+		seen[pkg] = true
+		name := pkg[strings.LastIndex(pkg, ".")+1:]
+		apps = append(apps, map[string]string{"p": pkg, "n": strings.ToUpper(name[:1]) + name[1:], "c": line, "i": ""})
+	}
+	s.appsJSON, _ = json.Marshal(apps)
+	return s.appsJSON, nil
+}
+
+var componentRe = regexp.MustCompile(`^[A-Za-z0-9_.]+/[A-Za-z0-9_.$]+$`)
+
+// launch opens an app in a window on the desktop screen.
+func (s *desktopSession) launch(component string) error {
+	if !componentRe.MatchString(component) {
+		return errors.New("bad app name")
+	}
+	id := s.displayID.Load()
+	if id <= 0 {
+		return errors.New("the desktop is not ready yet")
+	}
+	go func() {
+		out, _ := adb.shell(s.req.Serial, 15*time.Second,
+			fmt.Sprintf("am start --display %d --windowingMode 5 -n %s", id, component))
+		if strings.Contains(out, "brought to the front") {
+			// Already open (on the phone or the desktop): bring it here as a window.
+			pkg, _, _ := strings.Cut(component, "/")
+			task := runningTask(s.req.Serial, pkg)
+			if task != "" {
+				adb.shell(s.req.Serial, 10*time.Second, fmt.Sprintf("am display move-stack %s %d 2>/dev/null || cmd activity task move %s %d 2>/dev/null", task, id, task, id))
+			}
+		}
+	}()
+	return nil
+}
+
+func runningTask(serial, pkg string) string {
+	out, _ := adb.shell(serial, 10*time.Second, "am stack list 2>/dev/null")
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, pkg+"/") {
+			if i := strings.Index(line, "taskId="); i >= 0 {
+				id := line[i+7:]
+				if j := strings.IndexAny(id, ": "); j >= 0 {
+					id = id[:j]
+				}
+				return id
+			}
+		}
+	}
+	return ""
 }
 
 func bitrateFor(w, h int) int {
@@ -423,6 +543,7 @@ type inputCommand struct {
 	Repeat int32   `json:"repeat"`
 	S      string  `json:"s"`
 	K      string  `json:"k"`
+	C      string  `json:"c"`
 	On     bool    `json:"on"`
 }
 
@@ -448,6 +569,8 @@ func (s *desktopSession) handle(raw json.RawMessage) error {
 		return s.setClipboard(c.S, true)
 	case "nav":
 		return s.nav(c.K)
+	case "launch":
+		return s.launch(c.C)
 	case "phoneScreen":
 		on := byte(0)
 		if c.On {
@@ -661,6 +784,9 @@ func (s *desktopSession) send(msg []byte) error {
 
 func (s *desktopSession) cleanup() {
 	serial := s.req.Serial
+	if s.awakeByApp {
+		adb.shell(serial, 10*time.Second, "am stop-service -n "+shakelightPkg+"/.cast.DesktopAwakeService")
+	}
 	if s.port != "" {
 		adb.run(5*time.Second, "-s", serial, "forward", "--remove", "tcp:"+s.port)
 	}

@@ -56,7 +56,7 @@ object DesktopMode {
     }
 
     /** All launchable apps as JSON: [{"p": package, "n": name, "i": base64 PNG icon}]. */
-    fun appsJson(context: Context): ByteArray {
+    fun appsJson(context: Context, withComponents: Boolean = false): ByteArray {
         val pm = context.packageManager
         val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         @Suppress("DEPRECATION")
@@ -77,7 +77,9 @@ object DesktopMode {
                     bitmap.compress(Bitmap.CompressFormat.PNG, 100, bytes)
                     Base64.encodeToString(bytes.toByteArray(), Base64.NO_WRAP)
                 }.getOrDefault("")
-                apps.put(JSONObject().put("p", info.activityInfo.packageName).put("n", label).put("i", icon))
+                val app = JSONObject().put("p", info.activityInfo.packageName).put("n", label).put("i", icon)
+                if (withComponents) app.put("c", info.activityInfo.packageName + "/" + info.activityInfo.name)
+                apps.put(app)
             }
         return apps.toString().toByteArray()
     }

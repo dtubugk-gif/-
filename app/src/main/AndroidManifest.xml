@@ -93,6 +93,24 @@
                 android:resource="@xml/control_service" />
         </service>
 
+        <!-- Computer mode: used by ShakeLight Receiver over Wireless debugging only (DUMP = shell). -->
+        <service
+            android:name=".cast.DesktopAwakeService"
+            android:exported="true"
+            android:foregroundServiceType="specialUse"
+            android:permission="android.permission.DUMP">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps the phone awake while it runs a desktop shown on the user's computer" />
+        </service>
+
+        <provider
+            android:name=".cast.DesktopAppsProvider"
+            android:authorities="com.dtubugk.shakelight.desktop"
+            android:exported="true"
+            android:readPermission="android.permission.DUMP"
+            android:writePermission="android.permission.DUMP" />
+
         <service
             android:name=".cast.ScreenCastService"
             android:exported="false"

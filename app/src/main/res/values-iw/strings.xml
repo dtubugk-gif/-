@@ -107,6 +107,8 @@
     <string name="cast_outdated_title">עדכן את התוכנה במחשב</string>
     <string name="cast_outdated_body">במחשב הזה פועל ShakeLight Receiver בגרסה %1$s, שלא עובדת עם הגרסה הזו של האפליקציה. במחשב, סגור את חלון ה-Receiver הישן ופתח ShakeLight Receiver בגרסה %2$s או חדשה יותר (github.com/dtubugk-gif/- ← תיקיית dist).</string>
     <string name="cast_error_old_receiver">המחשב ניתק מיד. כנראה פועלת בו גרסה ישנה של ShakeLight Receiver: במחשב, סגור אותה ופתח את החדשה.</string>
+    <string name="desktop_notif_title">מצב מחשב פועל</string>
+    <string name="desktop_notif_text">הטלפון מריץ שולחן עבודה עבור המחשב שלך ונשאר ער עד שתתנתק.</string>
     <string name="proj_to_pc">הקרנה למחשב</string>
 
     <string name="pref_cat_shake">זיהוי ניעור</string>
