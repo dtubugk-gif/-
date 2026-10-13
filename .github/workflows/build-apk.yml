@@ -27,7 +27,7 @@ jobs:
       - name: Unit tests
         run: ./gradlew testReleaseUnitTest
 
-      - name: Build apps
+      - name: Build APK
         run: ./gradlew assembleRelease
 
       - name: Rename APK
