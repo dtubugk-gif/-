@@ -11,8 +11,8 @@ android {
         applicationId = "com.dtubugk.shakelight"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.2.0"
+        versionCode = 5
+        versionName = "1.2.1"
         // Only ship the languages the app is translated to (drops unused library translations).
         resourceConfigurations += listOf("en", "iw")
     }

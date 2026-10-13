@@ -14,7 +14,9 @@ import android.provider.Settings
 import android.util.DisplayMetrics
 import android.view.Display
 import android.view.accessibility.AccessibilityEvent
+import android.view.KeyEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.inputmethod.EditorInfo
 import kotlin.math.abs
 
 /**
@@ -125,12 +127,43 @@ class ControlService : AccessibilityService() {
     }
 
     // ---- text ----
+    // Android 13+: type through the system input channel, exactly like a keyboard app, so it works in
+    // every text field. Older Android: edit the focused field's text through accessibility.
 
-    fun type(text: String) = editFocused { current, start, end -> TextEdit.insert(current, start, end, text) }
+    fun type(text: String) {
+        val input = inputConnection()
+        if (input != null) {
+            input.commitText(text, 1, null)
+            return
+        }
+        editFocused { current, start, end -> TextEdit.insert(current, start, end, text) }
+    }
 
-    fun backspace() = editFocused { current, start, end -> TextEdit.backspace(current, start, end) }
+    fun backspace() {
+        val input = inputConnection()
+        if (input != null) {
+            input.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL))
+            input.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL))
+            return
+        }
+        editFocused { current, start, end -> TextEdit.backspace(current, start, end) }
+    }
 
     fun enter() {
+        val input = inputConnection()
+        if (input != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val info = inputMethod?.currentInputEditorInfo
+            val action = (info?.imeOptions ?: 0) and EditorInfo.IME_MASK_ACTION
+            val multiLine = (info?.inputType ?: 0) and android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE != 0
+            val noEnterAction = (info?.imeOptions ?: 0) and EditorInfo.IME_FLAG_NO_ENTER_ACTION != 0
+            if (!multiLine && !noEnterAction && action != EditorInfo.IME_ACTION_NONE && action != EditorInfo.IME_ACTION_UNSPECIFIED) {
+                input.performEditorAction(action) // Search, Send, Go, Done…
+            } else {
+                input.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
+                input.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
+            }
+            return
+        }
         val node = focusedInput() ?: return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
             node.actionList.any { it.id == AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id }
@@ -140,6 +173,9 @@ class ControlService : AccessibilityService() {
             type("\n")
         }
     }
+
+    private fun inputConnection() =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) inputMethod?.currentInputConnection else null
 
     private fun editFocused(edit: (String, Int, Int) -> TextEdit.Result) {
         val node = focusedInput() ?: return
