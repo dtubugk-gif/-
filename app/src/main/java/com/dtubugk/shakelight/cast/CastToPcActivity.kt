@@ -22,6 +22,7 @@ import com.dtubugk.shakelight.R
 import com.dtubugk.shakelight.core.Prefs
 import com.dtubugk.shakelight.databinding.ActivityCastBinding
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 
 /** Pick a computer running ShakeLight Receiver and project the phone screen to it. */
@@ -121,7 +122,11 @@ class CastToPcActivity : AppCompatActivity() {
         binding.searching.visibility = if (receivers.isEmpty()) View.VISIBLE else View.GONE
         for (receiver in receivers) {
             val button = MaterialButton(this).apply {
-                text = getString(R.string.cast_receiver_item, receiver.name, receiver.host)
+                text = if (receiver.isOutdated) {
+                    getString(R.string.cast_receiver_item_outdated, receiver.name, receiver.version)
+                } else {
+                    getString(R.string.cast_receiver_item, receiver.name, receiver.host)
+                }
                 setIconResource(R.drawable.ic_computer)
                 isAllCaps = false
                 setOnClickListener { begin(receiver) }
@@ -141,6 +146,10 @@ class CastToPcActivity : AppCompatActivity() {
     }
 
     private fun begin(receiver: ReceiverDiscovery.Receiver) {
+        if (receiver.isOutdated) {
+            showOutdated(receiver.version)
+            return
+        }
         target = receiver
         val needsAudioPermission = binding.soundSwitch.isChecked &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
@@ -150,6 +159,14 @@ class CastToPcActivity : AppCompatActivity() {
         } else {
             askScreenCapture()
         }
+    }
+
+    private fun showOutdated(version: String) {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.cast_outdated_title)
+            .setMessage(getString(R.string.cast_outdated_body, version, CastProtocol.MIN_RECEIVER_VERSION))
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     private fun askScreenCapture() {

@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShakeLight Computer</title>
+<style>
+  :root {
+    --amber: #ffb300; --amber-2: #ffd36b; --ink: #f5efe4; --muted: #a39782; --line: rgba(255,255,255,.08);
+    --glass: rgba(24,20,15,.72); --card: rgba(30,25,19,.86); --ok: #6fd99a; --err: #ff7a6b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #000; color: var(--ink); overflow: hidden;
+    font: 15px/1.5 "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, Roboto, "Noto Sans Hebrew", sans-serif; }
+  button, input, select { font: inherit; color: inherit; }
+
+  /* ---------- setup ---------- */
+  #setup { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; overflow: auto;
+    background:
+      radial-gradient(1200px 600px at 15% -10%, rgba(255,179,0,.18), transparent 60%),
+      radial-gradient(900px 500px at 110% 110%, rgba(255,120,40,.12), transparent 60%),
+      linear-gradient(160deg, #0d0b08, #050403 60%); }
+  .shell { width: min(760px, 100%); }
+  .brand { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+  .mark { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center;
+    background: linear-gradient(145deg, #2a2114, #120e09); box-shadow: 0 0 0 1px var(--line), 0 10px 40px rgba(255,179,0,.18); }
+  .brand h1 { margin: 0; font-size: 26px; font-weight: 650; letter-spacing: -.01em; }
+  .brand p { margin: 2px 0 0; color: var(--muted); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 26px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.45); backdrop-filter: blur(18px); }
+  .card + .card { margin-top: 14px; }
+  .card h2 { margin: 0 0 6px; font-size: 18px; font-weight: 600; }
+  .sub { color: var(--muted); margin: 0 0 18px; }
+  .device { display: flex; align-items: center; gap: 16px; padding: 16px; border-radius: 16px;
+    background: rgba(255,255,255,.04); border: 1px solid var(--line); }
+  .device .ph { width: 38px; height: 62px; border-radius: 9px; border: 2px solid var(--amber); position: relative; flex: none; }
+  .device .ph::after { content: ""; position: absolute; left: 50%; bottom: 5px; width: 10px; height: 2px; margin-left: -5px; background: var(--amber); border-radius: 2px; }
+  .device b { display: block; font-size: 16px; }
+  .device span { color: var(--muted); font-size: 13px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 12px var(--ok); margin-inline-start: auto; flex: none; }
+  .opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0 22px; }
+  .opt label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px 2px; text-transform: uppercase; letter-spacing: .06em; }
+  select, input[type=text] { width: 100%; height: 44px; border-radius: 12px; border: 1px solid rgba(255,255,255,.12);
+    background: rgba(0,0,0,.35); padding: 0 12px; outline: none; }
+  select:focus, input:focus { border-color: var(--amber); }
+  .primary { width: 100%; height: 56px; border: 0; border-radius: 16px; cursor: pointer; font-size: 17px; font-weight: 650;
+    color: #1b1203; background: linear-gradient(180deg, var(--amber-2), var(--amber)); box-shadow: 0 10px 30px rgba(255,179,0,.25);
+    transition: transform .08s, filter .2s; }
+  .primary:hover { filter: brightness(1.05); }
+  .primary:active { transform: scale(.99); }
+  .primary:disabled { opacity: .5; cursor: default; }
+  .ghost { height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,.14); background: transparent; cursor: pointer; }
+  .ghost:hover { background: rgba(255,255,255,.06); }
+  .steps { margin: 0; padding-inline-start: 20px; color: #ddd3c2; }
+  .steps li { margin: 7px 0; }
+  .row { display: flex; gap: 10px; margin-top: 14px; }
+  .row input { flex: 1; }
+  .note { color: var(--muted); font-size: 13px; margin-top: 14px; }
+  .msg { margin-top: 14px; font-size: 14px; min-height: 21px; }
+  .msg.err { color: var(--err); }
+  .msg.ok { color: var(--ok); }
+  .spinner { width: 46px; height: 46px; border-radius: 50%; border: 3px solid rgba(255,179,0,.18); border-top-color: var(--amber);
+    animation: spin 0.9s linear infinite; margin: 8px auto 18px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .center { text-align: center; }
+  .hidden { display: none !important; }
+  .back { position: fixed; top: 18px; left: 18px; color: var(--muted); text-decoration: none; font-size: 14px; }
+  .back:hover { color: var(--ink); }
+
+  /* ---------- desktop ---------- */
+  #desktop { position: fixed; inset: 0; background: #000; }
+  #screen { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: default; }
+  #kbd { position: fixed; left: -1000px; top: 0; width: 10px; height: 10px; opacity: 0; }
+  #bar { position: fixed; top: 10px; left: 50%; transform: translate(-50%, -140%); transition: transform .22s cubic-bezier(.2,.8,.2,1), opacity .22s;
+    opacity: 0; display: flex; align-items: center; gap: 4px; padding: 6px; border-radius: 16px; z-index: 5;
+    background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(20px) saturate(1.3); box-shadow: 0 14px 40px rgba(0,0,0,.45); }
+  #bar.show { transform: translate(-50%, 0); opacity: 1; }
+  #bar .name { padding: 0 12px 0 10px; font-weight: 600; font-size: 14px; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+  #bar .fps { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; font-size: 12px; }
+  .ib { width: 40px; height: 40px; border: 0; border-radius: 11px; background: transparent; cursor: pointer; display: grid; place-items: center; color: var(--ink); }
+  .ib:hover { background: rgba(255,255,255,.09); }
+  .ib.on { background: rgba(255,179,0,.18); color: var(--amber-2); }
+  .ib.danger:hover { background: rgba(255,90,70,.18); color: #ffb3a8; }
+  .ib svg { width: 21px; height: 21px; fill: currentColor; }
+  .sep { width: 1px; height: 24px; background: var(--line); margin: 0 4px; }
+  #loading { position: fixed; inset: 0; display: grid; place-items: center; background: #050403; z-index: 4; }
+  #toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--glass); border: 1px solid var(--line);
+    padding: 10px 18px; border-radius: 999px; font-size: 14px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 9;
+    backdrop-filter: blur(16px); white-space: nowrap; }
+  #toast.show { opacity: 1; }
+  #soundPrompt { position: fixed; right: 16px; bottom: 16px; z-index: 6; }
+</style>
+</head>
+<body>
+
+<!-- ======================= setup ======================= -->
+<div id="setup">
+  <a class="back" href="/">← Mirror mode</a>
+  <div class="shell">
+    <div class="brand">
+      <div class="mark"><svg width="30" height="30" viewBox="0 0 24 24"><path fill="#ffb300" d="M20,18c1.1,0 1.99,-0.9 1.99,-2L22,6c0,-1.1 -0.9,-2 -2,-2H4c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2H0v2h24v-2h-4zM4,6h16v10H4V6z"/></svg></div>
+      <div>
+        <h1>Turn your phone into a computer</h1>
+        <p>A full desktop with windows, running on your phone, shown on this screen.</p>
+      </div>
+    </div>
+
+    <div class="card center" id="working">
+      <div class="spinner"></div>
+      <h2 id="workingTitle">Looking for your phone…</h2>
+      <p class="sub" id="workingText">Getting ready.</p>
+    </div>
+
+    <div class="card hidden" id="ready">
+      <h2>Your phone is ready</h2>
+      <p class="sub">Apps open in windows you can move and resize, with this mouse and keyboard. Your phone screen stays free.</p>
+      <div id="deviceList"></div>
+      <div class="opts">
+        <div class="opt"><label for="res">Desktop size</label>
+          <select id="res">
+            <option value="fit">Fit this screen</option>
+            <option value="1920x1080">1920 × 1080</option>
+            <option value="2560x1440">2560 × 1440</option>
+            <option value="1600x900">1600 × 900</option>
+          </select></div>
+        <div class="opt"><label for="scale">Text size</label>
+          <select id="scale">
+            <option value="1">Comfortable</option>
+            <option value="0.85">Compact</option>
+            <option value="1.2">Large</option>
+          </select></div>
+        <div class="opt"><label for="sound">Sound</label>
+          <select id="sound">
+            <option value="1">On this computer</option>
+            <option value="0">Off</option>
+          </select></div>
+      </div>
+      <button class="primary" id="startBtn">Start desktop</button>
+      <div class="msg" id="startMsg"></div>
+    </div>
+
+    <div class="card hidden" id="pair">
+      <h2>Connect your phone once</h2>
+      <p class="sub">Computer mode talks to the phone over <b>Wireless debugging</b>, on the same Wi-Fi.</p>
+      <ol class="steps">
+        <li>On the phone: <b>Settings → Developer options → Wireless debugging</b> → turn it on.
+          <span class="note">(No Developer options? Settings → About phone → Software information → tap <b>Build number</b> 7 times.)</span></li>
+        <li>Tap <b>Pair device with pairing code</b>.</li>
+        <li>Type what it shows here:</li>
+      </ol>
+      <div class="row">
+        <input type="text" id="pairAddr" placeholder="IP address & port, e.g. 192.168.1.20:37099" spellcheck="false">
+        <input type="text" id="pairCode" placeholder="6-digit code" maxlength="6" style="max-width:150px" spellcheck="false">
+        <button class="ghost" id="pairBtn">Pair</button>
+      </div>
+      <p class="note">Already paired before? Type the address shown at the top of the Wireless debugging screen:</p>
+      <div class="row">
+        <input type="text" id="connAddr" placeholder="IP address & port, e.g. 192.168.1.20:41235" spellcheck="false">
+        <button class="ghost" id="connBtn">Connect</button>
+      </div>
+      <div class="msg" id="pairMsg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================= desktop ======================= -->
+<div id="desktop" class="hidden">
+  <canvas id="screen"></canvas>
+  <textarea id="kbd" aria-label="Keyboard input for the phone" autocomplete="off" spellcheck="false"></textarea>
+  <div id="loading"><div class="center"><div class="spinner"></div><div id="loadingText">Starting your desktop…</div></div></div>
+  <div id="bar">
+    <div class="name"><span id="devName">Phone</span><span class="fps" id="fps"></span></div>
+    <div class="sep"></div>
+    <button class="ib" data-nav="back" title="Back"></button>
+    <button class="ib" data-nav="home" title="Home"></button>
+    <button class="ib" data-nav="recents" title="Recent apps"></button>
+    <button class="ib" data-nav="notifications" title="Notifications"></button>
+    <div class="sep"></div>
+    <button class="ib" data-nav="vol-" title="Volume down"></button>
+    <button class="ib" data-nav="vol+" title="Volume up"></button>
+    <button class="ib" id="phoneScreenBtn" title="Turn the phone's own screen off/on (saves battery)"></button>
+    <button class="ib" id="soundBtn" title="Sound on this computer"></button>
+    <div class="sep"></div>
+    <button class="ib" id="fsBtn" title="Full screen (F11)"></button>
+    <button class="ib danger" id="stopBtn" title="Disconnect"></button>
+  </div>
+  <button class="ghost hidden" id="soundPrompt">🔊 Click for sound</button>
+  <div id="toast"></div>
+</div>
+
+<script type="module">
+import { Player, PKT, decodeJson, androidKeycode, androidMeta } from "/stream.js";
+
+const $ = id => document.getElementById(id);
+const ICON = {
+  back: "M20,11H7.83l5.59,-5.59L12,4l-8,8 8,8 1.41,-1.41L7.83,13H20v-2z",
+  home: "M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8z",
+  recents: "M18,4H6C4.9,4 4,4.9 4,6v12c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V6c0,-1.1 -0.9,-2 -2,-2zM18,18H6V6h12v12z",
+  notifications: "M12,22c1.1,0 2,-0.9 2,-2h-4c0,1.1 0.89,2 2,2zM18,16v-5c0,-3.07 -1.64,-5.64 -4.5,-6.32V4c0,-0.83 -0.67,-1.5 -1.5,-1.5s-1.5,0.67 -1.5,1.5v0.68C7.63,5.36 6,7.92 6,11v5l-2,2v1h16v-1l-2,-2z",
+  "vol-": "M18.5,12c0,-1.77 -1.02,-3.29 -2.5,-4.03v8.05c1.48,-0.73 2.5,-2.25 2.5,-4.02zM5,9v6h4l5,5V4L9,9H5z",
+  "vol+": "M3,9v6h4l5,5V4L7,9H3zM16.5,12c0,-1.77 -1.02,-3.29 -2.5,-4.03v8.05c1.48,-0.73 2.5,-2.25 2.5,-4.02zM14,3.23v2.06c2.89,0.86 5,3.54 5,6.71s-2.11,5.85 -5,6.71v2.06c4.01,-0.91 7,-4.49 7,-8.77s-2.99,-7.86 -7,-8.77z",
+  phone: "M17,1.01L7,1c-1.1,0 -2,0.9 -2,2v18c0,1.1 0.9,2 2,2h10c1.1,0 2,-0.9 2,-2V3c0,-1.1 -0.9,-1.99 -2,-1.99zM17,19H7V5h10v14z",
+  sound: "M12,3v10.55c-0.59,-0.34 -1.27,-0.55 -2,-0.55 -2.21,0 -4,1.79 -4,4s1.79,4 4,4 4,-1.79 4,-4V7h4V3h-6z",
+  fullscreen: "M7,14H5v5h5v-2H7v-3zM5,10h2V7h3V5H5v5zM17,17h-3v2h5v-5h-2v3zM14,5v2h3v3h2V5h-5z",
+  stop: "M13,3h-2v10h2V3zM17.83,5.17l-1.42,1.42C17.99,7.86 19,9.81 19,12c0,3.87 -3.13,7 -7,7s-7,-3.13 -7,-7c0,-2.19 1.01,-4.14 2.58,-5.42L6.17,5.17C4.23,6.82 3,9.26 3,12c0,4.97 4.03,9 9,9s9,-4.03 9,-9C21,9.26 19.77,6.82 17.83,5.17z",
+};
+const svg = d => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
+document.querySelectorAll("[data-nav]").forEach(b => {
+  b.innerHTML = svg(ICON[b.dataset.nav]);
+  b.addEventListener("click", () => { send({ t: "nav", k: b.dataset.nav }); focusKeyboard(); });
+});
+$("phoneScreenBtn").innerHTML = svg(ICON.phone);
+$("soundBtn").innerHTML = svg(ICON.sound);
+$("fsBtn").innerHTML = svg(ICON.fullscreen);
+$("stopBtn").innerHTML = svg(ICON.stop);
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+for (const id of ["res", "scale", "sound"]) {
+  $(id).value = store.get("desk." + id, $(id).value);
+  $(id).addEventListener("change", () => store.set("desk." + id, $(id).value));
+}
+
+let toastTimer;
+function toast(text) {
+  $("toast").textContent = text;
+  $("toast").classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $("toast").classList.remove("show"), 2400);
+}
+const show = (id, on = true) => $(id).classList.toggle("hidden", !on);
+async function api(path, body) {
+  const res = await fetch(path, body === undefined ? {} : { method: "POST", body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || res.statusText);
+  return data;
+}
+
+// ======================= setup flow =======================
+let selected = store.get("desk.serial", "");
+let status = null;
+let inDesktop = false;
+
+function renderStatus(s) {
+  status = s;
+  const sess = s.session || {};
+  if (sess.state === "running" || sess.state === "starting") { enterDesktop(sess); return; }
+  if (inDesktop) leaveDesktop(sess.error);
+
+  const phones = (s.devices || []).filter(d => d.state === "device");
+  const unauthorized = (s.devices || []).find(d => d.state === "unauthorized");
+  show("working", !s.adbReady);
+  if (!s.adbReady) {
+    $("workingTitle").textContent = s.adbError ? "Can't use adb" : "Getting ready…";
+    $("workingText").textContent = s.adbError || "Preparing the connection tools (first run downloads Google's adb, ~6 MB).";
+  }
+  show("ready", s.adbReady && phones.length > 0);
+  show("pair", s.adbReady && phones.length === 0);
+  if (unauthorized) $("pairMsg").textContent = "On the phone, tap Allow on the “Allow debugging?” message.";
+
+  if (phones.length) {
+    if (!phones.some(p => p.serial === selected)) selected = phones[0].serial;
+    $("deviceList").innerHTML = "";
+    for (const p of phones) {
+      const el = document.createElement("label");
+      el.className = "device";
+      el.style.cursor = "pointer";
+      el.innerHTML = `<div class="ph"></div><div><b></b><span></span></div>${phones.length > 1 ? '<input type="radio" name="dev">' : '<div class="dot"></div>'}`;
+      el.querySelector("b").textContent = p.model || "Android phone";
+      el.querySelector("span").textContent = p.wireless ? "Wireless debugging · connected" : "USB · connected";
+      const radio = el.querySelector("input");
+      if (radio) { radio.checked = p.serial === selected; radio.onchange = () => { selected = p.serial; store.set("desk.serial", selected); }; }
+      $("deviceList").appendChild(el);
+    }
+  }
+  if (sess.state === "error" && sess.error) { $("startMsg").className = "msg err"; $("startMsg").textContent = sess.error; }
+}
+
+async function poll() {
+  try { renderStatus(await api("/desktop/status")); } catch (e) { $("workingText").textContent = "Receiver not responding."; }
+  setTimeout(poll, inDesktop ? 3000 : 1500);
+}
+
+function desktopSize() {
+  const v = $("res").value;
+  const scale = parseFloat($("scale").value);
+  let w, h;
+  if (v === "fit") {
+    const dpr = window.devicePixelRatio || 1;
+    w = Math.round(screen.width * dpr); h = Math.round(screen.height * dpr);
+    const k = Math.min(1, 2560 / Math.max(w, h)); // keep it smooth: at most 2560 wide
+    w = Math.round(w * k); h = Math.round(h * k);
+  } else {
+    [w, h] = v.split("x").map(Number);
+  }
+  w -= w % 8; h -= h % 8;
+  // DeX looks right at ~160 dpi for 1080p; scale with the height and the chosen text size.
+  const dpi = Math.round(160 * (h / 1080) * scale);
+  return { width: w, height: h, dpi };
+}
+
+$("startBtn").onclick = async () => {
+  $("startBtn").disabled = true;
+  $("startMsg").className = "msg";
+  $("startMsg").textContent = "";
+  try {
+    player.sound = $("sound").value === "1";
+    await api("/desktop/start", { serial: selected, ...desktopSize(), audio: player.sound });
+    enterDesktop({ state: "starting" });
+  } catch (e) {
+    $("startMsg").className = "msg err";
+    $("startMsg").textContent = e.message;
+  } finally {
+    $("startBtn").disabled = false;
+  }
+};
+$("pairBtn").onclick = async () => {
+  $("pairMsg").className = "msg";
+  $("pairMsg").textContent = "Pairing…";
+  try {
+    const r = await api("/desktop/pair", { address: $("pairAddr").value.trim(), code: $("pairCode").value.trim() });
+    $("pairMsg").className = "msg ok";
+    $("pairMsg").textContent = r.message || "Paired! Connecting…";
+  } catch (e) { $("pairMsg").className = "msg err"; $("pairMsg").textContent = e.message; }
+};
+$("connBtn").onclick = async () => {
+  $("pairMsg").className = "msg";
+  $("pairMsg").textContent = "Connecting…";
+  try {
+    const r = await api("/desktop/connect", { address: $("connAddr").value.trim() });
+    $("pairMsg").className = "msg ok";
+    $("pairMsg").textContent = r.message || "Connected.";
+  } catch (e) { $("pairMsg").className = "msg err"; $("pairMsg").textContent = e.message; }
+};
+
+// ======================= desktop =======================
+const canvas = $("screen");
+const player = new Player(canvas, {
+  onFirstFrame: () => { show("loading", false); flashBar(); },
+  onStats: ({ fps }) => { $("fps").textContent = inDesktop && fps ? fps + " fps" : ""; },
+  onPacket: (type, payload) => {
+    if (type === PKT.HELLO) { const h = decodeJson(payload) || {}; $("devName").textContent = h.name || "Phone"; }
+    if (type === PKT.CLIPBOARD) {
+      const text = new TextDecoder().decode(payload);
+      navigator.clipboard.writeText(text).then(() => toast("Copied from the phone")).catch(() => {});
+    }
+  },
+});
+player.sound = $("sound").value === "1";
+player.run();
+
+function enterDesktop(sess) {
+  if (inDesktop) {
+    if (sess.state === "running" && !player.shown) $("loadingText").textContent = "Almost there…";
+    return;
+  }
+  inDesktop = true;
+  show("setup", false);
+  show("desktop", true);
+  show("loading", !player.shown);
+  $("loadingText").textContent = "Starting your desktop…";
+  player.resize();
+  focusKeyboard();
+  document.documentElement.requestFullscreen?.().catch(() => {});
+}
+function leaveDesktop(error) {
+  inDesktop = false;
+  show("desktop", false);
+  show("setup", true);
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  if (error) { $("startMsg").className = "msg err"; $("startMsg").textContent = error; }
+}
+
+// ---- ordered input channel ----
+const outbox = [];
+let sending = false;
+function send(cmd) {
+  if (!inDesktop) return;
+  const last = outbox[outbox.length - 1];
+  // Coalesce: one pending hover/drag move and one scroll are enough.
+  if (last && cmd.t === "mouse" && cmd.a === "move" && last.t === "mouse" && last.a === "move") { outbox[outbox.length - 1] = cmd; }
+  else if (last && cmd.t === "wheel" && last.t === "wheel") { last.dx += cmd.dx; last.dy += cmd.dy; last.x = cmd.x; last.y = cmd.y; }
+  else if (last && cmd.t === "text" && last.t === "text") { last.s += cmd.s; }
+  else outbox.push(cmd);
+  if (!sending) flush();
+}
+async function flush() {
+  sending = true;
+  while (outbox.length) {
+    const batch = outbox.splice(0);
+    try { await fetch("/control", { method: "POST", body: JSON.stringify(batch) }); } catch (e) {}
+  }
+  sending = false;
+}
+
+// ---- mouse: a real mouse on the phone (hover, right-click menus, wheel) ----
+let buttons = 0;
+canvas.addEventListener("contextmenu", e => e.preventDefault());
+canvas.addEventListener("pointerdown", e => {
+  focusKeyboard();
+  const p = player.toPicture(e.clientX, e.clientY);
+  if (!p) return;
+  e.preventDefault();
+  canvas.setPointerCapture(e.pointerId);
+  buttons = e.buttons;
+  send({ t: "mouse", a: "down", x: p[0], y: p[1], button: e.button, b: buttons });
+});
+canvas.addEventListener("pointermove", e => {
+  const p = player.toPicture(e.clientX, e.clientY, buttons !== 0);
+  if (!p) return;
+  send({ t: "mouse", a: "move", x: p[0], y: p[1], b: e.buttons });
+});
+const up = e => {
+  if (!buttons) return;
+  const p = player.toPicture(e.clientX, e.clientY, true);
+  buttons = e.buttons;
+  if (p) send({ t: "mouse", a: "up", x: p[0], y: p[1], button: e.button, b: buttons });
+};
+canvas.addEventListener("pointerup", up);
+canvas.addEventListener("pointercancel", up);
+canvas.addEventListener("wheel", e => {
+  e.preventDefault();
+  const p = player.toPicture(e.clientX, e.clientY);
+  if (!p) return;
+  const unit = e.deltaMode === 1 ? 3 : e.deltaMode === 2 ? 0.3 : 100;
+  // Android: positive vertical scroll = up (browser deltaY is positive for down); horizontal keeps its sign.
+  send({ t: "wheel", x: p[0], y: p[1], dx: (e.shiftKey ? e.deltaY : e.deltaX) / unit, dy: e.shiftKey ? 0 : -e.deltaY / unit });
+}, { passive: false });
+
+// ---- keyboard: shortcuts as real keys, typed text (any language) as text ----
+const kbd = $("kbd");
+function focusKeyboard() { if (inDesktop) kbd.focus({ preventScroll: true }); }
+const TEXT_KEYS = new Set(["Space"]);
+document.addEventListener("keydown", e => {
+  if (!inDesktop || e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+  if (e.key === "F11") return;                                        // browser full screen
+  if ((e.ctrlKey || e.metaKey) && e.code === "KeyV") return;          // arrives as a paste event
+  if (e.isComposing) return;
+  const code = androidKeycode(e.code);
+  const printable = e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey && !TEXT_KEYS.has(e.code);
+  if (printable || !code) return;                                     // typed text comes via the textarea
+  e.preventDefault();
+  send({ t: "key", a: "down", code, meta: androidMeta(e), repeat: e.repeat ? 1 : 0 });
+});
+document.addEventListener("keyup", e => {
+  if (!inDesktop || e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+  const code = androidKeycode(e.code);
+  const printable = e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey && !TEXT_KEYS.has(e.code);
+  if (printable || !code || ((e.ctrlKey || e.metaKey) && e.code === "KeyV")) return;
+  e.preventDefault();
+  send({ t: "key", a: "up", code, meta: androidMeta(e) });
+});
+kbd.addEventListener("input", e => {
+  if (e.isComposing) return;
+  if (kbd.value) send({ t: "text", s: kbd.value });
+  kbd.value = "";
+});
+kbd.addEventListener("compositionend", () => { if (kbd.value) send({ t: "text", s: kbd.value }); kbd.value = ""; });
+document.addEventListener("paste", e => {
+  if (!inDesktop) return;
+  const text = e.clipboardData && e.clipboardData.getData("text/plain");
+  if (text) { send({ t: "paste", s: text }); }
+  e.preventDefault();
+  kbd.value = "";
+});
+
+// ---- bar ----
+let barTimer;
+function flashBar() {
+  $("bar").classList.add("show");
+  clearTimeout(barTimer);
+  barTimer = setTimeout(() => { if (!$("bar").matches(":hover")) $("bar").classList.remove("show"); }, 2500);
+}
+document.addEventListener("mousemove", e => { if (inDesktop && e.clientY < 12) flashBar(); });
+$("bar").addEventListener("mouseleave", () => { barTimer = setTimeout(() => $("bar").classList.remove("show"), 900); });
+$("fsBtn").onclick = () => { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen().catch(() => {}); focusKeyboard(); };
+let phoneScreenOn = true;
+$("phoneScreenBtn").onclick = () => {
+  phoneScreenOn = !phoneScreenOn;
+  send({ t: "phoneScreen", on: phoneScreenOn });
+  $("phoneScreenBtn").classList.toggle("on", !phoneScreenOn);
+  toast(phoneScreenOn ? "Phone screen on" : "Phone screen off — the desktop keeps running");
+  focusKeyboard();
+};
+$("soundBtn").classList.toggle("on", player.sound);
+$("soundBtn").onclick = () => {
+  player.sound = !player.sound;
+  player.resumeAudio();
+  $("soundBtn").classList.toggle("on", player.sound);
+  toast(player.sound ? "Sound on" : "Sound off");
+  focusKeyboard();
+};
+$("stopBtn").onclick = async () => { try { await api("/desktop/stop", {}); } catch (e) {} leaveDesktop(); };
+document.addEventListener("fullscreenchange", () => {
+  // In full screen, let shortcuts like Esc and Ctrl+W reach the phone instead of the browser.
+  if (document.fullscreenElement && navigator.keyboard?.lock) navigator.keyboard.lock().catch(() => {});
+  else navigator.keyboard?.unlock?.();
+});
+setInterval(() => {
+  if (player.sound && player.audio && player.audio.state === "suspended" && inDesktop) show("soundPrompt", true);
+}, 1000);
+$("soundPrompt").onclick = () => { player.resumeAudio(); show("soundPrompt", false); focusKeyboard(); };
+
+poll();
+</script>
+</body>
+</html>

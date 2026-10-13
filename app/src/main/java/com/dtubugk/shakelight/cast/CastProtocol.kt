@@ -18,6 +18,22 @@ object CastProtocol {
 
     const val CTRL_REQUEST_KEYFRAME = 1
     const val CTRL_COMMAND = 2 // JSON command, see RemoteCommands
+    const val CTRL_WELCOME = 3 // JSON {"version": "..."} sent by the receiver right after connecting
+
+    /** Oldest computer receiver that speaks this protocol (1.0.0 only understands "SLC1"). */
+    const val MIN_RECEIVER_VERSION = "1.1.0"
+
+    fun isSupported(receiverVersion: String): Boolean = compareVersions(receiverVersion, MIN_RECEIVER_VERSION) >= 0
+
+    fun compareVersions(a: String, b: String): Int {
+        val x = a.split('.').map { it.toIntOrNull() ?: 0 }
+        val y = b.split('.').map { it.toIntOrNull() ?: 0 }
+        for (i in 0 until maxOf(x.size, y.size)) {
+            val d = x.getOrElse(i) { 0 }.compareTo(y.getOrElse(i) { 0 })
+            if (d != 0) return d
+        }
+        return 0
+    }
 
     const val DISCOVERY_PORT = 47800
     const val STREAM_PORT = 47801

@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const version = "1.1.1"
+const version = "2.0.0"
 
 //go:embed web
 var webFiles embed.FS
@@ -50,8 +50,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Can't open the viewer port %d: %v", webPort, err)
 	}
+	dm := newDesktopManager(h)
 	go func() {
-		log.Fatal(http.Serve(webListener, routes(h, name)))
+		log.Fatal(http.Serve(webListener, routes(h, dm, name)))
 	}()
 
 	printBanner(name)
@@ -109,8 +110,14 @@ func handlePhone(conn net.Conn, h *hub) {
 	}
 	conn.SetReadDeadline(time.Time{})
 
+	if h.desktopSession() != nil {
+		log.Println("A phone tried to mirror while Computer mode is running; ignored.")
+		return
+	}
 	h.setPhone(conn)
 	log.Println("Phone connected from", conn.RemoteAddr())
+	welcome, _ := json.Marshal(map[string]string{"version": version})
+	conn.Write(encodeControl(ctrlWelcome, welcome))
 
 	header := make([]byte, headerSize)
 	for {
@@ -142,19 +149,31 @@ func handlePhone(conn net.Conn, h *hub) {
 	}
 }
 
-func routes(h *hub, name string) http.Handler {
+func routes(h *hub, dm *desktopManager, name string) http.Handler {
 	mux := http.NewServeMux()
 
+	page := func(file, contentType string) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			body, err := webFiles.ReadFile("web/" + file)
+			if err != nil {
+				http.NotFound(w, r)
+				return
+			}
+			w.Header().Set("Content-Type", contentType)
+			w.Header().Set("Cache-Control", "no-store")
+			w.Write(body)
+		}
+	}
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
 			return
 		}
-		page, _ := webFiles.ReadFile("web/index.html")
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Header().Set("Cache-Control", "no-store")
-		w.Write(page)
+		page("index.html", "text/html; charset=utf-8")(w, r)
 	})
+	mux.HandleFunc("/desktop", page("desktop.html", "text/html; charset=utf-8"))
+	mux.HandleFunc("/stream.js", page("stream.js", "text/javascript; charset=utf-8"))
+	dm.routes(mux)
 
 	mux.HandleFunc("/info", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -175,6 +194,16 @@ func routes(h *hub, name string) http.Handler {
 		var cmds []json.RawMessage
 		if err := json.NewDecoder(io.LimitReader(r.Body, maxCommandLen)).Decode(&cmds); err != nil {
 			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		if d := h.desktopSession(); d != nil {
+			for _, cmd := range cmds {
+				if err := d.handle(cmd); err != nil {
+					http.Error(w, err.Error(), http.StatusConflict)
+					return
+				}
+			}
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		for _, cmd := range cmds {
@@ -304,3 +333,5 @@ func broadcastAddrs() []net.IP {
 	}
 	return out
 }
+
+func logf(format string, args ...any) { log.Printf(format, args...) }

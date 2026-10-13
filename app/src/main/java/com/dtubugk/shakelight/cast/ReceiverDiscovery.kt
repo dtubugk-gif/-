@@ -15,7 +15,10 @@ import kotlin.concurrent.thread
 /** Finds computers running ShakeLight Receiver: they broadcast a small JSON message every second. */
 class ReceiverDiscovery(context: Context, private val onChange: (List<Receiver>) -> Unit) {
 
-    data class Receiver(val name: String, val host: String, val port: Int)
+    /** [version] is empty when unknown (typed address). */
+    data class Receiver(val name: String, val host: String, val port: Int, val version: String = "") {
+        val isOutdated: Boolean get() = version.isNotEmpty() && !CastProtocol.isSupported(version)
+    }
 
     private val wifi = context.applicationContext.getSystemService(WifiManager::class.java)
     private val main = Handler(Looper.getMainLooper())
@@ -80,6 +83,7 @@ class ReceiverDiscovery(context: Context, private val onChange: (List<Receiver>)
             name = json.optString("name").ifBlank { host },
             host = host,
             port = json.optInt("port", CastProtocol.STREAM_PORT),
+            version = json.optString("version"),
         )
     }.getOrNull()
 

@@ -20,6 +20,8 @@ type hub struct {
 	// Latest hello / codec config / status / app list, replayed to viewers that open later.
 	latest map[byte][]byte
 	phone  net.Conn
+	// desktop is the running Computer-mode session; while set, it owns the viewer.
+	desktop *desktopSession
 }
 
 func newHub() *hub {
@@ -105,7 +107,36 @@ func (h *hub) clearPhone(conn net.Conn) bool {
 }
 
 func (h *hub) requestKeyframe() {
+	h.mu.Lock()
+	d := h.desktop
+	h.mu.Unlock()
+	if d != nil {
+		d.requestKeyframe()
+		return
+	}
 	h.sendToPhone(encodeControl(ctrlRequestKeyframe, nil))
+}
+
+// setDesktop hands the viewer to a Computer-mode session (nil when it ends). A phone that is
+// mirroring over Wi-Fi is disconnected so the two streams never mix.
+func (h *hub) setDesktop(d *desktopSession) {
+	h.mu.Lock()
+	h.desktop = d
+	old := h.phone
+	if d != nil {
+		h.phone = nil
+		h.latest = map[byte][]byte{}
+	}
+	h.mu.Unlock()
+	if d != nil && old != nil {
+		old.Close()
+	}
+}
+
+func (h *hub) desktopSession() *desktopSession {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.desktop
 }
 
 // sendToPhone writes one control packet. A single Write keeps concurrent packets from interleaving.

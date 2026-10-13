@@ -1,5 +1,6 @@
 package com.dtubugk.shakelight
 
+import com.dtubugk.shakelight.cast.CastProtocol
 import com.dtubugk.shakelight.cast.GesturePlan
 import com.dtubugk.shakelight.cast.TextEdit
 import com.dtubugk.shakelight.cast.TouchPoint
@@ -65,5 +66,15 @@ class RemoteControlTest {
         assertEquals(TextEdit.Result("ho", 1), TextEdit.backspace("hello", 1, 4))
         assertEquals(TextEdit.Result("abc", 0), TextEdit.backspace("abc", 0, 0))
         assertEquals(TextEdit.Result("hi", 2), TextEdit.backspace("hi😀", -1, -1))
+    }
+
+    @Test
+    fun receiverVersionCheck() {
+        assertTrue(!CastProtocol.isSupported("1.0.0"))
+        assertTrue(CastProtocol.isSupported("1.1.0"))
+        assertTrue(CastProtocol.isSupported("1.1.1"))
+        assertTrue(CastProtocol.isSupported("1.10"))
+        assertTrue(CastProtocol.isSupported("2.0.0"))
+        assertEquals(0, CastProtocol.compareVersions("1.2", "1.2.0"))
     }
 }

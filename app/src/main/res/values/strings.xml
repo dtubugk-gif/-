@@ -108,6 +108,10 @@
     <string name="control_allow_switch">Let the computer control this phone</string>
     <string name="control_service_label">ShakeLight remote control</string>
     <string name="control_service_description">Lets a computer running ShakeLight Receiver control this phone with its mouse and keyboard, only while you are projecting to it from ShakeLight. It does not collect or send any data.</string>
+    <string name="cast_receiver_item_outdated">%1$s  ·  needs update (version %2$s)</string>
+    <string name="cast_outdated_title">Update the computer program</string>
+    <string name="cast_outdated_body">This computer runs ShakeLight Receiver %1$s, which can’t work with this version of the app. On the computer, close the old receiver window and open ShakeLight Receiver %2$s or newer (github.com/dtubugk-gif/- → dist folder).</string>
+    <string name="cast_error_old_receiver">The computer hung up right away. It probably runs an old ShakeLight Receiver: on the computer, close it and open the newest one.</string>
     <string name="proj_to_pc">Project to computer</string>
 
     <!-- Settings -->

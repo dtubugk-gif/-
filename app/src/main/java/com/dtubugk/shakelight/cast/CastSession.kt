@@ -77,6 +77,8 @@ class CastSession(
     @Volatile private var failure: Int? = null
     @Volatile private var pendingSize: Size? = null
     @Volatile private var keyframeRequested = false
+    @Volatile private var heardFromReceiver = false
+    private var connectedAt = 0L
 
     private lateinit var out: DataOutputStream
     private var encoder: MediaCodec? = null
@@ -156,6 +158,7 @@ class CastSession(
         socket = s
         s.tcpNoDelay = true
         s.connect(InetSocketAddress(host, port), CONNECT_TIMEOUT_MS)
+        connectedAt = android.os.SystemClock.elapsedRealtime()
         out = DataOutputStream(BufferedOutputStream(s.getOutputStream(), 64 * 1024))
         synchronized(writeLock) { out.write(CastProtocol.MAGIC.toByteArray(Charsets.US_ASCII)) }
         send(CastProtocol.HELLO, 0, JSONObject().put("name", deviceName()).toString().toByteArray())
@@ -169,6 +172,7 @@ class CastSession(
                     if (length < 0 || length > MAX_COMMAND_BYTES) break
                     val payload = ByteArray(length)
                     input.readFully(payload)
+                    heardFromReceiver = true
                     when (type) {
                         CastProtocol.CTRL_REQUEST_KEYFRAME -> keyframeRequested = true
                         CastProtocol.CTRL_COMMAND -> {
@@ -180,7 +184,9 @@ class CastSession(
             } catch (e: IOException) {
                 // socket closed
             }
-            fail(R.string.cast_error_lost)
+            // A receiver that hangs up right away without a word is an old version (or not ShakeLight).
+            val quickHangUp = android.os.SystemClock.elapsedRealtime() - connectedAt < 4000
+            fail(if (quickHangUp && !heardFromReceiver) R.string.cast_error_old_receiver else R.string.cast_error_lost)
         }
     }
 
@@ -270,30 +276,42 @@ class CastSession(
             if (!caps.isSizeSupported(width, height)) continue
 
             val bitrate = caps.bitrateRange.clamp((width * height * 4).coerceIn(2_000_000, 8_000_000))
-            val format = MediaFormat.createVideoFormat(MIME, width, height).apply {
-                setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
-                setInteger(MediaFormat.KEY_BIT_RATE, bitrate)
-                setInteger(MediaFormat.KEY_FRAME_RATE, 30)
-                setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
-                setInteger(MediaFormat.KEY_PRIORITY, 0) // real-time
-                // Keep sending frames while the screen is still, so the computer always has a picture.
-                setLong(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 100_000)
-            }
-            try {
-                codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-                inputSurface = codec.createInputSurface()
-                codec.start()
-                encoder = codec
-                encodedWidth = width
-                encodedHeight = height
-                return
-            } catch (e: Exception) {
-                codec.reset()
+            // First with the low-latency tuning; some encoders reject it, so retry plain.
+            for (lowLatency in booleanArrayOf(true, false)) {
+                try {
+                    codec.configure(videoFormat(width, height, bitrate, lowLatency), null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+                    inputSurface = codec.createInputSurface()
+                    codec.start()
+                    encoder = codec
+                    encodedWidth = width
+                    encodedHeight = height
+                    return
+                } catch (e: Exception) {
+                    codec.reset()
+                }
             }
         }
         codec.release()
         throw IllegalStateException("No supported encoder size")
     }
+
+    private fun videoFormat(width: Int, height: Int, bitrate: Int, lowLatency: Boolean) =
+        MediaFormat.createVideoFormat(MIME, width, height).apply {
+            setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface)
+            setInteger(MediaFormat.KEY_BIT_RATE, bitrate)
+            setInteger(MediaFormat.KEY_FRAME_RATE, 60)
+            setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 2)
+            // Keep sending frames while the screen is still, so the computer always has a picture.
+            setLong(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 100_000)
+            if (lowLatency) {
+                setInteger(MediaFormat.KEY_PRIORITY, 0) // real-time
+                // No B-frames and no look-ahead: each frame leaves the encoder as soon as it's ready.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) setInteger(MediaFormat.KEY_MAX_B_FRAMES, 0)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) setInteger(MediaFormat.KEY_LATENCY, 1)
+                setInteger("vendor.qti-ext-enc-low-latency.enable", 1) // Snapdragon; ignored elsewhere
+            }
+        }
+
 
     private fun restartEncoder(screen: Size) {
         val oldEncoder = encoder

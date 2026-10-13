@@ -22,6 +22,7 @@ object DesktopMode {
     private const val SAVED_AUTO_ROTATE = "desktop_saved_auto_rotate"
     private const val SAVED_ROTATION = "desktop_saved_rotation"
     private const val WINDOWING_MODE_FREEFORM = 5
+    private var windowCount = 0
 
     fun canRotate(context: Context): Boolean = Settings.System.canWrite(context)
 
@@ -102,7 +103,14 @@ object DesktopMode {
         val metrics = context.resources.displayMetrics
         val w = metrics.widthPixels
         val h = metrics.heightPixels
-        val bounds = Rect(w / 8, h / 8, w * 7 / 8, h * 7 / 8)
+        // Each new window opens a step down-right of the previous one, like a desktop.
+        val step = windowCount++ % 5
+        val landscape = w > h
+        val winW = (w * if (landscape) 0.55f else 0.86f).toInt()
+        val winH = (h * if (landscape) 0.72f else 0.55f).toInt()
+        val left = (w * 0.05f + step * w * 0.07f).toInt().coerceAtMost(w - winW)
+        val top = (h * 0.06f + step * h * 0.05f).toInt().coerceAtMost(h - winH)
+        val bounds = Rect(left, top, left + winW, top + winH)
         val options = ActivityOptions.makeBasic().setLaunchBounds(bounds)
         // Not public API, but this is how launchers ask for a freeform window.
         runCatching {
