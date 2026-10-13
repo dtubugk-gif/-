@@ -69,7 +69,7 @@
 
     <!-- Project to computer -->
     <string name="feature_cast_pc">הקרנה למחשב</string>
-    <string name="feature_cast_pc_desc">הצג את הטלפון על מחשב או מקרן דרך ה-Wi-Fi</string>
+    <string name="feature_cast_pc_desc">הצג ושלוט בטלפון מהמחשב — מצב שולחן עבודה</string>
     <string name="channel_cast">הקרנת מסך</string>
     <string name="cast_intro">מציג את המסך והצליל של הטלפון על מחשב, ועל מקרן או טלוויזיה שמחוברים למחשב. ישירות דרך ה-Wi-Fi שלך: בלי Google Cast ובלי אינטרנט.\n\nבמחשב, פתח קודם את התוכנה ShakeLight Receiver.</string>
     <string name="cast_sound">שלח גם צליל (אנדרואיד 10 ומעלה)</string>
@@ -91,6 +91,18 @@
     <string name="cast_error_permission">שיתוף המסך לא אושר.</string>
     <string name="cast_notif_title">מקרין אל %1$s</string>
     <string name="cast_notif_text">המסך שלך מוצג במחשב</string>
+    <string name="control_title">שליטה ומצב שולחן עבודה</string>
+    <string name="control_intro">השתמש בעכבר ובמקלדת של המחשב בטלפון, פתח אפליקציות מתפריט התחל, וסובב את הטלפון לרוחב לשולחן עבודה רחב. אנדרואיד דורש שתפעיל את זה בעצמך, פעם אחת.</string>
+    <string name="control_turn_on">הפעל</string>
+    <string name="control_allow">אפשר</string>
+    <string name="control_on">✓ שליטה בעכבר ומקלדת פעילה</string>
+    <string name="control_off">עכבר ומקלדת: לחץ „הפעל”, בחר „ShakeLight remote control” והפעל אותו</string>
+    <string name="control_restricted_hint">אם המתג אפור: פתח הגדרות ← אפליקציות ← ShakeLight ← ⋮ (בפינה) ← „אפשר הגדרות מוגבלות”, ונסה שוב.</string>
+    <string name="rotate_on">✓ מצב שולחן עבודה (לרוחב) מאושר</string>
+    <string name="rotate_off">מצב שולחן עבודה (לרוחב): צריך „שינוי הגדרות מערכת”</string>
+    <string name="control_allow_switch">אפשר למחשב לשלוט בטלפון הזה</string>
+    <string name="control_service_label">ShakeLight remote control</string>
+    <string name="control_service_description">מאפשר למחשב שמריץ את ShakeLight Receiver לשלוט בטלפון בעכבר ובמקלדת, רק בזמן שאתה מקרין אליו מ-ShakeLight. לא אוסף ולא שולח שום מידע.</string>
     <string name="proj_to_pc">הקרנה למחשב</string>
 
     <string name="pref_cat_shake">זיהוי ניעור</string>

@@ -74,7 +74,7 @@
 
     <!-- Project to computer -->
     <string name="feature_cast_pc">Project to computer</string>
-    <string name="feature_cast_pc_desc">Show your phone on a computer or projector over Wi-Fi</string>
+    <string name="feature_cast_pc_desc">Show and control your phone on a computer — desktop mode</string>
     <string name="channel_cast">Screen projection</string>
     <string name="cast_intro">Shows this phone\'s screen and sound on a computer, and on a projector or TV plugged into that computer. It goes straight over your Wi-Fi: no Google Cast and no internet needed.\n\nOn the computer, open the ShakeLight Receiver app first.</string>
     <string name="cast_sound">Send sound too (Android 10+)</string>
@@ -96,6 +96,18 @@
     <string name="cast_error_permission">Screen sharing was not allowed.</string>
     <string name="cast_notif_title">Projecting to %1$s</string>
     <string name="cast_notif_text">Your screen is showing on the computer</string>
+    <string name="control_title">Control &amp; desktop mode</string>
+    <string name="control_intro">Use the computer\'s mouse and keyboard on your phone, open phone apps from a Start menu, and turn the phone sideways for a wide desktop. Android requires you to switch these on yourself, once.</string>
+    <string name="control_turn_on">Turn on</string>
+    <string name="control_allow">Allow</string>
+    <string name="control_on">✓ Mouse &amp; keyboard control is on</string>
+    <string name="control_off">Mouse &amp; keyboard: tap Turn on, then pick “ShakeLight remote control” and switch it on</string>
+    <string name="control_restricted_hint">If the switch is greyed out: open Settings → Apps → ShakeLight → ⋮ (top corner) → Allow restricted settings, then try again.</string>
+    <string name="rotate_on">✓ Desktop mode (landscape) is allowed</string>
+    <string name="rotate_off">Desktop mode (landscape): needs “Modify system settings”</string>
+    <string name="control_allow_switch">Let the computer control this phone</string>
+    <string name="control_service_label">ShakeLight remote control</string>
+    <string name="control_service_description">Lets a computer running ShakeLight Receiver control this phone with its mouse and keyboard, only while you are projecting to it from ShakeLight. It does not collect or send any data.</string>
     <string name="proj_to_pc">Project to computer</string>
 
     <!-- Settings -->

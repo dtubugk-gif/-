@@ -15,26 +15,25 @@ type subscriber struct {
 
 // hub connects the single active phone to every open viewer page.
 type hub struct {
-	mu     sync.Mutex
-	subs   map[*subscriber]struct{}
-	hello  []byte // latest hello packet, replayed to new viewers
-	config []byte // latest codec config packet, replayed to new viewers
+	mu   sync.Mutex
+	subs map[*subscriber]struct{}
+	// Latest hello / codec config / status / app list, replayed to viewers that open later.
+	latest map[byte][]byte
 	phone  net.Conn
 }
 
 func newHub() *hub {
-	return &hub{subs: map[*subscriber]struct{}{}}
+	return &hub{subs: map[*subscriber]struct{}{}, latest: map[byte][]byte{}}
 }
 
 func (h *hub) subscribe() *subscriber {
 	s := &subscriber{ch: make(chan []byte, 256), waitKey: true}
 	h.mu.Lock()
 	h.subs[s] = struct{}{}
-	if h.hello != nil {
-		s.ch <- h.hello
-	}
-	if h.config != nil {
-		s.ch <- h.config
+	for _, kind := range []byte{pktHello, pktConfig, pktStatus, pktApps} {
+		if pkt := h.latest[kind]; pkt != nil {
+			s.ch <- pkt
+		}
 	}
 	h.mu.Unlock()
 	h.requestKeyframe()
@@ -53,12 +52,10 @@ func (h *hub) publish(pkt []byte) {
 
 	h.mu.Lock()
 	switch kind {
-	case pktHello:
-		h.hello = pkt
-	case pktConfig:
-		h.config = pkt
+	case pktHello, pktConfig, pktStatus, pktApps:
+		h.latest[kind] = pkt
 	case pktBye:
-		h.hello, h.config = nil, nil
+		h.latest = map[byte][]byte{}
 	}
 	for s := range h.subs {
 		video := kind == pktKey || kind == pktDelta
@@ -108,10 +105,17 @@ func (h *hub) clearPhone(conn net.Conn) bool {
 }
 
 func (h *hub) requestKeyframe() {
+	h.sendToPhone(encodeControl(ctrlRequestKeyframe, nil))
+}
+
+// sendToPhone writes one control packet. A single Write keeps concurrent packets from interleaving.
+func (h *hub) sendToPhone(frame []byte) bool {
 	h.mu.Lock()
 	phone := h.phone
 	h.mu.Unlock()
-	if phone != nil {
-		phone.Write([]byte{ctrlRequestKeyframe})
+	if phone == nil {
+		return false
 	}
+	_, err := phone.Write(frame)
+	return err == nil
 }

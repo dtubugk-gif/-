@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-const version = "1.0.0"
+const version = "1.1.0"
 
 //go:embed web
 var webFiles embed.FS
@@ -97,7 +97,14 @@ func handlePhone(conn net.Conn, h *hub) {
 	r := bufio.NewReaderSize(conn, 1<<20)
 	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	head := make([]byte, len(magic))
-	if _, err := io.ReadFull(r, head); err != nil || string(head) != magic {
+	if _, err := io.ReadFull(r, head); err != nil {
+		return
+	}
+	if string(head) == oldMagic {
+		log.Println("A phone with an old ShakeLight version tried to connect: please update the app on the phone.")
+		return
+	}
+	if string(head) != magic {
 		return // not a ShakeLight phone
 	}
 	conn.SetReadDeadline(time.Time{})
@@ -157,6 +164,26 @@ func routes(h *hub, name string) http.Handler {
 			"port":      streamPort,
 			"version":   version,
 		})
+	})
+
+	// The viewer page sends mouse/keyboard input here, as a JSON array of commands, in order.
+	mux.HandleFunc("/control", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "POST only", http.StatusMethodNotAllowed)
+			return
+		}
+		var cmds []json.RawMessage
+		if err := json.NewDecoder(io.LimitReader(r.Body, maxCommandLen)).Decode(&cmds); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+		for _, cmd := range cmds {
+			if !h.sendToPhone(encodeControl(ctrlCommand, cmd)) {
+				http.Error(w, "no phone connected", http.StatusConflict)
+				return
+			}
+		}
+		w.WriteHeader(http.StatusNoContent)
 	})
 
 	mux.HandleFunc("/keyframe", func(w http.ResponseWriter, r *http.Request) {

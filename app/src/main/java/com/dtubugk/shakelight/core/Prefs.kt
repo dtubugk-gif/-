@@ -23,6 +23,7 @@ object Prefs {
 
     const val CAST_SOUND = "cast_sound"
     const val CAST_LAST_IP = "cast_last_ip"
+    const val CAST_CONTROL = "cast_control"
 
     /** Keys that change how shake detection behaves while the service runs. */
     val SHAKE_TUNING = setOf(SENSITIVITY, SHAKE_COUNT, POCKET_GUARD, SCREEN_OFF)

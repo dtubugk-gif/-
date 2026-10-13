@@ -5,16 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ShakeLight Receiver</title>
 <style>
-  :root { --amber: #ffb300; --text: #f3ead9; --muted: #a89c88; --bg: #000; --panel: #15120e; }
+  :root { --amber: #ffb300; --text: #f3ead9; --muted: #a89c88; --bg: #000; --panel: #15120e; --panel2: #221e19;
+    --line: #2c2620; --bar: 0px; }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
-    font: 16px/1.5 "Segoe UI", system-ui, -apple-system, Roboto, "Noto Sans Hebrew", sans-serif; overflow: hidden; }
-  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
-  body.hide-cursor, body.hide-cursor * { cursor: none; }
+    font: 15px/1.5 "Segoe UI", system-ui, -apple-system, Roboto, "Noto Sans Hebrew", sans-serif; overflow: hidden; user-select: none; }
+  button { font: inherit; color: inherit; }
+  #stage { position: fixed; left: 0; right: 0; top: 0; bottom: var(--bar); }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  body.hide-cursor #stage, body.hide-cursor #stage * { cursor: none; }
+  body.control #stage canvas { cursor: default; }
 
-  #idle { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px;
+  /* ---------- waiting screen ---------- */
+  #idle { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; z-index: 5;
     background: radial-gradient(circle at 50% 30%, #2a2112 0%, #000 70%); }
-  #idle .card { max-width: 640px; width: 100%; text-align: center; }
+  #idle .card { max-width: 660px; width: 100%; text-align: center; }
   .logo { width: 88px; height: 88px; margin: 0 auto 16px; border-radius: 24px; background: #1b1610;
     display: grid; place-items: center; box-shadow: 0 0 60px rgba(255,179,0,.25); }
   h1 { margin: 0 0 4px; font-size: 32px; font-weight: 600; }
@@ -22,25 +27,74 @@
   .pulse { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--amber);
     margin-inline-end: 10px; animation: pulse 1.6s infinite; vertical-align: middle; }
   @keyframes pulse { 0%,100% { opacity: .25 } 50% { opacity: 1 } }
-  .steps { text-align: start; background: var(--panel); border: 1px solid #2c2620; border-radius: 16px; padding: 20px 24px; }
+  .steps { text-align: start; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px 24px; }
   .steps ol { margin: 0; padding-inline-start: 22px; }
   .steps li { margin: 6px 0; }
-  .he { direction: rtl; color: var(--muted); font-size: 15px; margin-top: 14px; border-top: 1px solid #2c2620; padding-top: 12px; }
+  .he { direction: rtl; color: var(--muted); font-size: 14px; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
   .name { color: var(--amber); font-weight: 600; }
   .ips { margin-top: 16px; color: var(--muted); font-size: 14px; }
-  .keys { margin-top: 18px; color: var(--muted); font-size: 13px; }
-  kbd { border: 1px solid #4a4237; border-radius: 4px; padding: 0 5px; font: inherit; }
 
-  #toast { position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%); background: rgba(20,17,13,.92);
-    border: 1px solid #3a332a; padding: 10px 18px; border-radius: 999px; font-size: 15px; opacity: 0;
+  /* ---------- taskbar ---------- */
+  #taskbar { position: fixed; left: 0; right: 0; bottom: 0; height: 56px; z-index: 10; display: none;
+    align-items: center; gap: 2px; padding: 0 8px; background: rgba(21,18,14,.94); backdrop-filter: blur(12px);
+    border-top: 1px solid var(--line); }
+  body.connected #taskbar { display: flex; }
+  body.connected.bar-hidden #taskbar { transform: translateY(100%); transition: transform .2s; }
+  body.connected.bar-hidden.bar-peek #taskbar { transform: none; }
+  .tb { height: 44px; min-width: 44px; padding: 0 10px; border: 0; border-radius: 10px; background: transparent;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: var(--text); }
+  .tb:hover { background: #2c2823; }
+  .tb.on { background: #4a3600; color: #ffdf9e; }
+  .tb:disabled { opacity: .35; cursor: default; background: transparent; }
+  .tb svg { width: 22px; height: 22px; fill: currentColor; flex: none; }
+  .tb img { width: 30px; height: 30px; border-radius: 8px; }
+  #startBtn { color: var(--amber); font-weight: 600; }
+  .sep { width: 1px; height: 28px; background: var(--line); margin: 0 6px; }
+  .spacer { flex: 1; }
+  #pinned { display: flex; gap: 2px; overflow: hidden; }
+  .label { font-size: 13px; }
+  @media (max-width: 1100px) { .tb .label { display: none; } }
+
+  /* ---------- start menu ---------- */
+  #start { position: fixed; left: 8px; bottom: 64px; width: min(760px, calc(100vw - 16px)); height: min(620px, calc(100vh - 80px));
+    z-index: 20; display: none; flex-direction: column; background: rgba(28,24,19,.97); backdrop-filter: blur(16px);
+    border: 1px solid #3a332a; border-radius: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.6); overflow: hidden; }
+  #start.open { display: flex; }
+  #start header { padding: 16px; display: flex; gap: 12px; align-items: center; border-bottom: 1px solid var(--line); }
+  #search { flex: 1; height: 42px; border-radius: 12px; border: 1px solid #3a332a; background: #120f0c; color: var(--text);
+    padding: 0 14px; font: inherit; outline: none; }
+  #search:focus { border-color: var(--amber); }
+  #windowOpt { display: none; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; white-space: nowrap; }
+  #windowOpt.show { display: inline-flex; }
+  #appGrid { flex: 1; overflow-y: auto; padding: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 4px; align-content: start; }
+  .app { border: 0; background: transparent; border-radius: 12px; padding: 10px 4px; cursor: pointer; display: flex;
+    flex-direction: column; align-items: center; gap: 6px; color: var(--text); }
+  .app:hover, .app:focus-visible { background: #2c2823; outline: none; }
+  .app img { width: 48px; height: 48px; }
+  .app span { font-size: 12px; text-align: center; line-height: 1.25; max-width: 100%; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .app.pinned span::before { content: "📌 "; }
+  #start footer { padding: 8px 16px; color: var(--muted); font-size: 12px; border-top: 1px solid var(--line); }
+  .empty { grid-column: 1 / -1; color: var(--muted); text-align: center; padding: 40px 0; }
+
+  #banner { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 8; display: none;
+    background: rgba(20,17,13,.94); border: 1px solid #4a3600; padding: 10px 18px; border-radius: 14px; font-size: 14px;
+    max-width: calc(100vw - 32px); text-align: center; }
+  #banner.show { display: block; }
+  #kbd { position: fixed; left: -1000px; top: 0; width: 10px; height: 10px; opacity: 0; }
+  #toast { position: fixed; left: 50%; bottom: 76px; transform: translateX(-50%); background: rgba(20,17,13,.94);
+    border: 1px solid #3a332a; padding: 10px 18px; border-radius: 999px; font-size: 14px; opacity: 0; z-index: 30;
     transition: opacity .3s; pointer-events: none; white-space: nowrap; }
   #toast.show { opacity: 1; }
-  #sound { position: fixed; top: 20px; right: 20px; background: var(--amber); color: #201600; border: 0;
-    border-radius: 999px; padding: 10px 18px; font: inherit; font-weight: 600; cursor: pointer; display: none; }
+  #soundPrompt { position: fixed; top: 16px; right: 16px; background: var(--amber); color: #201600; border: 0; z-index: 9;
+    border-radius: 999px; padding: 10px 18px; font-weight: 600; cursor: pointer; display: none; }
 </style>
 </head>
 <body>
-<canvas id="screen"></canvas>
+<div id="stage"><canvas id="screen" tabindex="-1"></canvas></div>
+<!-- Receives typing in any language / input method; the text is forwarded to the phone. -->
+<textarea id="kbd" aria-label="Type on the phone" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
 
 <div id="idle">
   <div class="card">
@@ -54,83 +108,411 @@
         <li>Connect the phone and this computer to the <b>same Wi-Fi</b>.</li>
         <li>On the phone open <b>ShakeLight → Project to computer</b>.</li>
         <li>Tap <span class="name" id="pcName">this computer</span> and allow screen sharing.</li>
+        <li>To use this computer's mouse and keyboard on the phone, turn on <b>Control &amp; desktop mode</b> on that screen.</li>
       </ol>
       <div class="he">
         חבר את הטלפון והמחשב לאותה רשת Wi-Fi ← בטלפון פתח ShakeLight ← „הקרנה למחשב” ← לחץ על
-        <span class="name" id="pcNameHe">המחשב הזה</span> ואשר שיתוף מסך.
+        <span class="name" id="pcNameHe">המחשב הזה</span> ואשר שיתוף מסך. לשליטה בעכבר ובמקלדת הפעל „שליטה ומצב שולחן עבודה”.
       </div>
     </div>
     <div class="ips" id="ips"></div>
-    <div class="keys">
-      <kbd>F</kbd> full screen · <kbd>R</kbd> rotate 180° · <kbd>M</kbd> mirror · <kbd>S</kbd> sound on/off
-    </div>
   </div>
 </div>
 
-<button id="sound">🔊 Click to turn on sound</button>
+<div id="banner"></div>
+
+<div id="start" role="dialog" aria-label="Phone apps">
+  <header>
+    <input id="search" type="search" placeholder="Search apps…" autocomplete="off" spellcheck="false">
+    <label id="windowOpt"><input type="checkbox" id="openInWindow"> Open in a window</label>
+  </header>
+  <div id="appGrid"></div>
+  <footer>Click to open · Right-click to pin to the taskbar · Esc to close</footer>
+</div>
+
+<div id="taskbar">
+  <button class="tb" id="startBtn" title="Phone apps"></button>
+  <div class="sep"></div>
+  <div id="pinned"></div>
+  <div class="spacer"></div>
+  <button class="tb ctl" data-key="back" title="Back (Esc or right-click)"></button>
+  <button class="tb ctl" data-key="home" title="Home (middle-click)"></button>
+  <button class="tb ctl" data-key="recents" title="Recent apps"></button>
+  <button class="tb ctl" data-key="split" title="Split screen: two apps side by side"></button>
+  <div class="sep"></div>
+  <button class="tb ctl" data-key="notifications" title="Notifications"></button>
+  <button class="tb ctl" data-key="quick" title="Quick settings"></button>
+  <button class="tb ctl" data-key="screenshot" title="Screenshot (saved on the phone)"></button>
+  <button class="tb ctl" data-key="vol-" title="Volume down"></button>
+  <button class="tb ctl" data-key="vol+" title="Volume up"></button>
+  <button class="tb ctl" data-key="lock" title="Lock phone"></button>
+  <div class="sep"></div>
+  <button class="tb" id="desktopBtn" title="Desktop mode: turn the phone sideways for a wide screen"></button>
+  <button class="tb" id="soundBtn" title="Sound on this computer"></button>
+  <button class="tb" id="rotateBtn" title="Rotate 180° (ceiling projector)"></button>
+  <button class="tb" id="mirrorBtn" title="Mirror (rear projection)"></button>
+  <button class="tb" id="fsBtn" title="Full screen (F11)"></button>
+  <button class="tb" id="hideBtn" title="Hide taskbar (move the mouse to the bottom edge to show it)"></button>
+</div>
+
+<button id="soundPrompt">🔊 Click to turn on sound</button>
 <div id="toast"></div>
 
 <script>
 "use strict";
-const PKT = { HELLO: 0, CONFIG: 1, KEY: 2, DELTA: 3, AUDIO: 4, BYE: 127 };
+const PKT = { HELLO: 0, CONFIG: 1, KEY: 2, DELTA: 3, AUDIO: 4, STATUS: 5, APPS: 6, BYE: 127 };
 const HEADER = 13;
-
-const canvas = document.getElementById("screen");
-const ctx = canvas.getContext("2d");
-const idle = document.getElementById("idle");
-const statusEl = document.getElementById("status");
-const soundBtn = document.getElementById("sound");
-const toastEl = document.getElementById("toast");
-
-const view = {
-  rotate: localStorage.getItem("rotate") === "1",
-  mirror: localStorage.getItem("mirror") === "1",
-  sound: localStorage.getItem("sound") !== "0",
+const ICONS = {
+  apps: "M4,8h4V4H4v4zM10,20h4v-4h-4v4zM4,20h4v-4H4v4zM4,14h4v-4H4v4zM10,14h4v-4h-4v4zM16,4v4h4V4h-4zM10,8h4V4h-4v4zM16,14h4v-4h-4v4zM16,20h4v-4h-4v4z",
+  back: "M20,11H7.83l5.59,-5.59L12,4l-8,8 8,8 1.41,-1.41L7.83,13H20v-2z",
+  home: "M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8z",
+  recents: "M18,4H6C4.9,4 4,4.9 4,6v12c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V6c0,-1.1 -0.9,-2 -2,-2zM18,18H6V6h12v12z",
+  split: "M3,15h8v-2H3v2zM3,19h8v-2H3v2zM3,11h8V9H3v2zM3,5v2h8V5H3zM13,5h8v14h-8z",
+  notifications: "M12,22c1.1,0 2,-0.9 2,-2h-4c0,1.1 0.89,2 2,2zM18,16v-5c0,-3.07 -1.64,-5.64 -4.5,-6.32V4c0,-0.83 -0.67,-1.5 -1.5,-1.5s-1.5,0.67 -1.5,1.5v0.68C7.63,5.36 6,7.92 6,11v5l-2,2v1h16v-1l-2,-2z",
+  quick: "M3,17v2h6v-2H3zM3,5v2h10V5H3zM13,21v-2h8v-2h-8v-2h-2v6h2zM7,9v2H3v2h4v2h2V9H7zM21,13v-2H11v2h10zM15,9h2V7h4V5h-4V3h-2v6z",
+  screenshot: "M12,15.2A3.2,3.2 0,1 0,12 8.8a3.2,3.2 0,1 0,0 6.4zM9,2L7.17,4H4c-1.1,0 -2,0.9 -2,2v12c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V6c0,-1.1 -0.9,-2 -2,-2h-3.17L15,2H9z",
+  "vol-": "M18.5,12c0,-1.77 -1.02,-3.29 -2.5,-4.03v8.05c1.48,-0.73 2.5,-2.25 2.5,-4.02zM5,9v6h4l5,5V4L9,9H5z",
+  "vol+": "M3,9v6h4l5,5V4L7,9H3zM16.5,12c0,-1.77 -1.02,-3.29 -2.5,-4.03v8.05c1.48,-0.73 2.5,-2.25 2.5,-4.02zM14,3.23v2.06c2.89,0.86 5,3.54 5,6.71s-2.11,5.85 -5,6.71v2.06c4.01,-0.91 7,-4.49 7,-8.77s-2.99,-7.86 -7,-8.77z",
+  lock: "M18,8h-1V6c0,-2.76 -2.24,-5 -5,-5S7,3.24 7,6v2H6c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V10c0,-1.1 -0.9,-2 -2,-2zM12,17c-1.1,0 -2,-0.9 -2,-2s0.9,-2 2,-2 2,0.9 2,2 -0.9,2 -2,2zM15.1,8H8.9V6c0,-1.71 1.39,-3.1 3.1,-3.1 1.71,0 3.1,1.39 3.1,3.1v2z",
+  desktop: "M20,18c1.1,0 1.99,-0.9 1.99,-2L22,6c0,-1.1 -0.9,-2 -2,-2H4c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2H0v2h24v-2h-4zM4,6h16v10H4V6z",
+  sound: "M12,3v10.55c-0.59,-0.34 -1.27,-0.55 -2,-0.55 -2.21,0 -4,1.79 -4,4s1.79,4 4,4 4,-1.79 4,-4V7h4V3h-6z",
+  rotate: "M12,4V1L8,5l4,4V6c3.31,0 6,2.69 6,6 0,1.01 -0.25,1.97 -0.7,2.8l1.46,1.46C19.54,15.03 20,13.57 20,12c0,-4.42 -3.58,-8 -8,-8zM12,18c-3.31,0 -6,-2.69 -6,-6 0,-1.01 0.25,-1.97 0.7,-2.8L5.24,7.74C4.46,8.97 4,10.43 4,12c0,4.42 3.58,8 8,8v3l4,-4 -4,-4v3z",
+  mirror: "M15,21h2v-2h-2v2zM19,9h2V7h-2v2zM3,5v14c0,1.1 0.9,2 2,2h4v-2H5V5h4V3H5c-1.1,0 -2,0.9 -2,2zM19,3v2h2c0,-1.1 -0.9,-2 -2,-2zM11,23h2V1h-2v22zM19,17h2v-2h-2v2zM15,5h2V3h-2v2zM19,13h2v-2h-2v2zM19,21c1.1,0 2,-0.9 2,-2h-2v2z",
+  fullscreen: "M7,14H5v5h5v-2H7v-3zM5,10h2V7h3V5H5v5zM17,17h-3v2h5v-5h-2v3zM14,5v2h3v3h2V5h-5z",
+  hide: "M16.59,8.59L12,13.17 7.41,8.59 6,10l6,6 6,-6z",
 };
+const svg = d => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
+const $ = id => document.getElementById(id);
 
-// ---------- info ----------
+const canvas = $("screen"), ctx = canvas.getContext("2d"), stage = $("stage");
+const idle = $("idle"), statusEl = $("status"), toastEl = $("toast"), banner = $("banner");
+const startMenu = $("start"), search = $("search"), appGrid = $("appGrid");
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+const view = { rotate: store.get("rotate", false), mirror: store.get("mirror", false), sound: store.get("sound", true),
+  barHidden: store.get("barHidden", false) };
+let phoneStatus = null;     // what the phone allows (control, landscape…)
+let apps = null;            // the phone's apps
+let pins = store.get("pins", []);
+let connected = false;
+
+// ---------- taskbar ----------
+$("startBtn").innerHTML = svg(ICONS.apps) + '<span class="label">Apps</span>';
+document.querySelectorAll(".tb[data-key]").forEach(b => {
+  b.innerHTML = svg(ICONS[b.dataset.key]);
+  b.addEventListener("click", () => sendControl({ t: "key", k: b.dataset.key }));
+});
+$("desktopBtn").innerHTML = svg(ICONS.desktop) + '<span class="label">Desktop mode</span>';
+$("soundBtn").innerHTML = svg(ICONS.sound);
+$("rotateBtn").innerHTML = svg(ICONS.rotate);
+$("mirrorBtn").innerHTML = svg(ICONS.mirror);
+$("fsBtn").innerHTML = svg(ICONS.fullscreen);
+$("hideBtn").innerHTML = svg(ICONS.hide);
+
+$("startBtn").addEventListener("click", () => startMenu.classList.contains("open") ? closeStart() : openStart());
+$("desktopBtn").addEventListener("click", () => {
+  if (!phoneStatus || !phoneStatus.canRotate) {
+    toast("On the phone: ShakeLight → Project to computer → Desktop mode → Allow");
+    return;
+  }
+  sendControl({ t: "landscape", on: !phoneStatus.landscape });
+});
+$("soundBtn").addEventListener("click", () => setView("sound", !view.sound, view.sound ? "Sound off" : "Sound on"));
+$("rotateBtn").addEventListener("click", () => setView("rotate", !view.rotate, view.rotate ? "Rotation off" : "Rotated 180°"));
+$("mirrorBtn").addEventListener("click", () => setView("mirror", !view.mirror, view.mirror ? "Mirror off" : "Mirrored"));
+$("fsBtn").addEventListener("click", toggleFullscreen);
+$("hideBtn").addEventListener("click", () => setView("barHidden", true, "Taskbar hidden: move the mouse to the bottom edge"));
+
+function setView(key, value, message) {
+  view[key] = value;
+  store.set(key, value);
+  if (message) toast(message);
+  if (key === "sound" && value) resumeAudio();
+  renderBar();
+  draw();
+}
+
+function renderBar() {
+  document.body.classList.toggle("connected", connected);
+  document.body.classList.toggle("bar-hidden", view.barHidden);
+  const control = controlActive();
+  document.body.classList.toggle("control", control);
+  document.querySelectorAll(".ctl").forEach(b => b.disabled = !control);
+  $("startBtn").disabled = !control;
+  $("desktopBtn").classList.toggle("on", !!(phoneStatus && phoneStatus.landscape));
+  $("desktopBtn").disabled = !control;
+  $("soundBtn").classList.toggle("on", view.sound);
+  $("rotateBtn").classList.toggle("on", view.rotate);
+  $("mirrorBtn").classList.toggle("on", view.mirror);
+  document.documentElement.style.setProperty("--bar", connected && !view.barHidden ? "56px" : "0px");
+  renderPins();
+  renderBanner();
+  resizeCanvas();
+}
+
+function renderBanner() {
+  let text = "";
+  if (connected && phoneStatus && !phoneStatus.control) {
+    text = phoneStatus.controlAllowed === false
+      ? "View only: “Let the computer control this phone” is switched off on the phone."
+      : "View only. To use this mouse and keyboard on the phone: ShakeLight → Project to computer → Control & desktop mode → Turn on.";
+  }
+  banner.textContent = text;
+  banner.classList.toggle("show", !!text);
+}
+
+function renderPins() {
+  const box = $("pinned");
+  box.innerHTML = "";
+  for (const app of pins) {
+    const b = document.createElement("button");
+    b.className = "tb";
+    b.title = app.n + " (right-click to unpin)";
+    b.disabled = !controlActive();
+    b.innerHTML = `<img alt="" src="data:image/png;base64,${app.i}">`;
+    b.addEventListener("click", () => launch(app));
+    b.addEventListener("contextmenu", e => { e.preventDefault(); togglePin(app); });
+    box.appendChild(b);
+  }
+}
+
+function togglePin(app) {
+  const i = pins.findIndex(p => p.p === app.p);
+  if (i >= 0) { pins.splice(i, 1); toast("Unpinned " + app.n); }
+  else { pins.push({ p: app.p, n: app.n, i: app.i }); toast("Pinned " + app.n); }
+  store.set("pins", pins);
+  renderPins();
+  if (startMenu.classList.contains("open")) renderApps();
+}
+
+// Taskbar auto-show when hidden.
+document.addEventListener("mousemove", e => {
+  document.body.classList.toggle("bar-peek", e.clientY > innerHeight - 8 || (document.body.classList.contains("bar-peek") && e.clientY > innerHeight - 64));
+  document.body.classList.remove("hide-cursor");
+  clearTimeout(cursorTimer);
+  if (!controlActive()) cursorTimer = setTimeout(() => document.body.classList.add("hide-cursor"), 2500);
+});
+let cursorTimer;
+$("taskbar").addEventListener("dblclick", e => e.stopPropagation());
+document.addEventListener("dblclick", e => { if (!controlActive() && e.target === canvas) toggleFullscreen(); });
+
+// ---------- start menu ----------
+function openStart() {
+  if (!controlActive()) return;
+  startMenu.classList.add("open");
+  $("windowOpt").classList.toggle("show", !!(phoneStatus && phoneStatus.windows));
+  search.value = "";
+  renderApps();
+  if (!apps) sendControl({ t: "apps" });
+  setTimeout(() => search.focus(), 0);
+}
+function closeStart() { startMenu.classList.remove("open"); focusKeyboard(); }
+search.addEventListener("input", renderApps);
+search.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeStart();
+  if (e.key === "Enter") { const first = appGrid.querySelector(".app"); if (first) first.click(); }
+});
+document.addEventListener("pointerdown", e => {
+  if (startMenu.classList.contains("open") && !startMenu.contains(e.target) && e.target !== $("startBtn") && !$("startBtn").contains(e.target)) closeStart();
+}, true);
+$("openInWindow").checked = store.get("openInWindow", false);
+$("openInWindow").addEventListener("change", e => store.set("openInWindow", e.target.checked));
+
+function renderApps() {
+  appGrid.innerHTML = "";
+  if (!apps) { appGrid.innerHTML = '<div class="empty">Loading the phone’s apps…</div>'; return; }
+  const q = search.value.trim().toLowerCase();
+  const list = apps.filter(a => !q || a.n.toLowerCase().includes(q) || a.p.toLowerCase().includes(q));
+  if (!list.length) { appGrid.innerHTML = '<div class="empty">No apps found</div>'; return; }
+  for (const app of list) {
+    const b = document.createElement("button");
+    b.className = "app" + (pins.some(p => p.p === app.p) ? " pinned" : "");
+    b.title = app.n;
+    b.innerHTML = `<img alt="" src="data:image/png;base64,${app.i}"><span></span>`;
+    b.querySelector("span").textContent = app.n;
+    b.addEventListener("click", () => { launch(app); closeStart(); });
+    b.addEventListener("contextmenu", e => { e.preventDefault(); togglePin(app); });
+    appGrid.appendChild(b);
+  }
+}
+
+function launch(app) {
+  sendControl({ t: "launch", p: app.p, window: !!(phoneStatus && phoneStatus.windows && $("openInWindow").checked) });
+  toast("Opening " + app.n + "…");
+}
+
+// ---------- helpers ----------
 fetch("/info").then(r => r.json()).then(info => {
-  document.getElementById("pcName").textContent = info.name;
-  document.getElementById("pcNameHe").textContent = info.name;
-  document.getElementById("ips").textContent =
-    "Phone can't find it? Enter this address in the app: " + info.addresses.join("  ·  ");
+  $("pcName").textContent = info.name;
+  $("pcNameHe").textContent = info.name;
+  $("ips").textContent = "Phone can't find it? Enter this address in the app: " + info.addresses.join("  ·  ");
 }).catch(() => {});
 
-// ---------- UI helpers ----------
 let toastTimer;
 function toast(text) {
   toastEl.textContent = text;
   toastEl.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1800);
+  toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2200);
 }
 function setStatus(html) { statusEl.innerHTML = html; }
 function showIdle(message) {
   idle.style.display = "grid";
   setStatus('<span class="pulse"></span>' + message);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  soundBtn.style.display = "none";
+  $("soundPrompt").style.display = "none";
 }
-function showVideo() { idle.style.display = "none"; }
-
-let cursorTimer;
-document.addEventListener("mousemove", () => {
-  document.body.classList.remove("hide-cursor");
-  clearTimeout(cursorTimer);
-  cursorTimer = setTimeout(() => document.body.classList.add("hide-cursor"), 2500);
-});
-
+function showVideo() { if (idle.style.display !== "none") idle.style.display = "none"; }
 function toggleFullscreen() {
   if (document.fullscreenElement) document.exitFullscreen();
   else document.documentElement.requestFullscreen().catch(() => {});
 }
-document.addEventListener("dblclick", toggleFullscreen);
+const controlActive = () => connected && !!(phoneStatus && phoneStatus.control);
+
+// ---------- sending input to the phone (in order) ----------
+const outbox = [];
+let sending = false;
+function sendControl(cmd) {
+  if (!connected) return;
+  outbox.push(cmd);
+  if (!sending) flushControl();
+}
+async function flushControl() {
+  sending = true;
+  while (outbox.length) {
+    const batch = [];
+    for (const cmd of outbox.splice(0)) {
+      const last = batch[batch.length - 1];
+      if (cmd.t === "text" && last && last.t === "text") last.s += cmd.s; // merge fast typing
+      else batch.push(cmd);
+    }
+    try { await fetch("/control", { method: "POST", body: JSON.stringify(batch) }); } catch (e) {}
+  }
+  sending = false;
+}
+
+// ---------- mouse ----------
+let drawRect = null; // where the phone picture is drawn, in CSS pixels
+function toPhone(clientX, clientY) {
+  if (!drawRect) return null;
+  const r = canvas.getBoundingClientRect();
+  let dx = (clientX - r.left - drawRect.cx) / drawRect.w;
+  let dy = (clientY - r.top - drawRect.cy) / drawRect.h;
+  if (view.rotate) { dx = -dx; dy = -dy; }
+  if (view.mirror) dx = -dx;
+  const u = dx + 0.5, v = dy + 0.5;
+  if (u < 0 || u > 1 || v < 0 || v > 1) return null;
+  return [Math.round(u * 10000) / 10000, Math.round(v * 10000) / 10000];
+}
+
+let press = null;
+canvas.addEventListener("contextmenu", e => e.preventDefault());
+canvas.addEventListener("pointerdown", e => {
+  focusKeyboard();
+  if (!controlActive()) return;
+  const p = toPhone(e.clientX, e.clientY);
+  if (!p) return;
+  if (e.button === 2) { sendControl({ t: "key", k: "back" }); return; }
+  if (e.button === 1) { e.preventDefault(); sendControl({ t: "key", k: "home" }); return; }
+  if (e.button !== 0) return;
+  canvas.setPointerCapture(e.pointerId);
+  press = { t0: performance.now(), last: 0, pts: [[p[0], p[1], 0]] };
+});
+canvas.addEventListener("pointermove", e => {
+  if (!press) return;
+  const now = performance.now() - press.t0;
+  if (now - press.last < 12) return;
+  const p = toPhone(e.clientX, e.clientY) || clampToPicture(e);
+  if (!p) return;
+  press.last = now;
+  press.pts.push([p[0], p[1], Math.round(now)]);
+});
+function endPress(e) {
+  if (!press) return;
+  const p = toPhone(e.clientX, e.clientY) || clampToPicture(e);
+  const now = Math.round(performance.now() - press.t0);
+  if (p) press.pts.push([p[0], p[1], now]);
+  sendControl({ t: "gesture", pts: press.pts });
+  press = null;
+}
+canvas.addEventListener("pointerup", endPress);
+canvas.addEventListener("pointercancel", endPress);
+function clampToPicture(e) {
+  if (!drawRect) return null;
+  const r = canvas.getBoundingClientRect();
+  const x = Math.min(Math.max(e.clientX, r.left + drawRect.cx - drawRect.w / 2), r.left + drawRect.cx + drawRect.w / 2 - 1);
+  const y = Math.min(Math.max(e.clientY, r.top + drawRect.cy - drawRect.h / 2), r.top + drawRect.cy + drawRect.h / 2 - 1);
+  return toPhone(x, y);
+}
+
+let wheel = null;
+canvas.addEventListener("wheel", e => {
+  if (!controlActive()) return;
+  e.preventDefault();
+  const p = toPhone(e.clientX, e.clientY);
+  if (!p) return;
+  const unit = e.deltaMode === 1 ? 3 : e.deltaMode === 2 ? 0.3 : 100;
+  let dx = (e.shiftKey ? e.deltaY : e.deltaX) / unit, dy = e.shiftKey ? 0 : e.deltaY / unit;
+  if (view.rotate) { dx = -dx; dy = -dy; }
+  if (view.mirror) dx = -dx;
+  if (!wheel) {
+    wheel = { x: p[0], y: p[1], dx: 0, dy: 0 };
+    setTimeout(() => { sendControl({ t: "scroll", ...wheel }); wheel = null; }, 70);
+  }
+  wheel.dx += dx; wheel.dy += dy;
+}, { passive: false });
+
+// ---------- keyboard ----------
+// Special keys come from keydown; text comes from the hidden textarea's input events, so every
+// keyboard layout, IME and emoji picker works.
+const kbd = $("kbd");
+function focusKeyboard() { if (controlActive()) kbd.focus({ preventScroll: true }); else canvas.focus(); }
+kbd.addEventListener("input", e => {
+  if (e.isComposing) return;
+  if (kbd.value) sendControl({ t: "text", s: kbd.value });
+  kbd.value = "";
+});
+kbd.addEventListener("compositionend", () => {
+  if (kbd.value) sendControl({ t: "text", s: kbd.value });
+  kbd.value = "";
+});
+
 document.addEventListener("keydown", e => {
+  if (startMenu.classList.contains("open") || e.target === search) {
+    if (e.key === "Escape") closeStart();
+    return;
+  }
+  if (e.key === "F11") return;
+  if (controlActive()) {
+    if (document.activeElement !== kbd) focusKeyboard();
+    if (e.isComposing) return;
+    if (e.key === "Escape") sendControl({ t: "key", k: "back" });
+    else if (e.key === "Backspace") sendControl({ t: "backspace" });
+    else if (e.key === "Enter") sendControl({ t: "enter" });
+    else return; // letters, Ctrl+V… arrive through the textarea / paste event
+    e.preventDefault();
+    return;
+  }
   const k = e.key.toLowerCase();
   if (k === "f") toggleFullscreen();
-  else if (k === "r") { view.rotate = !view.rotate; localStorage.setItem("rotate", view.rotate ? "1" : "0"); toast(view.rotate ? "Rotated 180°" : "Rotation off"); draw(); }
-  else if (k === "m") { view.mirror = !view.mirror; localStorage.setItem("mirror", view.mirror ? "1" : "0"); toast(view.mirror ? "Mirrored" : "Mirror off"); draw(); }
-  else if (k === "s") { view.sound = !view.sound; localStorage.setItem("sound", view.sound ? "1" : "0"); toast(view.sound ? "Sound on" : "Sound off"); if (view.sound) resumeAudio(); }
+  else if (k === "r") setView("rotate", !view.rotate, view.rotate ? "Rotation off" : "Rotated 180°");
+  else if (k === "m") setView("mirror", !view.mirror, view.mirror ? "Mirror off" : "Mirrored");
+  else if (k === "s") setView("sound", !view.sound, view.sound ? "Sound off" : "Sound on");
+});
+document.addEventListener("keyup", e => {
+  // Windows key alone opens the phone's app list, like a Start menu.
+  if ((e.key === "Meta" || e.key === "OS") && controlActive() && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+    startMenu.classList.contains("open") ? closeStart() : openStart();
+  }
+});
+document.addEventListener("paste", e => {
+  if (!controlActive() || startMenu.classList.contains("open")) return;
+  const text = e.clipboardData && e.clipboardData.getData("text/plain");
+  if (text) { sendControl({ t: "text", s: text }); toast("Pasted on the phone"); }
+  e.preventDefault();
+  kbd.value = "";
 });
 
 // ---------- video ----------
@@ -139,22 +521,23 @@ let lastFrame = null, drawPending = false;
 
 function resizeCanvas() {
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.round(innerWidth * dpr);
-  canvas.height = Math.round(innerHeight * dpr);
+  const w = Math.round(stage.clientWidth * dpr), h = Math.round(stage.clientHeight * dpr);
+  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
   draw();
 }
 addEventListener("resize", resizeCanvas);
-resizeCanvas();
 
 function draw() {
   const f = lastFrame;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  if (!f) return;
+  if (!f) { drawRect = null; return; }
   const fw = f.displayWidth, fh = f.displayHeight;
   const scale = Math.min(canvas.width / fw, canvas.height / fh);
   const w = fw * scale, h = fh * scale;
+  const dpr = window.devicePixelRatio || 1;
+  drawRect = { cx: canvas.width / 2 / dpr, cy: canvas.height / 2 / dpr, w: w / dpr, h: h / dpr };
   ctx.translate(canvas.width / 2, canvas.height / 2);
   if (view.rotate) ctx.rotate(Math.PI);
   if (view.mirror) ctx.scale(-1, 1);
@@ -182,6 +565,8 @@ function findNal(data, type) {
 }
 const hex = b => b.toString(16).padStart(2, "0");
 
+function requestKeyframe() { fetch("/keyframe", { method: "POST" }).catch(() => {}); }
+
 function createDecoder() {
   if (decoder && decoder.state !== "closed") decoder.close();
   decoder = new VideoDecoder({
@@ -190,7 +575,7 @@ function createDecoder() {
   });
   decoder.configure({ codec: codecString, optimizeForLatency: true });
   needKey = true;
-  fetch("/keyframe", { method: "POST" }).catch(() => {});
+  requestKeyframe();
 }
 
 function onConfig(payload) {
@@ -211,7 +596,7 @@ function onVideo(pts, payload, isKey) {
   if (!decoder || decoder.state === "closed") createDecoder();
   if (needKey && !isKey) return;
   // A backlog means we're falling behind: drop it and restart from the next key frame.
-  if (decoder.decodeQueueSize > 8 && !isKey) { needKey = true; fetch("/keyframe", { method: "POST" }).catch(() => {}); return; }
+  if (decoder.decodeQueueSize > 8 && !isKey) { needKey = true; requestKeyframe(); return; }
   needKey = false;
   let data = payload;
   if (isKey) { // Annex B decoding needs SPS/PPS in front of every key frame.
@@ -230,16 +615,14 @@ function onVideo(pts, payload, isKey) {
 
 // ---------- audio ----------
 let audioCtx = null, nextAudioTime = 0;
-function resumeAudio() {
-  if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
-}
-soundBtn.addEventListener("click", () => { resumeAudio(); soundBtn.style.display = "none"; });
+function resumeAudio() { if (audioCtx && audioCtx.state === "suspended") audioCtx.resume(); }
+$("soundPrompt").addEventListener("click", () => { resumeAudio(); $("soundPrompt").style.display = "none"; });
 
 function onAudio(payload) {
   if (!view.sound) return;
   if (!audioCtx) audioCtx = new AudioContext({ sampleRate: 48000, latencyHint: "interactive" });
-  if (audioCtx.state === "suspended") { soundBtn.style.display = "block"; return; }
-  soundBtn.style.display = "none";
+  if (audioCtx.state === "suspended") { $("soundPrompt").style.display = "block"; return; }
+  $("soundPrompt").style.display = "none";
   const frames = payload.length >> 2;
   if (!frames) return;
   const buffer = audioCtx.createBuffer(2, frames, 48000);
@@ -260,24 +643,48 @@ function onAudio(payload) {
 }
 
 // ---------- stream ----------
+const decodeJson = payload => { try { return JSON.parse(new TextDecoder().decode(payload)); } catch (e) { return null; } };
+
 function handlePacket(type, pts, payload) {
   switch (type) {
     case PKT.HELLO: {
-      let name = "phone";
-      try { name = JSON.parse(new TextDecoder().decode(payload)).name || name; } catch (e) {}
-      setStatus('<span class="pulse"></span>Connecting to ' + name.replace(/[<>&]/g, "") + "…");
+      const name = ((decodeJson(payload) || {}).name || "phone").replace(/[<>&]/g, "");
+      connected = true;
+      setStatus('<span class="pulse"></span>Connecting to ' + name + "…");
       toast("Connected: " + name);
+      renderBar();
       break;
     }
     case PKT.CONFIG: onConfig(payload); break;
     case PKT.KEY: onVideo(pts, payload, true); break;
     case PKT.DELTA: onVideo(pts, payload, false); break;
     case PKT.AUDIO: onAudio(payload); break;
+    case PKT.STATUS: {
+      const wasControl = controlActive();
+      phoneStatus = decodeJson(payload);
+      if (!wasControl && controlActive()) toast("You can now use this mouse and keyboard on the phone");
+      renderBar();
+      focusKeyboard();
+      break;
+    }
+    case PKT.APPS:
+      apps = decodeJson(payload) || [];
+      // Refresh pinned icons in case an app was updated.
+      pins = pins.map(p => apps.find(a => a.p === p.p) || p);
+      store.set("pins", pins);
+      renderPins();
+      if (startMenu.classList.contains("open")) renderApps();
+      break;
     case PKT.BYE:
+      connected = false;
+      phoneStatus = null;
+      apps = null;
       codecConfig = null;
       if (decoder && decoder.state !== "closed") decoder.close();
       decoder = null;
       if (lastFrame) { lastFrame.close(); lastFrame = null; }
+      closeStart();
+      renderBar();
       showIdle("Phone disconnected — waiting for your phone…");
       break;
   }
@@ -298,10 +705,8 @@ class PacketReader {
       const b = this.buf;
       const n = ((b[off + 1] << 24) | (b[off + 2] << 16) | (b[off + 3] << 8) | b[off + 4]) >>> 0;
       if (this.len - off < HEADER + n) break;
-      const dv = new DataView(b.buffer, b.byteOffset + off + 5, 8);
-      const pts = Number(dv.getBigInt64(0));
-      const payload = b.slice(off + HEADER, off + HEADER + n);
-      handlePacket(b[off], pts, payload);
+      const pts = Number(new DataView(b.buffer, b.byteOffset + off + 5, 8).getBigInt64(0));
+      handlePacket(b[off], pts, b.slice(off + HEADER, off + HEADER + n));
       off += HEADER + n;
     }
     if (off > 0) { this.buf.copyWithin(0, off, this.len); this.len -= off; }
@@ -327,6 +732,7 @@ async function run() {
     await new Promise(r => setTimeout(r, 2000));
   }
 }
+renderBar();
 run();
 </script>
 </body>

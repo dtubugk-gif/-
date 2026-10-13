@@ -17,6 +17,7 @@ import android.media.projection.MediaProjection
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.provider.Settings
 import android.util.DisplayMetrics
 import android.util.Size
@@ -26,7 +27,9 @@ import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import com.dtubugk.shakelight.R
 import org.json.JSONObject
+import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
+import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
 import java.net.InetSocketAddress
@@ -34,6 +37,7 @@ import java.net.Socket
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.nio.ByteBuffer
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 import kotlin.math.max
@@ -57,6 +61,17 @@ class CastSession(
     private val writeLock = Any()
     private val displayManager = context.getSystemService(DisplayManager::class.java)
     private val main = Handler(Looper.getMainLooper())
+    private val io = Executors.newSingleThreadExecutor()
+    private val commands = RemoteCommands(context, this)
+    private var wakeLock: PowerManager.WakeLock? = null
+    private var lastStatus: String? = null
+    private val statusPoller = object : Runnable {
+        override fun run() {
+            if (!running.get()) return
+            sendStatusIfChanged()
+            main.postDelayed(this, 1500)
+        }
+    }
 
     @Volatile private var socket: Socket? = null
     @Volatile private var failure: Int? = null
@@ -111,7 +126,11 @@ class CastSession(
                 "ShakeLight", encodedWidth, encodedHeight, context.resources.displayMetrics.densityDpi,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, inputSurface, null, null,
             )
-            main.post { displayManager.registerDisplayListener(displayListener, main) }
+            main.post {
+                displayManager.registerDisplayListener(displayListener, main)
+                statusPoller.run()
+            }
+            keepScreenOn()
             if (sendAudio && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) startAudio()
             onConnected()
             drainEncoder()
@@ -143,11 +162,19 @@ class CastSession(
 
         thread(name = "cast-control", isDaemon = true) {
             try {
-                val input = s.getInputStream()
+                val input = DataInputStream(BufferedInputStream(s.getInputStream()))
                 while (running.get()) {
-                    when (input.read()) {
-                        -1 -> break
+                    val type = input.readUnsignedByte()
+                    val length = input.readInt()
+                    if (length < 0 || length > MAX_COMMAND_BYTES) break
+                    val payload = ByteArray(length)
+                    input.readFully(payload)
+                    when (type) {
                         CastProtocol.CTRL_REQUEST_KEYFRAME -> keyframeRequested = true
+                        CastProtocol.CTRL_COMMAND -> {
+                            val json = runCatching { JSONObject(String(payload, Charsets.UTF_8)) }.getOrNull()
+                            if (json != null) main.post { commands.handle(json) }
+                        }
                     }
                 }
             } catch (e: IOException) {
@@ -155,6 +182,32 @@ class CastSession(
             }
             fail(R.string.cast_error_lost)
         }
+    }
+
+    /** Sends a packet from a background thread (never block the main thread on the network). */
+    fun sendAsync(type: Int, payload: () -> ByteArray) {
+        if (!running.get()) return
+        runCatching { // the executor is already shut down if the session just ended
+            io.execute { runCatching { send(type, 0, payload()) } }
+        }
+    }
+
+    fun sendStatusIfChanged(force: Boolean = false) {
+        val status = commands.status().toString()
+        if (!force && status == lastStatus) return
+        lastStatus = status
+        sendAsync(CastProtocol.STATUS) { status.toByteArray() }
+    }
+
+    // While projecting, keep the phone screen on (dimmed): a sleeping screen would project black.
+    @Suppress("DEPRECATION")
+    private fun keepScreenOn() {
+        wakeLock = context.getSystemService(PowerManager::class.java)
+            .newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP, "ShakeLight:cast")
+            .apply {
+                setReferenceCounted(false)
+                acquire(4 * 60 * 60 * 1000L)
+            }
     }
 
     private fun send(type: Int, pts: Long, payload: ByteArray, length: Int = payload.size) {
@@ -309,7 +362,13 @@ class CastSession(
     }
 
     private fun cleanup() {
-        main.post { displayManager.unregisterDisplayListener(displayListener) }
+        main.post {
+            displayManager.unregisterDisplayListener(displayListener)
+            main.removeCallbacks(statusPoller)
+            DesktopMode.setLandscape(context, false)
+        }
+        io.shutdownNow()
+        runCatching { wakeLock?.takeIf { it.isHeld }?.release() }
         runCatching { audioThread?.join(500) }
         runCatching { virtualDisplay?.release() }
         runCatching { encoder?.stop() }
@@ -343,6 +402,7 @@ class CastSession(
     private companion object {
         const val MIME = MediaFormat.MIMETYPE_VIDEO_AVC
         const val CONNECT_TIMEOUT_MS = 5000
+        const val MAX_COMMAND_BYTES = 1 shl 20
         const val SAMPLE_RATE = 48_000
         const val AUDIO_CHUNK = 3840 // 20 ms of 16-bit stereo
         val MAX_SIDES = intArrayOf(1920, 1600, 1280, 1024, 800, 640)

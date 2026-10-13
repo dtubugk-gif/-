@@ -5,7 +5,10 @@ import android.app.Activity
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
 import android.os.Build
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -55,6 +58,18 @@ class CastToPcActivity : AppCompatActivity() {
             binding.soundSwitch.isEnabled = false
         }
 
+        binding.allowControlSwitch.isChecked = prefs.getBoolean(Prefs.CAST_CONTROL, true)
+        binding.allowControlSwitch.setOnCheckedChangeListener { _, checked -> prefs.edit { putBoolean(Prefs.CAST_CONTROL, checked) } }
+        binding.controlButton.setOnClickListener { ControlService.openSettings(this) }
+        binding.rotateButton.setOnClickListener {
+            runCatching {
+                startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName")))
+            }
+        }
+        // Android 13+ blocks accessibility for apps installed from a file until the user allows it.
+        binding.restrictedHint.visibility =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) View.VISIBLE else View.GONE
+
         binding.manualAddress.setText(prefs.getString(Prefs.CAST_LAST_IP, ""))
         binding.manualConnect.setOnClickListener { connectManually() }
         binding.stopButton.setOnClickListener { ScreenCastService.stop(this) }
@@ -72,6 +87,23 @@ class CastToPcActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         discovery.start()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        renderControlSetup()
+    }
+
+    private fun renderControlSetup() {
+        val controlOn = ControlService.isEnabled(this)
+        binding.controlStatus.setText(if (controlOn) R.string.control_on else R.string.control_off)
+        binding.controlButton.visibility = if (controlOn) View.GONE else View.VISIBLE
+        binding.restrictedHint.visibility =
+            if (!controlOn && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) View.VISIBLE else View.GONE
+
+        val rotateOn = DesktopMode.canRotate(this)
+        binding.rotateStatus.setText(if (rotateOn) R.string.rotate_on else R.string.rotate_off)
+        binding.rotateButton.visibility = if (rotateOn) View.GONE else View.VISIBLE
     }
 
     override fun onStop() {
