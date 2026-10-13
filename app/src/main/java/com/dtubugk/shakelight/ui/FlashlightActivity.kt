@@ -32,7 +32,6 @@ class FlashlightActivity : AppCompatActivity() {
         setContentView(binding.root)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        binding.power.isEnabled = TorchController.isAvailable
         binding.power.setOnClickListener { onPowerPressed() }
 
         binding.modeGroup.addOnButtonCheckedListener { _, id, checked ->
@@ -154,7 +153,9 @@ class FlashlightActivity : AppCompatActivity() {
     }
 
     private fun renderPower() {
-        if (!TorchController.isAvailable) {
+        val hasFlash = TorchController.hasFlash(this)
+        binding.power.isEnabled = hasFlash
+        if (!hasFlash) {
             binding.status.setText(R.string.no_flash)
             return
         }

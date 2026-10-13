@@ -26,6 +26,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private var renderingSwitch = false
+    private val torchListener: (Boolean) -> Unit = { render() }
 
     private val notificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { startShake() }
@@ -43,7 +44,16 @@ class MainActivity : AppCompatActivity() {
             if (checked) enableShake() else disableShake()
         }
         binding.batteryButton.setOnClickListener { requestUnrestrictedBattery() }
-        binding.noFlashWarning.visibility = if (TorchController.isAvailable) View.GONE else View.VISIBLE
+    }
+
+    override fun onStart() {
+        super.onStart()
+        TorchController.addListener(torchListener)
+    }
+
+    override fun onStop() {
+        TorchController.removeListener(torchListener)
+        super.onStop()
     }
 
     override fun onResume() {
@@ -84,6 +94,7 @@ class MainActivity : AppCompatActivity() {
         binding.shakeSwitch.isChecked = enabled
         renderingSwitch = false
         binding.shakeStatus.setText(if (enabled) R.string.shake_status_on else R.string.shake_status_off)
+        binding.noFlashWarning.visibility = if (TorchController.hasFlash(this)) View.GONE else View.VISIBLE
 
         val power = getSystemService(PowerManager::class.java)
         val restricted = !power.isIgnoringBatteryOptimizations(packageName)
