@@ -82,14 +82,24 @@ export class Player {
     }
   }
 
-  createDecoder() {
+  /** A new configuration is always followed by a key frame, so only ask for one after an error. */
+  createDecoder(requestKey = false) {
     if (this.decoder && this.decoder.state !== "closed") this.decoder.close();
     this.decoder = new VideoDecoder({
       output: f => this.onFrame(f),
       error: e => { console.warn("decoder", e); this.decoder = null; this.needKey = true; },
     });
-    this.decoder.configure({ codec: this.codec, optimizeForLatency: true, hardwareAcceleration: "prefer-hardware" });
+    // No hardware preference: the browser uses the GPU when it can and falls back to software otherwise
+    // ("prefer-hardware" fails outright on computers without a suitable GPU decoder).
+    this.decoder.configure({ codec: this.codec, optimizeForLatency: true });
     this.needKey = true;
+    if (requestKey) this.requestKey();
+  }
+
+  requestKey() {
+    const now = performance.now();
+    if (now - (this.lastKeyRequest || 0) < 1500) return;
+    this.lastKeyRequest = now;
     fetch("/keyframe", { method: "POST" }).catch(() => {});
   }
 
@@ -97,19 +107,22 @@ export class Player {
     const annexB = payload.slice(4);
     const sps = findNal(annexB, 7);
     if (!sps || sps.length < 4) return;
+    const codec = "avc1." + hex(sps[1]) + hex(sps[2]) + hex(sps[3]);
+    const same = this.config && this.codec === codec && sameBytes(this.config, annexB) &&
+      this.decoder && this.decoder.state === "configured";
     this.config = annexB;
-    this.codec = "avc1." + hex(sps[1]) + hex(sps[2]) + hex(sps[3]);
-    this.createDecoder();
+    this.codec = codec;
+    if (!same) this.createDecoder();
   }
 
   handleVideo(pts, payload, key) {
     if (!this.config) return;
-    if (!this.decoder || this.decoder.state === "closed") this.createDecoder();
+    if (!this.decoder || this.decoder.state === "closed") this.createDecoder(true);
     if (this.needKey && !key) return;
     // Falling behind (slow computer or network burst): skip to the next key frame instead of lagging.
     if (this.decoder.decodeQueueSize > 4 && !key) {
       this.needKey = true;
-      fetch("/keyframe", { method: "POST" }).catch(() => {});
+      this.requestKey();
       return;
     }
     this.needKey = false;
@@ -205,6 +218,11 @@ function findNal(data, type) {
   return null;
 }
 const hex = b => b.toString(16).padStart(2, "0");
+function sameBytes(a, b) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
 
 class PacketReader {
   constructor(onPacket) { this.onPacket = onPacket; this.buf = new Uint8Array(1 << 20); this.len = 0; }

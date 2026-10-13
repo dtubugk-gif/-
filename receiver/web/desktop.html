@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%23161310%27/%3E%3Cpath d=%27M36 6 16 36h13l-3 22 22-32H34z%27 fill=%27%23ffb547%27/%3E%3C/svg%3E">
 <title>ShakeLight Computer</title>
 <style>
   :root {
@@ -22,7 +23,7 @@
       linear-gradient(160deg, #0d0b08, #050403 60%); }
   .shell { width: min(760px, 100%); }
   .brand { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
-  .mark { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center;
+  .mark { flex: none; width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center;
     background: linear-gradient(145deg, #2a2114, #120e09); box-shadow: 0 0 0 1px var(--line), 0 10px 40px rgba(255,179,0,.18); }
   .brand h1 { margin: 0; font-size: 26px; font-weight: 650; letter-spacing: -.01em; }
   .brand p { margin: 2px 0 0; color: var(--muted); }
@@ -39,6 +40,7 @@
   .device span { color: var(--muted); font-size: 13px; }
   .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 12px var(--ok); margin-inline-start: auto; flex: none; }
   .opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 18px 0 22px; }
+  @media (max-width: 560px) { .opts { grid-template-columns: 1fr; } }
   .opt label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px 2px; text-transform: uppercase; letter-spacing: .06em; }
   select, input[type=text] { width: 100%; height: 44px; border-radius: 12px; border: 1px solid rgba(255,255,255,.12);
     background: rgba(0,0,0,.35); padding: 0 12px; outline: none; }
@@ -385,6 +387,7 @@ const player = new Player(canvas, {
   },
 });
 player.sound = $("sound").value === "1";
+window.shakelightPlayer = player; // for troubleshooting from the browser console
 player.run();
 
 function enterDesktop(sess) {
@@ -468,8 +471,15 @@ canvas.addEventListener("wheel", e => {
 // ---- keyboard: shortcuts as real keys, typed text (any language) as text ----
 const kbd = $("kbd");
 function focusKeyboard() { if (inDesktop) kbd.focus({ preventScroll: true }); }
+// Leaving the window with a key held (Alt+Tab…) must not leave it stuck down on the phone.
+window.addEventListener("blur", () => {
+  for (const code of keysDown) send({ t: "key", a: "up", code, meta: 0 });
+  keysDown.clear();
+});
 const TEXT_KEYS = new Set(["Space"]);
+const keysDown = new Set(); // only release keys we pressed on the phone
 document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && launcher.classList.contains("open")) { e.preventDefault(); closeLauncher(); return; }
   if (!inDesktop || e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || launcher.classList.contains("open")) return;
   if (e.key === "F11") return;                                        // browser full screen
   if ((e.ctrlKey || e.metaKey) && e.code === "KeyV") return;          // arrives as a paste event
@@ -478,13 +488,13 @@ document.addEventListener("keydown", e => {
   const printable = e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey && !TEXT_KEYS.has(e.code);
   if (printable || !code) return;                                     // typed text comes via the textarea
   e.preventDefault();
+  keysDown.add(code);
   send({ t: "key", a: "down", code, meta: androidMeta(e), repeat: e.repeat ? 1 : 0 });
 });
 document.addEventListener("keyup", e => {
   if (!inDesktop || e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
   const code = androidKeycode(e.code);
-  const printable = e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey && !TEXT_KEYS.has(e.code);
-  if (printable || !code || ((e.ctrlKey || e.metaKey) && e.code === "KeyV")) return;
+  if (!keysDown.delete(code)) return;
   e.preventDefault();
   send({ t: "key", a: "up", code, meta: androidMeta(e) });
 });

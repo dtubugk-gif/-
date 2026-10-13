@@ -188,7 +188,9 @@ func (m *desktopManager) routes(mux *http.ServeMux) {
 		w.Write(data)
 	})
 	mux.HandleFunc("/desktop/stop", func(w http.ResponseWriter, r *http.Request) {
-		m.stop()
+		if s := m.active(); s != nil {
+			s.stopBecause("disconnected from this computer")
+		}
 		writeJSON(w, http.StatusOK, map[string]string{"ok": "stopped"})
 	})
 	mux.HandleFunc("/desktop/pair", func(w http.ResponseWriter, r *http.Request) {

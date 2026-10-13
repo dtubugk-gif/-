@@ -133,6 +133,17 @@ func (h *hub) setDesktop(d *desktopSession) {
 	}
 }
 
+// clearDesktop detaches d if it is still the active session. Returns true if it was.
+func (h *hub) clearDesktop(d *desktopSession) bool {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.desktop != d {
+		return false
+	}
+	h.desktop = nil
+	return true
+}
+
 func (h *hub) desktopSession() *desktopSession {
 	h.mu.Lock()
 	defer h.mu.Unlock()

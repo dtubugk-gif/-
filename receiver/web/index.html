@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%23161310%27/%3E%3Cpath d=%27M36 6 16 36h13l-3 22 22-32H34z%27 fill=%27%23ffb547%27/%3E%3C/svg%3E">
 <title>ShakeLight Receiver</title>
 <style>
   :root { --amber: #ffb300; --text: #f3ead9; --muted: #a89c88; --bg: #000; --panel: #15120e; --panel2: #221e19;
@@ -33,6 +34,14 @@
   .he { direction: rtl; color: var(--muted); font-size: 14px; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
   .name { color: var(--amber); font-weight: 600; }
   .ips { margin-top: 16px; color: var(--muted); font-size: 14px; }
+  .computer { display: flex; align-items: center; gap: 16px; margin-top: 16px; padding: 16px 20px; border-radius: 16px; text-align: start;
+    color: var(--text); text-decoration: none; background: linear-gradient(135deg, #2a2112, #15120e); border: 1px solid rgba(255,179,0,.35);
+    transition: transform .15s, border-color .15s, box-shadow .15s; }
+  .computer:hover, .computer:focus-visible { transform: translateY(-2px); border-color: var(--amber); box-shadow: 0 10px 40px rgba(255,179,0,.15); outline: none; }
+  .computer svg { flex: none; }
+  .computer b { display: block; font-size: 17px; }
+  .computer small { color: var(--muted); font-size: 13.5px; }
+  .computer .go { margin-inline-start: auto; color: var(--amber); font-size: 22px; }
 
   /* ---------- taskbar ---------- */
   #taskbar { position: fixed; left: 0; right: 0; bottom: 0; height: 56px; z-index: 10; display: none;
@@ -115,6 +124,12 @@
         <span class="name" id="pcNameHe">המחשב הזה</span> ואשר שיתוף מסך. לשליטה בעכבר ובמקלדת הפעל „שליטה ומצב שולחן עבודה”.
       </div>
     </div>
+    <a class="computer" href="/desktop">
+      <svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffb300" d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-6v2h3v2H7v-2h3v-2H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm1 2v8h14V7z"/></svg>
+      <span><b>Computer mode</b><small>Turn the phone into a full computer on this screen: windows, taskbar, mouse and keyboard.
+        <span dir="rtl">· מצב מחשב</span></small></span>
+      <span class="go" aria-hidden="true">→</span>
+    </a>
     <div class="ips" id="ips"></div>
   </div>
 </div>

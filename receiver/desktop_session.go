@@ -87,8 +87,16 @@ func (s *desktopSession) setState(st string) {
 	s.mu.Unlock()
 }
 
-func (s *desktopSession) stop() {
-	s.stopOnce.Do(func() { close(s.done) })
+func (s *desktopSession) stop() { s.stopBecause("") }
+
+// stopBecause ends the session; the reason (if any) goes to the log for troubleshooting.
+func (s *desktopSession) stopBecause(reason string) {
+	s.stopOnce.Do(func() {
+		if reason != "" {
+			logf("Computer mode: stopping (%s)", reason)
+		}
+		close(s.done)
+	})
 	s.mu.Lock()
 	conns := s.conns
 	cmd := s.cmd
@@ -112,10 +120,15 @@ func (s *desktopSession) stopped() bool {
 
 func (s *desktopSession) run() {
 	err := s.serve()
-	s.stop()
+	if err != nil {
+		s.stopBecause(err.Error())
+	} else {
+		s.stop()
+	}
 	s.cleanup()
-	s.hub.setDesktop(nil)
-	s.hub.publish(encodePacket(pktBye, 0, nil))
+	if s.hub.clearDesktop(s) { // only if a newer session hasn't taken over meanwhile
+		s.hub.publish(encodePacket(pktBye, 0, nil))
+	}
 	if s.stopped() && err != nil && isClosedErr(err) {
 		err = nil // the user disconnected
 	}
@@ -401,7 +414,10 @@ func (s *desktopSession) connectFirst(serverLog <-chan string) (net.Conn, error)
 		}
 		c, err := net.DialTimeout("tcp", "127.0.0.1:"+s.port, time.Second)
 		if err == nil {
-			c.SetReadDeadline(time.Now().Add(1500 * time.Millisecond))
+			// Once the server is listening, the dummy byte always comes: wait for it rather than
+			// reconnecting, or the server would hand video/audio/control roles to the wrong sockets.
+			// (When nothing listens yet, adb closes the connection at once and the read fails fast.)
+			c.SetReadDeadline(time.Now().Add(10 * time.Second))
 			one := make([]byte, 1)
 			if _, err = io.ReadFull(c, one); err == nil {
 				c.SetReadDeadline(time.Time{})
@@ -496,14 +512,14 @@ func (s *desktopSession) readControl(c net.Conn) {
 	for {
 		kind, err := r.ReadByte()
 		if err != nil {
-			s.stop()
+			s.stopBecause("control channel closed: " + err.Error())
 			return
 		}
 		switch kind {
 		case 0: // clipboard
 			var n uint32
 			if binary.Read(r, binary.BigEndian, &n) != nil || n > 1<<20 {
-				s.stop()
+				s.stopBecause("bad clipboard message from the phone")
 				return
 			}
 			text := make([]byte, n)
@@ -520,8 +536,7 @@ func (s *desktopSession) readControl(c net.Conn) {
 			}
 			io.CopyN(io.Discard, r, int64(binary.BigEndian.Uint16(hdr[2:4])))
 		default:
-			logf("Unknown message from the phone (%d)", kind)
-			s.stop()
+			s.stopBecause(fmt.Sprintf("unknown message from the phone (%d)", kind))
 			return
 		}
 	}

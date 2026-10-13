@@ -88,16 +88,15 @@ func (a *adbTool) forward(name string) (string, error) {
 			if err != nil {
 				return
 			}
-			go func() {
-				u, err := net.Dial("unix", "@"+name)
-				if err != nil {
-					c.Close()
-					return
-				}
-				go func() { io.Copy(u, c); u.Close() }()
-				io.Copy(c, u)
+			// Connect in accept order, like adb's single transport does: the server assigns the
+			// video/audio/control roles by connection order.
+			u, err := net.Dial("unix", "@"+name)
+			if err != nil {
 				c.Close()
-			}()
+				continue
+			}
+			go func() { io.Copy(u, c); u.Close() }()
+			go func() { io.Copy(c, u); c.Close() }()
 		}
 	}()
 	return port, nil
