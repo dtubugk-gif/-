@@ -60,7 +60,9 @@ object DesktopMode {
         val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
         @Suppress("DEPRECATION")
         val activities = pm.queryIntentActivities(launcher, 0)
-        val iconSize = (48 * context.resources.displayMetrics.density).toInt().coerceIn(48, 144)
+        // The Start menu shows icons at 48 px; 96 px stays sharp on high-DPI screens and keeps the
+        // list small (full-resolution icons made it 2.5 MB for 130 apps).
+        val iconSize = 96
         val apps = JSONArray()
         activities
             .distinctBy { it.activityInfo.packageName }

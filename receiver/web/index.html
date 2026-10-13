@@ -127,7 +127,7 @@
     <label id="windowOpt"><input type="checkbox" id="openInWindow"> Open in a window</label>
   </header>
   <div id="appGrid"></div>
-  <footer>Click to open · Right-click to pin to the taskbar · Esc to close</footer>
+  <footer>Click to open · Right-click to pin to the taskbar · Esc to close<span id="windowNote"> · An app that is already open comes back in its old size: close it in Recent apps first</span></footer>
 </div>
 
 <div id="taskbar">
@@ -304,6 +304,7 @@ function openStart() {
   if (!controlActive()) return;
   startMenu.classList.add("open");
   $("windowOpt").classList.toggle("show", !!(phoneStatus && phoneStatus.windows));
+  $("windowNote").style.display = phoneStatus && phoneStatus.windows ? "" : "none";
   search.value = "";
   renderApps();
   if (!apps) sendControl({ t: "apps" });
@@ -318,7 +319,7 @@ search.addEventListener("keydown", e => {
 document.addEventListener("pointerdown", e => {
   if (startMenu.classList.contains("open") && !startMenu.contains(e.target) && e.target !== $("startBtn") && !$("startBtn").contains(e.target)) closeStart();
 }, true);
-$("openInWindow").checked = store.get("openInWindow", false);
+$("openInWindow").checked = store.get("openInWindow", true);
 $("openInWindow").addEventListener("change", e => store.set("openInWindow", e.target.checked));
 
 function renderApps() {

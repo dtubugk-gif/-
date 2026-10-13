@@ -131,26 +131,30 @@ class ControlService : AccessibilityService() {
     // every text field. Older Android: edit the focused field's text through accessibility.
 
     fun type(text: String) {
-        val input = inputConnection()
-        if (input != null) {
-            input.commitText(text, 1, null)
-            return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val input = inputMethod?.currentInputConnection
+            if (input != null) {
+                input.commitText(text, 1, null)
+                return
+            }
         }
         editFocused { current, start, end -> TextEdit.insert(current, start, end, text) }
     }
 
     fun backspace() {
-        val input = inputConnection()
-        if (input != null) {
-            input.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL))
-            input.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL))
-            return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val input = inputMethod?.currentInputConnection
+            if (input != null) {
+                input.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL))
+                input.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL))
+                return
+            }
         }
         editFocused { current, start, end -> TextEdit.backspace(current, start, end) }
     }
 
     fun enter() {
-        val input = inputConnection()
+        val input = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) inputMethod?.currentInputConnection else null
         if (input != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val info = inputMethod?.currentInputEditorInfo
             val action = (info?.imeOptions ?: 0) and EditorInfo.IME_MASK_ACTION
@@ -173,9 +177,6 @@ class ControlService : AccessibilityService() {
             type("\n")
         }
     }
-
-    private fun inputConnection() =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) inputMethod?.currentInputConnection else null
 
     private fun editFocused(edit: (String, Int, Int) -> TextEdit.Result) {
         val node = focusedInput() ?: return
