@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Star Dodger</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b0b1a;color:#fff;font-family:system-ui,sans-serif;overflow:hidden;touch-action:none}
+  canvas{display:block;margin:0 auto;background:radial-gradient(#1b1b3a,#0b0b1a);max-width:100%}
+  #hud{position:fixed;top:8px;left:0;right:0;text-align:center;font-size:20px;pointer-events:none}
+  #msg{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000a;text-align:center;font-size:22px}
+  button{font-size:22px;padding:10px 28px;border:0;border-radius:12px;background:#ffd400;cursor:pointer;margin-top:14px}
+</style>
+</head>
+<body>
+<canvas id="c" width="480" height="640"></canvas>
+<div id="hud">⭐ <span id="s">0</span> &nbsp; ❤️ <span id="l">3</span> &nbsp; 🏆 <span id="b">0</span></div>
+<div id="msg"><div><h1>⭐ Star Dodger ⭐</h1>אסוף כוכבים צהובים, הימנע מהסלעים האדומים<br>חצים / עכבר / מגע להזיז<br><button id="go">שחק</button></div></div>
+<script>
+const c=document.getElementById('c'),x=c.getContext('2d');
+const W=c.width,H=c.height;
+let p,items,score,lives,t,run=false,best=+localStorage.getItem('sd_best')||0,keys={},tx=null;
+const $=id=>document.getElementById(id);
+$('b').textContent=best;
+function reset(){p={x:W/2,y:H-60,r:18};items=[];score=0;lives=3;t=0;}
+function start(){reset();run=true;$('msg').style.display='none';loop();}
+function end(){run=false;if(score>best){best=score;localStorage.setItem('sd_best',best);}
+  $('b').textContent=best;
+  $('msg').innerHTML='<div><h1>נגמר המשחק</h1>ניקוד: '+score+'<br><button id="go">שוב</button></div>';
+  $('msg').style.display='flex';$('go').onclick=start;}
+$('go').onclick=start;
+addEventListener('keydown',e=>keys[e.key]=1);addEventListener('keyup',e=>keys[e.key]=0);
+function pos(e){const r=c.getBoundingClientRect();const p=e.touches?e.touches[0]:e;tx=(p.clientX-r.left)*W/r.width;}
+c.addEventListener('mousemove',pos);c.addEventListener('touchmove',e=>{pos(e);e.preventDefault()},{passive:false});c.addEventListener('touchstart',pos);
+function loop(){
+  if(!run)return;
+  t++;
+  const sp=6;
+  if(keys.ArrowLeft||keys.a)p.x-=sp,tx=null;
+  if(keys.ArrowRight||keys.d)p.x+=sp,tx=null;
+  if(tx!==null)p.x+=(tx-p.x)*0.25;
+  p.x=Math.max(p.r,Math.min(W-p.r,p.x));
+  const rate=Math.max(18,45-Math.floor(t/200)*3);
+  if(t%rate===0){const star=Math.random()<0.4;
+    items.push({x:20+Math.random()*(W-40),y:-20,r:star?12:16+Math.random()*10,v:2+Math.random()*2+t/1500,star});}
+  x.clearRect(0,0,W,H);
+  for(let i=items.length-1;i>=0;i--){
+    const o=items[i];o.y+=o.v;
+    const d=Math.hypot(o.x-p.x,o.y-p.y);
+    if(d<o.r+p.r-4){
+      if(o.star){score+=10;}else{lives--;if(lives<=0){draw();end();return;}}
+      items.splice(i,1);continue;
+    }
+    if(o.y>H+30)items.splice(i,1);
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+function draw(){
+  x.clearRect(0,0,W,H);
+  items.forEach(o=>{x.font=(o.r*2)+'px serif';x.textAlign='center';x.textBaseline='middle';x.fillText(o.star?'⭐':'☄️',o.x,o.y);});
+  x.font='40px serif';x.textAlign='center';x.textBaseline='middle';x.fillText('🚀',p.x,p.y);
+  $('s').textContent=score;$('l').textContent=Math.max(lives,0);
+}
+</script>
+</body>
+</html>
