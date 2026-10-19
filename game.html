@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <title>Star Dodger</title>
 <style>
-  html,body{margin:0;height:100%;background:#0b0b1a;color:#fff;font-family:system-ui,sans-serif;overflow:hidden;touch-action:none}
+  :root{--bg:#0b0b1a;--fg:#fff;--accent:#ffd400}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0b0b1a;--fg:#fff}}
+  :root[data-theme="dark"]{--bg:#0b0b1a;--fg:#fff}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font-family:system-ui,sans-serif;overflow:hidden;touch-action:none}
   canvas{display:block;margin:0 auto;background:radial-gradient(#1b1b3a,#0b0b1a);max-width:100%}
   #hud{position:fixed;top:8px;left:0;right:0;text-align:center;font-size:20px;pointer-events:none}
   #msg{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000a;text-align:center;font-size:22px}
@@ -19,12 +22,13 @@
 <script>
 const c=document.getElementById('c'),x=c.getContext('2d');
 const W=c.width,H=c.height;
-let p,items,score,lives,t,run=false,best=+localStorage.getItem('sd_best')||0,keys={},tx=null;
+let p,items,score,lives,t,run=false,best=0,keys={},tx=null;
 const $=id=>document.getElementById(id);
+try{best=+localStorage.getItem('sd_best')||0}catch(e){}
 $('b').textContent=best;
 function reset(){p={x:W/2,y:H-60,r:18};items=[];score=0;lives=3;t=0;}
 function start(){reset();run=true;$('msg').style.display='none';loop();}
-function end(){run=false;if(score>best){best=score;localStorage.setItem('sd_best',best);}
+function end(){run=false;if(score>best){best=score;try{localStorage.setItem('sd_best',best)}catch(e){}}
   $('b').textContent=best;
   $('msg').innerHTML='<div><h1>נגמר המשחק</h1>ניקוד: '+score+'<br><button id="go">שוב</button></div>';
   $('msg').style.display='flex';$('go').onclick=start;}
