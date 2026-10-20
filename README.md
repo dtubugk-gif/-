@@ -42,8 +42,10 @@ category as MaskOff and TrapCall.
 2. **Voice → Programmable Voice → Create Voice API application.** Webhook URL: `https://<your-server>/webhooks/telnyx`, API v2.
 3. **Numbers → Buy:** toll-free numbers (one per user; ~$1–2/month each) **+ one regular local number** (used to place the setup test call).
    Assign all of them to the application from step 2.
-4. **Verify → Create profile (SMS)** for sign-up codes.
-5. Copy: API key, **Public key** (Keys & Credentials), application (connection) id, verify profile id.
+4. **Voice → Outbound Voice Profiles → Create**, allow your countries, and attach it to the application
+   (the server places the setup test call through it).
+5. **Verify → Create profile (SMS)** for sign-up codes.
+6. Copy: API key, **Public key** (Keys & Credentials), application (connection) id, verify profile id.
 
 ### 2. Deploy the server
 Any Docker host with a persistent volume (Fly.io, Render, Railway, a VPS):
