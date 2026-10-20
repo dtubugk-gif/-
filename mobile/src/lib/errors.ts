@@ -6,8 +6,9 @@ export function errorMessage(err: unknown): string {
   if (err instanceof ApiError) {
     switch (err.code) {
       case "network":
-      case "no_server":
         return s.errorNetwork;
+      case "no_server":
+        return s.errorNoServer;
       case "invalid_phone":
         return s.errorInvalidPhone;
       case "invalid":

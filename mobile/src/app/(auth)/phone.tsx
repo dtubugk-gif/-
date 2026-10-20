@@ -1,9 +1,9 @@
 import { getLocales } from "expo-localization";
-import { router } from "expo-router";
-import { useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import { View } from "react-native";
 import { Button, Field, Row, Screen, T } from "@/components/ui";
-import { api } from "@/lib/api";
+import { api, getServerUrl } from "@/lib/api";
 import { errorMessage } from "@/lib/errors";
 import { formatAsYouType, toE164 } from "@/lib/format";
 import { useT } from "@/lib/i18n";
@@ -23,6 +23,9 @@ export default function Phone() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
+  const [noServer, setNoServer] = useState(!getServerUrl());
+  // Re-check after returning from the server screen.
+  useFocusEffect(useCallback(() => setNoServer(!getServerUrl()), []));
   const e164 = toE164(input, country);
 
   const submit = async () => {
@@ -73,8 +76,15 @@ export default function Phone() {
         autoFocus
         onSubmitEditing={submit}
       />
-      {error ? <T color="#F05252">{error}</T> : null}
-      <Button title={s.sendCode} onPress={submit} loading={busy} disabled={!e164} />
+      {noServer ? (
+        <>
+          <T color="#F05252">{s.errorNoServer}</T>
+          <Button title={s.setServer} variant="secondary" onPress={() => router.push("/server")} />
+        </>
+      ) : error ? (
+        <T color="#F05252">{error}</T>
+      ) : null}
+      <Button title={s.sendCode} onPress={submit} loading={busy} disabled={!e164 || noServer} />
     </Screen>
   );
 }
