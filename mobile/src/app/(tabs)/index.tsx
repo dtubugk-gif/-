@@ -1,5 +1,6 @@
+import * as Notifications from "expo-notifications";
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { Badge, Button, Card, T } from "@/components/ui";
 import { Space, useColors } from "@/constants/theme";
@@ -35,6 +36,12 @@ export default function Calls() {
       void load();
     }, [load]),
   );
+
+  // A revealed-call alert arriving while the app is open should show up without a manual refresh.
+  useEffect(() => {
+    const sub = Notifications.addNotificationReceivedListener(() => void load());
+    return () => sub.remove();
+  }, [load]);
 
   const header = (
     <View style={{ gap: Space.md, marginBottom: Space.md }}>
