@@ -35,6 +35,20 @@ category as MaskOff and TrapCall.
 - **Israel:** the code supports Israeli carriers and Hebrew, but confirm with a test call that Israeli 1-800 numbers
   from your provider receive withheld numbers before marketing there.
 
+## Personal use (just you)
+
+No SMS provider or sign-up flow is needed. Set these on the server:
+
+```
+OTP_PROVIDER=access_code
+OWNER_ACCESS_CODE=<a long private code>     # what you type in the app instead of an SMS code
+ALLOWED_PHONES=+972XXXXXXXXX                # your number; everyone else is refused
+ENTITLEMENT_MODE=free                       # no subscription
+```
+
+You still need the telephony side (Telnyx + one forwarding number + one number for the setup test call) —
+that is what reveals the caller. Alerts: push needs Firebase; without it, set `SMS_FROM_NUMBER` to get alerts by SMS.
+
 ## Go-live checklist
 
 ### 1. Telnyx (≈30 min)

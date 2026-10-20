@@ -35,7 +35,9 @@ export class OtpService {
     if (recent.n >= MAX_SENDS_PER_HOUR) throw new OtpError("rate_limited");
 
     let codeHash: string | null = null;
-    if (this.cfg.OTP_PROVIDER === "console") {
+    if (this.cfg.OTP_PROVIDER === "access_code") {
+      // Nothing to send: the owner already knows the code.
+    } else if (this.cfg.OTP_PROVIDER === "console") {
       const code = otpCode();
       codeHash = hmac(this.cfg.JWT_SECRET, `${phone}:${code}`);
       this.log.info({ phone, code }, "OTP code (console provider)");
@@ -59,10 +61,11 @@ export class OtpService {
     if (ch.attempts >= MAX_ATTEMPTS) throw new OtpError("too_many_attempts");
     this.db.prepare("UPDATE otp_challenges SET attempts = attempts + 1 WHERE id = ?").run(ch.id);
 
-    const ok =
-      this.cfg.OTP_PROVIDER === "console"
-        ? ch.code_hash != null && safeEqual(ch.code_hash, hmac(this.cfg.JWT_SECRET, `${phone}:${code}`))
-        : await this.telephony.checkVerification(phone, code);
+    let ok: boolean;
+    if (this.cfg.OTP_PROVIDER === "access_code") ok = safeEqual(code, this.cfg.OWNER_ACCESS_CODE);
+    else if (this.cfg.OTP_PROVIDER === "console")
+      ok = ch.code_hash != null && safeEqual(ch.code_hash, hmac(this.cfg.JWT_SECRET, `${phone}:${code}`));
+    else ok = /^\d{4,8}$/.test(code) && (await this.telephony.checkVerification(phone, code));
     if (!ok) throw new OtpError("invalid");
     this.db.prepare("UPDATE otp_challenges SET consumed_at = ? WHERE id = ?").run(now, ch.id);
   }

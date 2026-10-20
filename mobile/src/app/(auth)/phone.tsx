@@ -33,8 +33,8 @@ export default function Phone() {
     setBusy(true);
     setError(null);
     try {
-      await api("/v1/auth/start", { body: { phone: e164, country } });
-      router.push({ pathname: "/(auth)/code", params: { phone: e164, country } });
+      const res = await api<{ method: "sms" | "access_code" }>("/v1/auth/start", { body: { phone: e164, country } });
+      router.push({ pathname: "/(auth)/code", params: { phone: e164, country, method: res.method ?? "sms" } });
     } catch (err) {
       setError(errorMessage(err));
     } finally {

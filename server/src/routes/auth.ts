@@ -8,12 +8,18 @@ import { serializeUser } from "./me.js";
 
 const startBody = z.object({ phone: z.string().min(4).max(32), country: z.string().length(2).optional() });
 const verifyBody = startBody.extend({
-  code: z.string().regex(/^\d{4,8}$/),
+  code: z.string().min(4).max(128),
   locale: z.enum(["en", "he"]).optional(),
   timezone: z.string().max(64).optional(),
 });
 
 const normalize = (phone: string, country: string | undefined, fallback: string) => toE164(phone, country ?? fallback);
+
+/** On a personal server only the owner's numbers may sign in. */
+function allowed(phone: string, list: string, fallbackCountry: string): boolean {
+  const entries = list.split(",").map((p) => p.trim()).filter(Boolean);
+  return !entries.length || entries.some((p) => toE164(p, fallbackCountry) === phone);
+}
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
   const { db, otp, cfg, now } = app.services;
@@ -23,19 +29,21 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const body = startBody.parse(req.body);
     const phone = normalize(body.phone, body.country, cfg.DEFAULT_COUNTRY);
     if (!phone) return reply.code(400).send({ error: "invalid_phone" });
+    if (!allowed(phone, cfg.ALLOWED_PHONES, cfg.DEFAULT_COUNTRY)) return reply.code(403).send({ error: "phone_not_allowed" });
     try {
       await otp.send(phone);
     } catch (err) {
       if (err instanceof OtpError) return reply.code(429).send({ error: err.code });
       throw err;
     }
-    return { ok: true, phone };
+    return { ok: true, phone, method: cfg.OTP_PROVIDER === "access_code" ? "access_code" : "sms" };
   });
 
   app.post("/verify", limit, async (req, reply) => {
     const body = verifyBody.parse(req.body);
     const phone = normalize(body.phone, body.country, cfg.DEFAULT_COUNTRY);
     if (!phone) return reply.code(400).send({ error: "invalid_phone" });
+    if (!allowed(phone, cfg.ALLOWED_PHONES, cfg.DEFAULT_COUNTRY)) return reply.code(403).send({ error: "phone_not_allowed" });
     try {
       await otp.check(phone, body.code);
     } catch (err) {

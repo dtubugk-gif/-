@@ -30,7 +30,16 @@ const schema = z.object({
   DEMO_LINE_NUMBER: z.string().default(""),
   WEBHOOK_SIGNATURE_REQUIRED: bool.default(true),
 
-  OTP_PROVIDER: z.enum(["telnyx", "console"]).default("telnyx"),
+  /**
+   * How sign-in is verified:
+   *   telnyx       SMS code via Telnyx Verify (public app)
+   *   access_code  a private code you choose (OWNER_ACCESS_CODE) — no SMS, for personal servers
+   *   console      code printed to the server log (local development only)
+   */
+  OTP_PROVIDER: z.enum(["telnyx", "access_code", "console"]).default("telnyx"),
+  OWNER_ACCESS_CODE: z.string().default(""),
+  /** Comma-separated numbers allowed to sign in. Empty = anyone. Set it on a personal server. */
+  ALLOWED_PHONES: z.string().default(""),
   ENTITLEMENT_MODE: z.enum(["revenuecat", "free"]).default("revenuecat"),
   REVENUECAT_WEBHOOK_AUTH: z.string().default(""),
 
@@ -62,6 +71,10 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       throw new Error("WEBHOOK_SIGNATURE_REQUIRED cannot be disabled in production");
     }
     if (cfg.OTP_PROVIDER === "console") throw new Error("OTP_PROVIDER=console is not allowed in production");
+  }
+  if (cfg.OTP_PROVIDER === "access_code") {
+    if (cfg.OWNER_ACCESS_CODE.length < 8) throw new Error("OWNER_ACCESS_CODE must be at least 8 characters");
+    if (!cfg.ALLOWED_PHONES.trim()) throw new Error("ALLOWED_PHONES is required with OTP_PROVIDER=access_code");
   }
   return cfg;
 }

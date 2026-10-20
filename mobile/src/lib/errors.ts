@@ -9,6 +9,8 @@ export function errorMessage(err: unknown): string {
         return s.errorNetwork;
       case "no_server":
         return s.errorNoServer;
+      case "phone_not_allowed":
+        return s.errorNotAllowed;
       case "invalid_phone":
         return s.errorInvalidPhone;
       case "invalid":

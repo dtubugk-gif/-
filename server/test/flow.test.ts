@@ -280,3 +280,32 @@ describe("forwarding codes", () => {
     expect(forwardingInstructions("visible", "decline", "+18005550100").manual).toBe(true);
   });
 });
+
+describe("personal server (access code, no SMS)", () => {
+  const env = { OTP_PROVIDER: "access_code", OWNER_ACCESS_CODE: "my-secret-code-123", ALLOWED_PHONES: "+972552691740" };
+
+  it("signs the owner in with the access code and sends no SMS", async () => {
+    const t = await setup({ ...env, DEFAULT_COUNTRY: "IL" });
+    const start = await t.app.inject({ method: "POST", url: "/v1/auth/start", payload: { phone: "0552691740", country: "IL" } });
+    expect(start.json()).toMatchObject({ ok: true, phone: "+972552691740", method: "access_code" });
+    expect(t.telephony.calls.filter((c) => c.op === "otp-send")).toHaveLength(0);
+
+    const wrong = await t.app.inject({ method: "POST", url: "/v1/auth/verify", payload: { phone: "0552691740", country: "IL", code: "guess-guess" } });
+    expect(wrong.json().error).toBe("invalid");
+    const ok = await t.app.inject({ method: "POST", url: "/v1/auth/verify", payload: { phone: "0552691740", country: "IL", code: "my-secret-code-123" } });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json().token).toBeTruthy();
+  });
+
+  it("refuses every other number", async () => {
+    const t = await setup(env);
+    const res = await t.app.inject({ method: "POST", url: "/v1/auth/start", payload: { phone: USER_PHONE } });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error).toBe("phone_not_allowed");
+  });
+
+  it("rejects a weak or missing access code configuration", async () => {
+    await expect(setup({ OTP_PROVIDER: "access_code", OWNER_ACCESS_CODE: "short", ALLOWED_PHONES: "+972552691740" })).rejects.toThrow(/at least 8/);
+    await expect(setup({ OTP_PROVIDER: "access_code", OWNER_ACCESS_CODE: "long-enough-code" })).rejects.toThrow(/ALLOWED_PHONES/);
+  });
+});
