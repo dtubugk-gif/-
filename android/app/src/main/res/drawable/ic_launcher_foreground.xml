@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- White shield with a keyhole, centered in the adaptive-icon safe zone -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,26L76,34V51C76,65 66.6,76.6 54,80C41.4,76.6 32,65 32,51V34Z" />
+    <path
+        android:fillColor="@color/ic_launcher_background"
+        android:pathData="M54,40a6,6 0,1 1,-0.01 0ZM51,49h6l2,14h-10Z" />
+</vector>

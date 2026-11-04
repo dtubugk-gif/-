@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand">#9DB4FF</color>
+    <color name="status_connected">#5BD27A</color>
+    <color name="status_off">#A0A0A0</color>
+    <color name="status_busy">#FFC53D</color>
+    <color name="button_connect">#4A72F5</color>
+    <color name="button_disconnect">#E35252</color>
+</resources>

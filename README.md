@@ -38,6 +38,19 @@ Optional flags:
 
 ## 2. Connect your devices
 
+### Option A: the My VPN Android app (this repo)
+
+1. On your Android phone, download [`apk/MyVPN.apk`](apk/MyVPN.apk) from this repository.
+2. Open it. If Android asks, allow your browser or file manager to **install unknown apps**.
+3. Open **My VPN**, tap **Scan QR code**, and scan the QR code printed by `install-server.sh` or `add-client.sh`.
+   You can also tap **Import .conf file** or **Paste config text**.
+4. Tap **Connect** and accept Android's VPN permission prompt.
+
+The app shows your connection status, how much data has gone up and down, and when it last heard from the server.
+It works on Android 7.0 or newer. To build the APK yourself, see [Building the Android app](#building-the-android-app).
+
+### Option B: the official WireGuard apps
+
 Install the official WireGuard app: <https://www.wireguard.com/install/>
 
 - **Phone (iOS/Android):** tap **+**, choose **Scan from QR code**, and scan the QR code the script printed.
@@ -76,6 +89,24 @@ Files on the server:
 | `/etc/wireguard/wg0.conf` | Server config and all peers |
 | `/etc/wireguard/params` | Settings the helper scripts use |
 | `/etc/wireguard/clients/*.conf` | Client configs (contain private keys, keep them secret) |
+
+## Building the Android app
+
+The app source is in [`android/`](android). It's written in Kotlin and uses the official
+[WireGuard Android library](https://git.zx2c4.com/wireguard-android/) (`com.wireguard.android:tunnel`).
+
+Requirements: JDK 17 or newer, and the Android SDK (platform 36). Install Android Studio, or point `ANDROID_HOME` at the SDK.
+
+```bash
+cd android
+./gradlew assembleRelease
+# APK: android/app/build/outputs/apk/release/app-release.apk
+```
+
+To sign with your own release key, set `MYVPN_KEYSTORE`, `MYVPN_KEYSTORE_PASSWORD`, `MYVPN_KEY_ALIAS` and `MYVPN_KEY_PASSWORD`
+before building. Without them, the build is signed with the Android debug key.
+That key differs between computers, so installing an update built on a different machine
+means uninstalling the app first. You'll then need to add the server config again.
 
 ## Troubleshooting
 

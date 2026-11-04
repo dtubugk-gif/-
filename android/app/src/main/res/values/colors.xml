@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand">#2F5BEA</color>
+    <color name="status_connected">#1E8E3E</color>
+    <color name="status_off">#757575</color>
+    <color name="status_busy">#E8A100</color>
+    <color name="button_connect">#2F5BEA</color>
+    <color name="button_disconnect">#C62828</color>
+    <color name="ic_launcher_background">#2F5BEA</color>
+</resources>

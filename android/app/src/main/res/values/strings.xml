@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">My VPN</string>
+
+    <string name="connect">Connect</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="status_connected">Connected</string>
+    <string name="status_disconnected">Disconnected</string>
+    <string name="status_connecting">Connecting…</string>
+    <string name="status_disconnecting">Disconnecting…</string>
+    <string name="status_no_config">No server added</string>
+    <string name="detail_no_config">Add your server config below to get started.</string>
+    <string name="detail_server">Server: %1$s</string>
+    <string name="stats">↓ %1$s   ↑ %2$s\n%3$s</string>
+    <string name="handshake_ago">Last handshake %1$d s ago</string>
+    <string name="handshake_waiting">Waiting for server… (no handshake yet)</string>
+    <string name="unknown">unknown</string>
+
+    <string name="server_title">Server</string>
+    <string name="server_none">No server yet. On your VPN server run\nsudo ./scripts/add-client.sh my-phone\nthen scan the QR code it prints.</string>
+    <string name="server_info">Endpoint: %1$s\nYour VPN IP: %2$s</string>
+    <string name="scan_qr">Scan QR code</string>
+    <string name="import_file">Import .conf file</string>
+    <string name="paste_config">Paste config text</string>
+    <string name="remove_server">Remove server</string>
+    <string name="scan_prompt">Scan the QR code printed by add-client.sh</string>
+
+    <string name="paste_title">Paste WireGuard config</string>
+    <string name="paste_hint">[Interface]\nPrivateKey = …\n\n[Peer]\n…</string>
+    <string name="save">Save</string>
+    <string name="config_saved">Server config saved</string>
+
+    <string name="remove_title">Remove server?</string>
+    <string name="remove_message">This disconnects the VPN and deletes the saved config from this phone.</string>
+    <string name="remove">Remove</string>
+
+    <string name="error_title">Something went wrong</string>
+    <string name="error_connect">Could not change the VPN state: %1$s</string>
+    <string name="error_bad_config">That isn\'t a valid WireGuard config. Use the file or QR code made by add-client.sh.</string>
+    <string name="error_read_file">Could not read that file.</string>
+    <string name="permission_denied">VPN permission is needed to connect.</string>
+</resources>
