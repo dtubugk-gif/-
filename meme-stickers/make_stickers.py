@@ -3,9 +3,9 @@ import numpy as np, cv2
 from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageEnhance, ImageFilter
 
 random.seed(7); np.random.seed(7)
-D = '/tmp/claude-0/-home-user--/548e3110-b1f4-5937-912b-94fa45f03838/scratchpad/'
-ANTON = D + 'fonts/Anton-Regular.ttf'
-MARKER = D + 'fonts/PermanentMarker-Regular.ttf'
+D = __import__('os').path.dirname(__import__('os').path.abspath(__file__)) + '/'
+ANTON = D + 'fonts/SecularOne-Regular.ttf'
+MARKER = D + 'fonts/Karantina-Bold.ttf'
 EMOJI = '/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf'
 
 # ---------- source: clean cutout ----------
@@ -92,9 +92,9 @@ def text(s, size, font=ANTON, fill='white', stroke='black', sw=None, angle=0):
     f = ImageFont.truetype(font, size)
     sw = sw if sw is not None else max(4, size // 9)
     tmp = ImageDraw.Draw(Image.new('RGBA', (1, 1)))
-    l, t, r, b = tmp.textbbox((0, 0), s, font=f, stroke_width=sw)
+    l, t, r, b = tmp.textbbox((0, 0), s, font=f, stroke_width=sw, direction='rtl', language='he')
     im = Image.new('RGBA', (r - l + 20, b - t + 20))
-    ImageDraw.Draw(im).text((10 - l, 10 - t), s, font=f, fill=fill, stroke_width=sw, stroke_fill=stroke)
+    ImageDraw.Draw(im).text((10 - l, 10 - t), s, font=f, fill=fill, stroke_width=sw, stroke_fill=stroke, direction='rtl', language='he')
     return im.rotate(angle, expand=True, resample=Image.BICUBIC) if angle else im
 
 
@@ -185,7 +185,7 @@ im = lofi(im, tint=(70, 120, 255))
 tears(im, EYE_L, 720); tears(im, EYE_R, 680)
 s1, _ = subject(im, 860, angle=-6, crop=(0, 0, 1871, 2200))
 c = place_on(); paste(c, s1, 550, 470)
-paste(c, text("IT'S SO OVER", 150, sw=14, angle=4), 540, 900)
+paste(c, text("זהו. נגמר.", 160, sw=14, angle=4), 540, 900)
 paste(c, emoji('😭', 170), 165, 190, 15)
 paste(c, emoji('💋', 140), 920, 200, -20)
 stickers.append(c)
@@ -202,7 +202,7 @@ c = place_on(); paste(c, s2, 520, 520)
 paste(c, text('?', 260, sw=18, fill='#ffe600', angle=-15), 900, 210)
 paste(c, text('?', 170, sw=14, fill='#ff4fa3', angle=20), 800, 90)
 paste(c, text('?', 130, sw=12, fill='#4fd1ff', angle=-30), 975, 440)
-paste(c, text('huh??', 165, font=MARKER, sw=14, angle=6), 520, 915)
+paste(c, text('אהה??', 230, font=MARKER, sw=14, angle=6), 520, 915)
 pk = emoji('💋', 120); pk2 = text('?', 90, sw=10, fill='white')
 paste(c, pk, 140, 170, 25); paste(c, pk2, 200, 115)
 stickers.append(c)
@@ -226,7 +226,7 @@ for k in range(14):
                 (550 + r1 * math.cos(ang), 470 + r1 * math.sin(ang)),
                 (550 + r0 * math.cos(ang + .05), 470 + r0 * math.sin(ang + .05))], fill=(20, 20, 20, 255))
 paste(c, s3, 550, 500)
-paste(c, text('WHAT', 230, sw=18, fill='#ff2b2b', angle=-5), 550, 900)
+paste(c, text('מההה?!', 200, sw=18, fill='#ff2b2b', angle=-5), 550, 900)
 paste(c, emoji('😱', 150), 900, 150, -12)
 paste(c, emoji('💋', 120), 180, 140, 30)
 paste(c, text('!!', 120, sw=12, fill='#ffe600', angle=15), 260, 110)
@@ -256,7 +256,7 @@ c = place_on(); paste(c, s4, 470, 500)
 paste(c, emoji('💋', 230), 900, 300, -18)
 paste(c, emoji('💋', 120), 1000, 110, 12)
 paste(c, emoji('✨', 100), 820, 120, 0)
-paste(c, text('mwah.', 185, font=MARKER, sw=15, fill='#ff3d7f', angle=8), 600, 900)
+paste(c, text('מוואה.', 250, font=MARKER, sw=15, fill='#ff3d7f', angle=8), 600, 900)
 stickers.append(c)
 
 # 5 ── SIDE-EYE: googly eyes glancing right, flat mouth
@@ -271,7 +271,7 @@ d.line([(1020, 610), (1250, 650)], fill=(40, 25, 20, 255), width=45)
 s5, _ = subject(im, 820, angle=8, crop=(0, 0, 1871, 2100))
 c = place_on(); paste(c, s5, 460, 500)
 paste(c, emoji('👀', 170), 870, 240, 0)
-paste(c, text('ok and?', 170, font=MARKER, sw=15, angle=-5), 560, 905)
+paste(c, text('אוקיי, ו...?', 220, font=MARKER, sw=15, angle=-5), 560, 905)
 paste(c, emoji('💋', 115), 880, 560, 20)
 stickers.append(c)
 
@@ -287,7 +287,7 @@ im = im.crop((0, 0, 1871, 2150))
 im = im.resize((int(im.width * 0.62), int(im.height * 1.15)), Image.LANCZOS)  # long face
 s6, _ = subject(im, 870)
 c = place_on(); paste(c, s6, 520, 470)
-paste(c, text('bro.', 230, sw=18, fill='white'), 560, 900)
+paste(c, text('אחי.', 230, sw=18, fill='white'), 560, 900)
 k = emoji('💋', 130).convert('LA').convert('RGBA')
 paste(c, k, 880, 230, -10)
 paste(c, text('...', 140, sw=12), 880, 120)
@@ -303,7 +303,7 @@ lips = emoji('💋', 660)
 c = place_on()
 paste(c, lips, 560, 660, 0)
 paste(c, head, 560, 280)
-paste(c, text('i am the lips now', 98, font=MARKER, sw=11, angle=-4), 560, 965)
+paste(c, text('אני השפתיים עכשיו', 150, font=MARKER, sw=12, angle=-4), 560, 965)
 paste(c, emoji('💦', 110), 820, 160, 0)
 stickers.append(c)
 
@@ -318,8 +318,8 @@ win = Image.new('RGBA', (820, 210), (0, 0, 0, 0))
 wd = ImageDraw.Draw(win)
 wd.rectangle((0, 0, 819, 209), fill=(200, 200, 200, 255), outline='black', width=8)
 wd.rectangle((8, 8, 811, 58), fill=(0, 0, 160, 255))
-wd.text((24, 12), 'brain.exe', font=ImageFont.truetype(ANTON, 38), fill='white')
-wd.text((40, 85), 'has stopped responding', font=ImageFont.truetype(ANTON, 58), fill='black')
+wd.text((795, 8), 'מוח', font=ImageFont.truetype(ANTON, 36), fill='white', anchor='ra', direction='rtl', language='he')
+wd.text((410, 72), 'המוח הפסיק להגיב', font=ImageFont.truetype(ANTON, 72), fill='black', anchor='ma', direction='rtl', language='he')
 paste(c, s8, 550, 430)
 paste(c, win, 550, 870, 3)
 paste(c, emoji('💋', 120), 140, 160, 160)
@@ -340,7 +340,7 @@ c = place_on()
 for (x, y, sz, rot) in [(150, 760, 230, -8), (950, 760, 230, 10), (300, 800, 170, 5), (800, 800, 170, -5), (550, 840, 150, 0)]:
     paste(c, emoji('🔥', sz), x, y, rot)
 paste(c, s9, 550, 470)
-paste(c, text("it's fine :)", 150, font=MARKER, sw=14, fill='#ffe600', angle=3), 550, 960)
+paste(c, text("הכל בסדר.", 220, font=MARKER, sw=14, fill='#ffe600', angle=3), 550, 960)
 paste(c, emoji('💋', 120), 960, 150, -15)
 paste(c, emoji('🙂', 110), 140, 140, 0)
 stickers.append(c)
