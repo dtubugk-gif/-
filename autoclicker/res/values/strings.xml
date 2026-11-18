@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Fast Clicker</string>
+    <string name="service_description">Fast Clicker taps the screen at the spot you choose with the floating target. It only performs taps while you have pressed Start, and reads no screen content.</string>
+</resources>
